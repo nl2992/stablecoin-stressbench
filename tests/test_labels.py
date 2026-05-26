@@ -15,7 +15,7 @@ def _make_basis_df(n: int = 100) -> pl.DataFrame:
     rng = np.random.default_rng(42)
     ts = [i * 60_000_000_000 for i in range(n)]
     basis = rng.normal(0, 10, n).tolist()
-    return pl.DataFrame({"ts_ns": ts, "cross_quote_basis_bps": basis})
+    return pl.DataFrame({"ts_ns": ts, "cross_quote_basis_primary_bps": basis})
 
 
 def test_add_basis_labels_adds_columns():
@@ -34,8 +34,32 @@ def test_add_basis_labels_classification_binary():
     assert set(col.unique().to_list()).issubset({0, 1})
 
 
+def test_add_basis_labels_label_prefix():
+    df = _make_basis_df(100)
+    result = add_basis_labels(df, label_prefix="basis_usdc")
+    assert "label_basis_usdc_1m" in result.columns
+    assert "label_basis_usdc_1m_gt10bps" in result.columns
+    assert "label_basis_1m" not in result.columns
+
+
+def test_add_basis_labels_explicit_col():
+    import numpy as np
+    rng = np.random.default_rng(7)
+    ts = [i * 60_000_000_000 for i in range(100)]
+    df = pl.DataFrame({
+        "ts_ns": ts,
+        "cross_quote_basis_maxabs_bps": rng.normal(0, 15, 100).tolist(),
+    })
+    result = add_basis_labels(
+        df,
+        basis_col="cross_quote_basis_maxabs_bps",
+        label_prefix="basis_maxabs",
+    )
+    assert "label_basis_maxabs_1m_gt10bps" in result.columns
+
+
 def test_add_basis_labels_empty_df():
-    df = pl.DataFrame({"ts_ns": [], "cross_quote_basis_bps": []})
+    df = pl.DataFrame({"ts_ns": [], "cross_quote_basis_primary_bps": []})
     result = add_basis_labels(df)
     assert result.is_empty()
 

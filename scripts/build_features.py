@@ -224,8 +224,22 @@ def build_silver(bronze_dir: str, silver_dir: str, start: datetime, end: datetim
 # Gold helpers — called once per date
 # ---------------------------------------------------------------------------
 
-def _load_silver_channels(silver_root: Path, channels: list[str], dates: set[str]) -> pl.DataFrame:
-    """Load and concatenate Silver Parquet files matching given channels and dates."""
+def _load_silver_channels(
+    silver_root: Path,
+    channels: list[str],
+    dates: set[str],
+    depth_source: str | None = None,
+) -> pl.DataFrame:
+    """Load and concatenate Silver Parquet files matching given channels and dates.
+
+    Args:
+        silver_root: Root of the Silver layer.
+        channels: Channel names to scan.
+        dates: ISO date strings to include.
+        depth_source: When set, adds a ``depth_source`` column with this value
+            to every loaded frame. Use ``"real_l2"`` or ``"synthetic_kline"``
+            to distinguish executable-quality data from OHLCV-derived data.
+    """
     frames: list[pl.DataFrame] = []
     for channel in channels:
         for f in sorted(silver_root.glob(f"venue=*/channel={channel}/**/date=*/hour=*/part-0.parquet")):
@@ -235,10 +249,13 @@ def _load_silver_channels(silver_root: Path, channels: list[str], dates: set[str
             if date_part not in dates:
                 continue
             try:
-                frames.append(pl.read_parquet(f))
+                frame = pl.read_parquet(f)
+                if depth_source is not None and not frame.is_empty():
+                    frame = frame.with_columns(pl.lit(depth_source).alias("depth_source"))
+                frames.append(frame)
             except Exception as exc:
                 logger.warning("Skip %s: %s", f, exc)
-    return pl.concat(frames) if frames else pl.DataFrame()
+    return pl.concat(frames, how="diagonal") if frames else pl.DataFrame()
 
 
 def _compute_book_1m(books_df: pl.DataFrame) -> pl.DataFrame:
@@ -493,7 +510,7 @@ def _compute_basis_features(book_1m: pl.DataFrame, instruments: list[dict]) -> p
         .otherwise(None).alias("cross_quote_basis_usdt_bps"),
     ])
 
-    # Primary signal: larger absolute deviation between the two quote currencies
+    # Max-absolute basis: generic stress detector (larger of USDC vs USDT deviation)
     basis = basis.with_columns(
         pl.when(
             pl.col("cross_quote_basis_usdc_bps").abs()
@@ -501,8 +518,21 @@ def _compute_basis_features(book_1m: pl.DataFrame, instruments: list[dict]) -> p
         )
         .then(pl.col("cross_quote_basis_usdc_bps"))
         .otherwise(pl.col("cross_quote_basis_usdt_bps"))
-        .alias("cross_quote_basis_bps")
+        .alias("cross_quote_basis_maxabs_bps")
     )
+
+    # Primary basis: USDC-specific (for SVB/USDC event analysis).
+    # Falls back to max-absolute when USDC basis is unavailable.
+    basis = basis.with_columns([
+        pl.col("cross_quote_basis_usdc_bps")
+        .fill_null(pl.col("cross_quote_basis_maxabs_bps"))
+        .alias("cross_quote_basis_primary_bps"),
+        pl.when(pl.col("cross_quote_basis_usdc_bps").is_not_null())
+        .then(pl.lit("USDC"))
+        .otherwise(pl.lit("max_abs"))
+        .alias("basis_primary_asset"),
+    ])
+
     return basis
 
 
@@ -640,6 +670,15 @@ def _compute_net_profit_1m(
         if found_any:
             row["buy_venue"] = best_buy_v or ""
             row["sell_venue"] = best_sell_v or ""
+            # Propagate depth quality: real_l2 if any real-L2 book was used for
+            # this minute window, otherwise synthetic_kline (not paper-grade).
+            if "depth_source" in snap.columns:
+                ts_sources = (
+                    slice_t["depth_source"].drop_nulls().unique().to_list()
+                )
+                row["depth_source"] = (
+                    "real_l2" if "real_l2" in ts_sources else "synthetic_kline"
+                )
             rows.append(row)
 
     return pl.DataFrame(rows) if rows else pl.DataFrame()
@@ -717,12 +756,18 @@ def build_gold_features(
         logger.info("Gold: processing %s", date_str)
         one_day = {date_str}
 
-        books = _load_silver_channels(
-            silver_root,
-            ["depth", "level2", "book", "klines",
-             "tardis_book_snapshot_1s", "tardis_incremental_book_l2"],
-            one_day,
-        )
+        # Load books in two passes so depth quality can be tracked downstream.
+        # Real L2 (executable-quality) is preferred for net-profit calculations.
+        # Synthetic klines are acceptable for microstructure feature snapshots only.
+        _REAL_L2_CHANNELS = [
+            "depth", "level2", "book",
+            "tardis_book_snapshot_1s", "tardis_incremental_book_l2",
+        ]
+        books_real = _load_silver_channels(silver_root, _REAL_L2_CHANNELS, one_day, depth_source="real_l2")
+        books_synth = _load_silver_channels(silver_root, ["klines"], one_day, depth_source="synthetic_kline")
+        book_frames = [df for df in [books_real, books_synth] if not df.is_empty()]
+        books = pl.concat(book_frames, how="diagonal") if book_frames else pl.DataFrame()
+
         trades = _load_silver_channels(
             silver_root,
             ["trade", "aggTrades", "matches", "tardis_trades"],
@@ -882,8 +927,15 @@ def build_labels(gold_dir: str, start: datetime, end: datetime, dry_run: bool) -
         df = df.join(avg_frag, on=TS, how="left")
 
     # --- Apply labels ---
-    if "cross_quote_basis_bps" in df.columns:
-        df = add_basis_labels(df, basis_col="cross_quote_basis_bps", ts_col=TS)
+    # Primary (USDC-specific, fallback to max-abs) → label_basis_*  [backward compat]
+    if "cross_quote_basis_primary_bps" in df.columns:
+        df = add_basis_labels(df, basis_col="cross_quote_basis_primary_bps", ts_col=TS, label_prefix="basis")
+    # USDC-specific → label_basis_usdc_*
+    if "cross_quote_basis_usdc_bps" in df.columns:
+        df = add_basis_labels(df, basis_col="cross_quote_basis_usdc_bps", ts_col=TS, label_prefix="basis_usdc")
+    # Max-absolute (generic stress) → label_basis_maxabs_*
+    if "cross_quote_basis_maxabs_bps" in df.columns:
+        df = add_basis_labels(df, basis_col="cross_quote_basis_maxabs_bps", ts_col=TS, label_prefix="basis_maxabs")
 
     df = add_regime_labels(df, ts_col=TS)
 

@@ -32,8 +32,9 @@ _THRESHOLDS_BPS = [5.0, 10.0, 25.0, 50.0]
 
 def add_basis_labels(
     df: pl.DataFrame,
-    basis_col: str = "cross_quote_basis_bps",
+    basis_col: str = "cross_quote_basis_primary_bps",
     ts_col: str = "ts_ns",
+    label_prefix: str = "basis",
 ) -> pl.DataFrame:
     """Add forward-looking basis labels to a feature DataFrame.
 
@@ -44,6 +45,9 @@ def add_basis_labels(
         df: Feature DataFrame with ``ts_col`` and ``basis_col`` columns.
         basis_col: Name of the cross-quote basis column.
         ts_col: Name of the timestamp column (nanoseconds).
+        label_prefix: Prefix for generated label columns. Default ``"basis"``
+            produces ``label_basis_1m_gt10bps``. Use ``"basis_usdc"`` for
+            USDC-specific labels or ``"basis_maxabs"`` for max-absolute labels.
 
     Returns:
         DataFrame with additional label columns appended.
@@ -58,10 +62,11 @@ def add_basis_labels(
         # Build a lookup frame keyed at (t + horizon_ns) → shifted back to t,
         # then join with join_asof (nearest, 90 s tolerance) to handle irregular
         # or gapped data where t + horizon_ns may not have an exact match.
+        reg_col = f"label_{label_prefix}_{horizon_name}"
         future = df.select(
             [
                 (pl.col(ts_col) - horizon_ns).alias(ts_col),
-                pl.col(basis_col).alias(f"label_basis_{horizon_name}"),
+                pl.col(basis_col).alias(reg_col),
             ]
         ).sort(ts_col)
         df = df.join_asof(
@@ -73,10 +78,10 @@ def add_basis_labels(
 
         # Classification labels
         for threshold in _THRESHOLDS_BPS:
-            col_name = f"label_basis_{horizon_name}_gt{int(threshold)}bps"
+            col_name = f"label_{label_prefix}_{horizon_name}_gt{int(threshold)}bps"
             df = df.with_columns(
                 (
-                    pl.col(f"label_basis_{horizon_name}").abs() > threshold
+                    pl.col(reg_col).abs() > threshold
                 ).cast(pl.Int8).alias(col_name)
             )
 
