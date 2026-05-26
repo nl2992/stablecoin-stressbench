@@ -1,5 +1,5 @@
 task,oracle_net_bps,best_model,best_model_net_bps,capture_pct
-basis_1m_gt10bps,146.75,lasso@price_plus_book,-81.37,-55.4
-executable_arb_q10000_1m,224.57,last_value@price_only,-73.94,-32.9
-executable_arb_q10000_5m,224.57,last_value@price_only,-83.72,-37.3
-executable_arb_q50000_5m,146.75,last_value@price_only,-206.62,-140.8
+basis_usdc_1m_gt10bps,161.73,logistic@price_plus_book,-49.09,-30.4
+basis_usdc_5m_gt25bps,161.73,gross_arb_threshold@price_only,-136.04,-84.1
+executable_arb_q10000_5m,224.57,price_threshold_25bps@price_only,-42.9,-19.1
+executable_arb_q50000_5m,146.75,gross_arb_threshold@price_only,-112.73,-76.8

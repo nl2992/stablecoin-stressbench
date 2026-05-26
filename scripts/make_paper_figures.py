@@ -215,10 +215,16 @@ def figure_4_ablation_heatmap(experiments_dir: Path, output_dir: Path, fmt: str)
         return
 
     with open(all_results) as fh:
-        rows = [r for r in csv.DictReader(fh) if r["task"] == "basis_1m_gt10bps" and r["model"] != "oracle"]
+        all_rows = list(csv.DictReader(fh))
+
+    # Prefer USDC-specific primary task; fall back to generic for backward compat
+    for primary_task in ("basis_usdc_1m_gt10bps", "basis_1m_gt10bps"):
+        rows = [r for r in all_rows if r["task"] == primary_task and r["model"] != "oracle"]
+        if rows:
+            break
 
     if not rows:
-        logger.warning("No basis_1m_gt10bps results — skipping Figure 4.")
+        logger.warning("No basis_*_1m_gt10bps results — skipping Figure 4.")
         return
 
     models = sorted({r["model"] for r in rows})
@@ -240,7 +246,8 @@ def figure_4_ablation_heatmap(experiments_dir: Path, output_dir: Path, fmt: str)
     ax.set_xticklabels(feat_sets, rotation=25, ha="right", fontsize=9)
     ax.set_yticks(range(len(models)))
     ax.set_yticklabels(models, fontsize=9)
-    ax.set_title("Figure 4 — AUROC Ablation: basis_1m_gt10bps")
+    task_label = rows[0]["task"] if rows else "basis_usdc_1m_gt10bps"
+    ax.set_title(f"Figure 4 — AUROC Ablation: {task_label}")
     for i in range(len(models)):
         for j in range(len(feat_sets)):
             v = data[i, j]
