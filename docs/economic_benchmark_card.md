@@ -88,6 +88,18 @@ Net-profit labels use only real L2 order-book depth:
 
 Synthetic kline depth (`synthetic_kline`) is excluded from paper-grade calculations. Provenance is auditable per row via `is_paper_grade_depth` and `depth_sources_used` columns.
 
+## Historical Event Catalogue
+
+The benchmark catalogues **18 stress events** (2020–2023) across **7 mechanism classes**.
+Execution-grade claims are anchored to the two Tier A events (USDC/SVB 2023).
+Source verification status for every event is in `src/stressbench/history/source_verification.py`.
+
+| Tier | N | Example | Execution claims? |
+|---|---|---|---|
+| A | 2 | USDC/SVB Mar 2023 | Yes — all oracle gap, net bps, model evaluation |
+| B | 11 | Terra/UST, FTX, BUSD, USDT/Curve | Price-grade estimates only ("est.") |
+| C | 5 | IRON/TITAN, FEI, Acala, Binance conversion | Taxonomy context only |
+
 ## Reproducibility
 
 | Item | Status |
@@ -98,7 +110,9 @@ Synthetic kline depth (`synthetic_kline`) is excluded from paper-grade calculati
 | All results | `results/experiments/all_results.csv` (136 rows) |
 | Paper tables | `results/paper/table_{1-4}_*.csv` |
 | Paper figures | `results/paper/figures/figure_{1-5}_*.png` |
-| Tests | 121 passing (`pytest tests/ -q`) |
+| Historical tables (14–19) | `results/paper_addon/table_{14..19}_*.csv` |
+| Historical figures (25–28) | `results/paper_addon/figures/figure_{25..28}_*.png` |
+| Tests | **187 passing** (`pytest tests/ -q`) |
 
 ## Benchmark-Freeze Tag
 
@@ -109,7 +123,8 @@ All add-on experiments write to `results/experiments_addon/` and `results/paper_
 
 A reviewer can understand the benchmark from this card without reading source code. Known limitations:
 
-1. **Single primary stress event** — SVB/USDC Mar 2023. Validation uses Terra/LUNA May 2022.
+1. **Single Tier-A primary stress event** — SVB/USDC Mar 2023. The 18-event catalogue documents mechanism diversity; Tier A expansion to other mechanisms requires additional L2 data acquisition.
 2. **CEX settlement is proxied** — true on-chain settlement latency not modeled.
 3. **Latency simplified** — partial fills and network latency not included.
 4. **Feature set** — no sub-minute order flow imbalance.
+5. **Mechanism generalisation** — models trained on fiat-reserve bank shock may not generalise to algorithmic or exchange-credit failure modes.

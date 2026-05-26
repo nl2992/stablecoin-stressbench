@@ -173,7 +173,7 @@ All non-oracle models produce **negative net bps** on the test split. The oracle
 - [x] No-lookahead labels verified (`tests/test_no_lookahead.py`)
 - [x] Split integrity verified (`tests/test_split_integrity.py`)
 - [x] Depth-source filter verified (`tests/test_depth_source_filter.py`)
-- [x] 121 tests passing
+- [x] **187 tests passing** (`pytest tests/ -q`)
 - [x] Full experiment grid committed (`results/experiments/all_results.csv`, 136 rows)
 - [x] Paper tables committed (`results/paper/table_{1-4}_*.csv`)
 - [x] Paper figures committed (`results/paper/figures/figure_{1-5}_*.png`)
@@ -181,8 +181,49 @@ All non-oracle models produce **negative net bps** on the test split. The oracle
 
 ---
 
-## Next Steps (not yet implemented)
+## Historical Event Catalogue
 
-- **Expected net-profit regressor**: Predict `net_profit_bps_q10000` directly (regression target) and trade only when predicted net profit exceeds a calibrated floor. This is the natural next model after the oracle-gap analysis.
-- **Confidence-weighted sizing**: Scale notional by predicted probability rather than trading full size on binary signal.
-- **Extended data pull**: Expand beyond the 5-day SVB window to cover the full stress+recovery arc (Mar 10 – Apr 1 2023) and include the USDT Curve pool de-peg (Jun 2023).
+Stablecoin stress is not a single phenomenon. The benchmark catalogues **18 events** across
+**7 mechanism classes** (2020–2023):
+
+| Class | N | Representative event | Tier |
+|---|---|---|---|
+| Algorithmic / Reflexive | 5 | Terra/UST May 2022 | B |
+| **Fiat-Reserve Bank Shock** | **2** | **USDC/SVB Mar 2023** | **A** |
+| Regulatory Winddown | 2 | BUSD Feb 2023 | B |
+| Exchange Credit / Liquidity | 3 | FTX Nov 2022 | B |
+| DeFi Pool Imbalance | 3 | USDT/Curve Jun 2023 | B |
+| Collateral / Liquidation | 1 | DAI Black Thursday 2020 | B |
+| RWA / Niche Stablecoin | 2 | USDR Oct 2023 | B |
+
+**Claim permissions by tier:**
+- Tier A only: execution-gap claims, oracle bps, model net bps, oracle capture %
+- Tier B: price-grade estimates ("est.") for depeg magnitude and frequency only
+- Tier C: taxonomy and mechanism context; no numerical claims
+
+Source verification: `src/stressbench/history/source_verification.py` (26 records; `use_in_paper=True` requires `verified=True`).
+Price-grade feature summaries: `results/paper_addon/table_17_historical_price_grade_summary.csv`.
+Mechanism taxonomy: `results/paper_addon/table_18_mechanism_taxonomy_summary.csv`.
+
+## Benchmark-Freeze Checklist
+
+- [x] Bronze → Silver → Gold pipeline reproduced from raw data
+- [x] Depth-source provenance tagged per row (`depth_sources_used`, `is_paper_grade_depth`)
+- [x] Real-L2-only net-profit labels (`feat_net_profit_1m`)
+- [x] No-lookahead labels verified (`tests/test_no_lookahead.py`)
+- [x] Split integrity verified (`tests/test_split_integrity.py`)
+- [x] Depth-source filter verified (`tests/test_depth_source_filter.py`)
+- [x] **187 tests passing** (`pytest tests/ -q`)
+- [x] Full experiment grid committed (`results/experiments/all_results.csv`, 136 rows)
+- [x] Paper tables committed (`results/paper/table_{1-4}_*.csv`)
+- [x] Paper figures committed (`results/paper/figures/figure_{1-5}_*.png`)
+- [x] Add-on tables committed (`results/paper_addon/table_{5,8,8b,9,10,14-19}_*.csv`)
+- [x] Historical catalogue: 18 events, 7 mechanism classes, source verification registry
+- [x] Tag: `v0.1.0-benchmark-freeze`
+
+## Open Problems (future work)
+
+- **Tier A expansion**: Acquire L2 archives for Terra/UST (Binance), FTX stress (Kraken), USDT/Curve to enable cross-mechanism execution-gap comparison.
+- **Uncertainty-aware abstention**: Bootstrap ensemble models that abstain when uncertainty is high; computational cost deferred.
+- **Threshold ablation**: Full multi-rule ablation (fixed 0.5/0.7, validation F1, mean bps) to confirm null result is threshold-rule-independent.
+- **Meta-labeling on validation split**: Current meta-labeling fails due to zero profitable primary-signal windows in the calm training split; re-train on Terra/LUNA validation data.

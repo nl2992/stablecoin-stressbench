@@ -159,9 +159,20 @@ python scripts/run_pipeline.py --start 2022-01-10 --end 2024-01-22
 
 ---
 
+## Historical Event Catalogue
+
+The benchmark catalogues **18 stress events** (2020–2023) across **7 mechanism classes**
+(algorithmic/reflexive, fiat-reserve bank shock, regulatory winddown, exchange credit/liquidity,
+DeFi pool imbalance, collateral liquidation, RWA/niche stablecoin).
+
+Execution-aware claims are anchored to **Tier A events only** (USDC/SVB 2023).
+Tier B events support price-grade (estimate) claims. Tier C events provide taxonomy context.
+
+See `docs/stablecoin_stress_event_catalog.md` for full entries.
+
 ## Limitations and Caveats
 
-1. **Single stress event (SVB)**: The test set covers only the March 2023 USDC depeg. Generalization to other stress events is not guaranteed.
+1. **Single Tier-A stress event**: The test set covers the March 2023 USDC/SVB depeg (one of two Tier A events). Generalisation to other mechanism classes (algorithmic, exchange-credit, DeFi-pool) requires Tier A data for those events, which is not yet available.
 
 2. **Binance-centric depth**: Net profit computations rely on Binance book depth. Coinbase/Kraken depth data would change execution cost estimates.
 

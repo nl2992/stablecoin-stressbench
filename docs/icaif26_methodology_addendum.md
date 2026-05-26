@@ -153,23 +153,48 @@ be used to make execution-gap or profitability arguments.
 
 ### 9.3 The Event Catalogue Approach
 
-The full event catalogue (`docs/stablecoin_stress_event_catalog.md`) documents 7 events
-spanning June 2021 to June 2023:
+The full event catalogue (`docs/stablecoin_stress_event_catalog.md`) documents **18 events**
+spanning March 2020 to October 2023 across **7 mechanism classes**:
 
-1. **IRON/TITAN Jun 2021** (Tier C): Canonical algorithmic stablecoin death spiral. Terminal depeg.
-2. **Terra/UST May 2022** (Tier B): Large-scale algorithmic failure. $40B market cap destruction.
-3. **FTX Collapse Nov 2022** (Tier B): Exchange credit shock. Small CEX stablecoin contagion (<20 bps).
-4. **BUSD Regulatory Feb–Mar 2023** (Tier B): Regulatory winddown. Managed -30 bps brief dislocation.
-5. **USDC/SVB Mar 10–15 2023** (Tier A): Primary benchmark event. -1300 bps peak. Full L2 captured.
-6. **USDC Recovery Mar 15–Apr 1 2023** (Tier A): Recovery window. Normal conditions within 5 days.
-7. **USDT/Curve Jun 2023** (Tier B): Brief pool imbalance. -8 bps. Hours not days.
+**Algorithmic / Reflexive (5 events, Tier B–C):**
+- FEI Launch Stress Apr 2021 (C): Partial-reserve algorithmic design fails at launch.
+- IRON/TITAN Jun 2021 (C): Canonical death spiral. Terminal depeg in <24h.
+- MIM/Wonderland Jan–Feb 2022 (B): Governance-confidence shock via DeFi collateral links.
+- Terra/UST May 2022 (B): Large-scale algorithmic failure. $40B destruction. Validation split.
+- USDD/TRON Jun 2022 (B): UST-contagion sentiment on competing algorithmic stablecoin.
 
-The event taxonomy serves two purposes:
-1. **Generalizability framing**: The benchmark tests on the March 2023 SVB event. Users extending
-   the benchmark to other events must account for data tier limitations.
-2. **Mechanism classification**: Each event represents a distinct failure mode. Models trained on
-   SVB-style reserve-bank shocks may not generalize to algorithmic (UST-style) or exchange-specific
-   (FTX-style) dislocations.
+**Fiat-Reserve Bank Shock (2 events, Tier A):**
+- **USDC/SVB Mar 10–15 2023 (A): PRIMARY benchmark event. −1300 bps. Full L2 captured.**
+- USDC Recovery Mar 15–Apr 1 2023 (A partial): Normal conditions; low label density.
+
+**Regulatory / Issuer Winddown (2 events, Tier B–C):**
+- Binance USDC→BUSD Conversion Sep 2022 (C): Policy event; 0 bps depeg.
+- BUSD Regulatory Feb–Mar 2023 (B): NYDFS order; −30 bps managed dislocation.
+
+**Exchange Credit / Liquidity (3 events, Tier B):**
+- Celsius/3AC Contagion Jun 2022 (B): DeFi credit cascade; est. −100 bps CEX contagion.
+- HUSD Issuer Failure Aug 2022 (B): Exchange-issuer credit risk; est. −800 bps.
+- FTX Collapse Nov 2022 (B): Exchange insolvency; small CEX contagion (−20 bps verified).
+
+**DeFi Pool Imbalance (3 events, Tier B):**
+- Curve 3Pool/UST May 2022 (B): 12h leading indicator before UST collapse.
+- USDC/DAI Secondary DeFi SVB 2023 (B): MakerDAO PSM co-incident with Tier A event.
+- USDT/Curve Jun 2023 (B): Brief pool imbalance. −8 bps. Hours not days.
+
+**Collateral / Liquidation (1 event, Tier B):**
+- DAI Black Thursday Mar 2020 (B): Collateral crash; DAI **above** peg (+150 bps verified).
+
+**RWA / Niche Stablecoin (2 events, Tier B–C):**
+- Acala aUSD Exploit Aug 2022 (C): 1.28B unbacked aUSD minted; protocol halt.
+- USDR RWA Failure Oct 2023 (B): Real-estate illiquidity; est. −5000 bps.
+
+The event taxonomy serves three purposes:
+1. **Generalizability framing**: Benchmark tests on the SVB (fiat-reserve) event. Models trained on
+   this mechanism class may not generalise to algorithmic, exchange-credit, or DeFi-pool failures.
+2. **Mechanism classification**: Each mechanism class represents a structurally distinct failure mode
+   with different depth-deterioration profiles, contagion chains, and signal characteristics.
+3. **Future data roadmap**: The 18-event catalogue is the target for Tier A expansion as additional
+   exchange L2 archives are acquired.
 
 ### 9.4 Coverage Score Protocol
 

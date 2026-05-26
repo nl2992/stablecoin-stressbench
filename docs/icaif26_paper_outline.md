@@ -68,17 +68,31 @@ Stablecoin stress events generate frequent price dislocations, but many apparent
 
 No information from the test split is used in training or calibration. No-lookahead is formally verified (see §3.4).
 
-### 3.3 Feature sets
+### 3.3 Historical event catalogue and data tiering
+
+The benchmark catalogues **18 stress events** (2020–2023) across **7 mechanism classes**:
+algorithmic/reflexive (N=5), fiat-reserve bank shock (N=2, Tier A), regulatory winddown (N=2),
+exchange credit/liquidity (N=3), DeFi pool imbalance (N=3), collateral/liquidation (N=1),
+RWA/niche stablecoin (N=2).
+
+Tier A (execution-grade, N=2): real L2 depth; VWAP labels and oracle gap computable.
+Tier B (price-grade, N=11): OHLCV/DEX; basis estimates only.
+Tier C (context-grade, N=5): taxonomy only; no numerical claims.
+
+All execution-aware claims are anchored to Tier A. Tier B figures use "est." notation.
+
+### 3.4 Feature sets
 Four nested sets from narrowest to broadest:
 - `price_only`: 5 cross-quote basis and stablecoin deviation columns
 - `price_plus_book`: + 7 microstructure columns (spread, depth, imbalance, volume)
 - `price_book_frag`: + 3 cross-venue fragmentation columns
 - `price_book_settle`: + 7 on-chain settlement proxies
 
-### 3.4 Integrity guarantees
+### 3.5 Integrity guarantees
 - No-lookahead: labels constructed by `join_asof` at `t + horizon`; formally tested
 - Split integrity: no cross-split overlap; tested against `configs/event_windows.yaml`
 - Depth provenance: `depth_source ∈ {real_l2_snapshot, real_l2_incremental}` for net-profit labels; `is_paper_grade_depth` flag per row; tested
+- Source verification: `use_in_paper=True` claims require `verified=True` in `source_verification.py`; enforced by `test_historical_layer.py`
 
 ---
 
@@ -180,16 +194,18 @@ Directly predicting net_profit_bps improves calibration vs classification models
 ## 7. Limitations and Future Work (~0.5 pages)
 
 **Limitations**:
-- Single primary stress event (SVB Mar 2023); validation event is Terra/LUNA May 2022
+- Single Tier-A stress event (SVB Mar 2023); 18-event catalogue documents mechanism diversity but other events lack L2 depth for execution-grade analysis
+- Models trained on fiat-reserve bank shock may not generalise to algorithmic, exchange-credit, or DeFi-pool failure modes
 - CEX internal book settlement is proxied; true on-chain settlement latency not modeled
 - Partial fills and latency-induced execution slippage are simplified
 - Feature set does not include order flow imbalance at sub-minute resolution
 
 **Future work**:
+- Tier A expansion: acquire L2 archives for Terra/UST, FTX stress, USDT/Curve events
 - Expected net-profit models with uncertainty-aware abstention
 - Confidence-weighted position sizing (scale notional by predicted probability)
-- Extended data: post-SVB USDC recovery (Mar 15 – Apr 1 2023), USDT Curve stress (Jun 2023)
 - Graph-based venue fragmentation features during stress
+- Cross-mechanism model generalisation testing
 
 ---
 

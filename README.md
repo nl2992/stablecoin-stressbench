@@ -80,10 +80,36 @@ python scripts/start_live_capture.py
 pytest tests/ -q
 ```
 
+## Historical Event Catalogue
+
+Stablecoin stress is a recurring phenomenon across multiple failure modes. The benchmark catalogues
+**18 stress events** spanning 2020–2023 across **7 mechanism classes**:
+
+| Mechanism class | Representative event | Tier | N |
+|---|---|---|---|
+| Algorithmic / Reflexive | Terra/UST May 2022 | B | 5 |
+| **Fiat-Reserve Bank Shock** | **USDC/SVB Mar 2023** | **A** | **2** |
+| Regulatory / Issuer Winddown | BUSD Feb 2023 | B | 2 |
+| Exchange Credit / Liquidity | FTX Nov 2022 | B | 3 |
+| DeFi Pool Imbalance | USDT/Curve Jun 2023 | B | 3 |
+| Collateral / Liquidation | DAI Black Thursday 2020 | B | 1 |
+| RWA / Niche Stablecoin | USDR Oct 2023 | B | 2 |
+
+Execution-aware arbitrage analysis (oracle gap, model evaluation) is performed only on the
+two Tier A events where real L2 order-book depth supports VWAP net-profit labels.
+All Tier B magnitude figures carry "est." notation.
+
+See [`docs/stablecoin_stress_event_catalog.md`](docs/stablecoin_stress_event_catalog.md) for
+full event entries and [`configs/event_windows_historical.yaml`](configs/event_windows_historical.yaml)
+for the authoritative machine-readable source.
+
 ## Documentation
 
 - [Research Methodology](docs/research_methodology.md) — event-study design, execution-label construction, model stack, and empirical results summary
+- [Historical Event Catalog](docs/stablecoin_stress_event_catalog.md) — 18 events across 7 mechanism classes with tier classification and source verification
+- [Historical Methodology](docs/historical_methodology.md) — tier classification rules, claim permissions, source verification protocol
 - [Data Card](docs/data_card.md) — dataset provenance, schema, and depth-source tagging
+- [Reproducibility Manifest](docs/reproducibility_manifest.md) — step-by-step reproduction guide (Steps 0–11)
 
 ## License
 MIT License

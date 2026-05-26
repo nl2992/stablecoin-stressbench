@@ -176,6 +176,42 @@ python scripts/make_paper_figures_extended.py
 | `figure_21_horizon_ratio.png` | Price-to-execution ratio by horizon |
 | `figure_22_calibration.png` | Reliability / calibration diagram |
 
+### Step 10 — Historical catalogue tables (18-event expansion)
+
+```bash
+python scripts/generate_source_audit_table.py
+python scripts/rebuild_historical_tables.py
+python scripts/build_price_grade_event_features.py
+python scripts/make_mechanism_taxonomy_table.py
+python scripts/run_event_robustness.py
+```
+
+**Outputs** (written to `results/paper_addon/`):
+
+| File | Description |
+|---|---|
+| `table_14_historical_event_catalog.csv` | 18 events: mechanism class, tier, dates, empirical use |
+| `table_15_event_data_coverage.csv` | 18 events × 5 data source type columns |
+| `table_16_event_source_audit.csv` | 26 source records: verified / use_in_paper flags |
+| `table_17_historical_price_grade_summary.csv` | Price-grade summaries (16 synthetic, 2 Tier A empirical) |
+| `table_18_mechanism_taxonomy_summary.csv` | 7 mechanism classes: event counts, tier distribution, max depeg |
+| `table_19_event_robustness.csv` | Structural price-to-execution gap characterisation by mechanism |
+
+### Step 11 — Expanded historical figures (mechanism taxonomy, 18-event coverage)
+
+```bash
+python scripts/make_expanded_historical_figures.py
+```
+
+**Outputs** (written to `results/paper_addon/figures/`):
+
+| File | Content |
+|---|---|
+| `figure_25_mechanism_taxonomy.png` | Event count + max depeg by mechanism class |
+| `figure_26_coverage_matrix.png` | 18-event × data source type coverage matrix |
+| `figure_27_event_timeline_expanded.png` | Event timeline 2020–2023 by mechanism class and tier |
+| `figure_28_tierb_depeg_panel.png` | Tier B depeg severity vs. Tier A benchmark |
+
 ---
 
 ## Integrity Tests
@@ -195,6 +231,7 @@ Key test files:
 | `test_robustness_grid.py` | Robustness grid schema and monotone properties |
 | `test_expected_net_profit_model.py` | ExpectedNetProfitRegressor interface and calibration |
 | `test_uncertainty_abstention.py` | Uncertainty module API |
+| `test_historical_layer.py` | 18-event YAML count, mechanism classes, Tier A identity, source registry coverage, synthetic flag correctness |
 
 ---
 
