@@ -69,17 +69,36 @@ Manually curated issuer-level events for USDC (Circle):
 
 ---
 
+## Data Source Provenance
+
+| Source | Bronze ingestor | Silver normalizer | Gold table | depth_source tag |
+|---|---|---|---|---|
+| Binance Vision aggTrades archive | `archive_to_bronze.py` | `normalize_binance_trades` | `feat_book_1m` (trade stats) | — |
+| Binance Vision klines (1m OHLCV) | `archive_to_bronze.py` | `normalize_binance_klines` | `feat_book_1m`, `feat_net_profit_1m` | `synthetic_kline` |
+| Binance Vision bookDepth (futures) | `archive_to_bronze.py` | `normalize_binance_depth` | `feat_book_1m`, `feat_net_profit_1m` | `real_l2_incremental` |
+| Coinbase WebSocket level2 | `start_live_capture.py` | `normalize_coinbase_level2` | `feat_book_1m`, `feat_net_profit_1m` | `real_l2_snapshot` / `real_l2_incremental` |
+| Kraken WebSocket book | `start_live_capture.py` | `normalize_kraken_book` | `feat_book_1m`, `feat_net_profit_1m` | `real_l2_snapshot` |
+| Tardis book_snapshot_1s | `archive_to_bronze.py` | `normalize_tardis_book_snapshot_1s` | `feat_book_1m`, `feat_net_profit_1m` | `real_l2_snapshot` |
+| Tardis incremental_book_L2 | `archive_to_bronze.py` | `normalize_tardis_incremental_book_l2` | `feat_book_1m`, `feat_net_profit_1m` | `real_l2_incremental` |
+| Etherscan ERC-20 transfers | `fetch_real_data.py` | `normalize_etherscan_transfers` | `feat_settlement_1m` | — |
+| The Graph Uniswap v3 swaps | `fetch_real_data.py` | `normalize_uniswap_swaps` | `feat_settlement_1m` | — |
+
+> **depth_source** tags each Silver book row by data quality.  `real_l2_*` rows represent actual limit-order book state and are required for paper-grade net-profit computations.  `synthetic_kline` rows are OHLCV-derived (5-level synthetic ladder) and are acceptable only for price-reference features.
+
+---
+
 ## Silver Layer Schema
 
-Normalized per-venue Parquet files (Hive-partitioned: `venue/channel/symbol/date/hour/`).
+Normalized per-venue Parquet files (Hive-partitioned: `venue=*/channel=*/symbol=*/date=*/hour=*/`).
 
-**Common columns:** `ts_event_ns`, `ts_receive_ns`, `venue_id`, `native_symbol`, `channel`
+**Common columns:** `ts_event_ns`, `ts_receive_ns`, `venue_id`, `instrument_id`, `native_symbol`, `payload_hash`
 
-**Trades:** `price`, `size`, `side`, `trade_id`, `is_buyer_maker`
+**Trades (`fact_trade`):** `price`, `size`, `side`, `trade_id`, `is_outlier_price`, `raw_source`
 
-**Book snapshots:** `bid_price_l{1..5}`, `bid_size_l{1..5}`, `ask_price_l{1..5}`, `ask_size_l{1..5}`
+**Book levels (`fact_book_level`):** `side`, `level` (0 = best), `price`, `size`, `checksum`, `depth_source`,
+`is_crossed_book`, `is_negative_size`, `is_sequence_gap`, `is_checksum_failed`, `is_stale_quote`, `is_resync_period`
 
-**On-chain transfers:** `block_number`, `tx_hash`, `from_address`, `to_address`, `value`, `token_symbol`
+**On-chain transfers:** `block_number`, `tx_hash`, `from_address`, `to_address`, `value`, `token_symbol`, `ts_unix_seconds`
 
 ---
 
@@ -87,37 +106,60 @@ Normalized per-venue Parquet files (Hive-partitioned: `venue/channel/symbol/date
 
 One row per UTC minute; produced by `scripts/build_features.py`.
 
-### Features (21 columns)
+### Core feature tables
+
+| Table | Key columns | Description |
+|---|---|---|
+| `feat_book_1m` | `ts_1m_ns`, `venue_id`, `instrument_id` | BBO, spread, depth, imbalance, data quality score per venue per minute |
+| `feat_basis_1m` | `ts_1m_ns` | Three cross-quote basis columns, stablecoin price tables |
+| `feat_net_profit_1m` | `ts_1m_ns` | VWAP round-trip net profit at four notional sizes; `depth_source` column distinguishes real-L2 vs synthetic rows |
+| `feat_fragmentation_1m` | `ts_1m_ns`, `stablecoin` | Cross-venue price dispersion per stablecoin per minute |
+| `feat_settlement_1m` | `ts_1m_ns` | On-chain settlement proxy (transfer count, gas, Uniswap liquidity) |
+
+### Cross-quote basis columns (feat_basis_1m)
 
 | Column | Description |
 |---|---|
-| `cross_quote_basis_bps` | USDT–USDC price gap in basis points (Binance spot) |
-| `vwap_buy_bps` | VWAP cost of buying USDC with USDT at $10K notional |
-| `vwap_sell_bps` | VWAP revenue of selling USDC for USDT at $10K notional |
-| `bid_ask_spread_bps` | Best bid–ask spread in basis points |
-| `depth_1pct_bps` | Book depth within ±1% of mid |
-| `order_imbalance` | (bid_depth – ask_depth) / (bid_depth + ask_depth) |
-| `trade_flow_imbalance` | Buy volume minus sell volume over trailing 5 minutes |
-| `btc_usdt_mid` | BTC/USDT mid price (regime proxy) |
-| `btc_usdc_mid` | BTC/USDC mid price |
-| `btc_basis_bps` | BTC cross-venue basis (USDT vs USDC quote) |
-| `net_profit_bps_q10000` | Round-trip net profit at $10K after fees and price impact |
-| `net_profit_bps_q50000` | Round-trip net profit at $50K |
-| `net_profit_bps_q100000` | Round-trip net profit at $100K |
-| `net_profit_bps_q500000` | Round-trip net profit at $500K |
-| `mint_event` | 1 if a USDC mint event occurred in this minute |
-| `burn_event` | 1 if a USDC burn event occurred in this minute |
-| `block_lag_proxy` | Estimated Ethereum block confirmation lag (seconds) |
-| `fragmentation_hhi` | Herfindahl index of cross-venue price fragmentation |
-| `venue_count` | Number of active venues with valid quotes |
-| `return_1m` | 1-minute log return of USDC/USDT |
-| `volatility_5m` | Rolling 5-minute realized volatility |
+| `cross_quote_basis_usdc_bps` | `10000 × (BTC_via_USDC − BTC_direct) / BTC_direct` — USDC-specific basis, primary signal for SVB/USDC stress events |
+| `cross_quote_basis_usdt_bps` | `10000 × (BTC_via_USDT − BTC_direct) / BTC_direct` — USDT-specific basis |
+| `cross_quote_basis_maxabs_bps` | Max absolute of USDC and USDT basis — generic stress detector |
+| `cross_quote_basis_primary_bps` | USDC basis with max-abs fallback — backward-compatible label driver |
+| `basis_primary_asset` | `"USDC"` or `"max_abs"` — indicates which route drove `cross_quote_basis_primary_bps` |
 
-### Labels (60 columns)
+### Net-profit columns (feat_net_profit_1m)
 
-**Basis labels** (horizon × threshold): `label_basis_{1m,5m,15m,1h}_gt{5,10,25,50}bps` — binary classification; regression targets `label_basis_{horizon}`.
+| Column | Description |
+|---|---|
+| `net_profit_bps_q10000` | Round-trip net profit at $10K after taker fees and VWAP price impact |
+| `net_profit_bps_q50000` | Same at $50K notional |
+| `net_profit_bps_q100000` | Same at $100K notional |
+| `net_profit_bps_q500000` | Same at $500K notional |
+| `buy_venue` / `sell_venue` | Best route identified by the VWAP walk |
+| `depth_source` | `"real_l2"` if any real L2 book was used; `"synthetic_kline"` otherwise |
 
-**Arbitrage window labels** (notional × horizon × threshold): `label_arb_q{10000,50000,100000,500000}_{1m,5m,15m}_gt{0,5,10}bps` — 1 if max executable net profit over next H minutes exceeds threshold.
+### Book microstructure columns (feat_book_1m, aggregated in dataset.parquet)
+
+| Column | Description |
+|---|---|
+| `spread_bps_mean` | Mean bid–ask spread across active venues |
+| `depth_bid_10bp_mean` | Mean BTC depth within 10 bps of bid across venues |
+| `depth_ask_10bp_mean` | Mean BTC depth within 10 bps of ask across venues |
+| `imbalance_1bp_mean` | Mean level-0 quote imbalance `(bid_sz − ask_sz) / (bid_sz + ask_sz)` |
+| `data_quality_score_min` | Min data quality score across venues (penalizes checksum failures and resync periods) |
+
+### Labels
+
+**Basis labels** — three families, one per basis variant:
+
+| Family | Column pattern | Basis source |
+|---|---|---|
+| `label_basis_*` | `label_basis_{1m,5m,15m,1h}[_gt{5,10,25,50}bps]` | `cross_quote_basis_primary_bps` (backward-compat driver) |
+| `label_basis_usdc_*` | `label_basis_usdc_{1m,5m,15m,1h}[_gt{5,10,25,50}bps]` | `cross_quote_basis_usdc_bps` (USDC-specific) |
+| `label_basis_maxabs_*` | `label_basis_maxabs_{1m,5m,15m,1h}[_gt{5,10,25,50}bps]` | `cross_quote_basis_maxabs_bps` (generic stress) |
+
+Binary columns (`_gt{N}bps`) are `int8` — 1 if `|future_basis| > N bps`.  Regression targets (no threshold suffix) are `float64` in basis points.
+
+**Executable arbitrage labels** (notional × horizon): `label_executable_arb_q{10000,50000}__{1m,5m}_gt0bps` — 1 if net_profit_bps > 0 over the next H minutes at the given notional size.
 
 **Regime labels**: `label_regime_{calm,stress,recovery}` — manual event-based regime tags.
 

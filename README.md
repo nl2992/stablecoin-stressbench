@@ -8,10 +8,14 @@ This repository implements a full-featured, reproducible benchmark and research 
 
 Can AI models identify stablecoin dislocations that are still economically meaningful after spreads, depth, fees, transfer frictions, and settlement risk are included?
 
-Stablecoin StressBench proves three things:
+Stablecoin StressBench is designed to test three hypotheses:
 1. **Cross-quote and cross-venue dislocations** are measurable and severe during stablecoin stress events.
 2. **Naive price-only signals overstate arbitrage** because they ignore executable depth, fees, latency, and transfer constraints.
 3. **Joint feature models** (combining order-book state, cross-venue basis, stablecoin FX deviation, venue status, and on-chain settlement features) outperform price/candle-only baselines.
+
+### Preliminary empirical result
+
+During the SVB-crisis test window (March 2023), **35.1% of 1-minute windows** showed a cross-quote basis exceeding 10 bps on price alone — yet only **3.34% remained profitable** after a full VWAP order-book walk at $10K notional (including taker fees and price impact). This price-to-execution gap is the core quantitative claim of the benchmark.
 
 ## Repository Structure
 
@@ -40,14 +44,31 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-### 2. Run ClickHouse
+### 2. Build Bronze → Silver → Gold (historical data)
 ```bash
-docker-compose up -d
+# Ingest Binance Vision archive for a date range
+python scripts/archive_to_bronze.py --start 2023-03-10 --end 2023-03-15
+
+# Normalize Bronze to Silver, then build Gold feature tables
+python scripts/build_features.py --start 2023-03-10 --end 2023-03-15
 ```
 
-### 3. Run Live Capture (Example)
+### 3. Run the experiment grid
+```bash
+# Train all models and evaluate across all tasks × feature sets
+python scripts/run_experiments.py --data-dir data/gold
+
+# Results written to results/experiments/all_results.csv
+```
+
+### 4. Run Live Capture (optional)
 ```bash
 python scripts/start_live_capture.py
+```
+
+### 5. Run tests
+```bash
+pytest tests/ -q
 ```
 
 ## License
