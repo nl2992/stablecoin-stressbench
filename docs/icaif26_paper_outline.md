@@ -2,8 +2,9 @@
 
 **Title**: Stablecoin StressBench: An Execution-Aware Benchmark for Stablecoin Dislocations
 
-**Venue**: ACM ICAIF 2026
-**Format**: 8 pages max (ACM double-column), no appendices, no supplementary material
+**Venue**: ACM ICAIF 2026 — Milan, Italy, November 14–17, 2026
+**Format**: 8 pages max (ACM sigconf double-column), no appendices, no supplementary material
+**Submission mode**: Double-blind (anonymous parameter in documentclass)
 **Contribution type**: Benchmark / empirical study
 
 ---
@@ -45,7 +46,7 @@ Stablecoin stress events generate frequent price dislocations, but many apparent
 | Stablecoin de-pegs | Cruz et al. 2024; Kwon et al. 2023 | Execution-aware follow-on: not just price gap but tradable gap |
 | Limits to arbitrage | Hautsch et al. 2018; Shleifer & Vishny 1997 | Empirical L2 measurement vs. theoretical framing |
 | Market microstructure | Cont & Kukanov 2013; Glosten & Milgrom 1985 | Real-time VWAP walk with depth provenance tracking |
-| Crypto ML benchmarks | Salý-Kaufmann et al. 2026 | Stablecoin-specific, event-based, execution-labeled |
+| Financial ML benchmarks | López de Prado 2018; Makarov & Schoar 2020 | Meta-labeling for execution filtering; execution barriers in crypto arbitrage |
 | Stablecoin flows | Griffin & Shams 2020 | Microstructure execution focus, not flow manipulation |
 
 ---
@@ -247,12 +248,11 @@ Stablecoin StressBench introduces a benchmark for execution-aware stablecoin arb
 4. Griffin & Shams (2020) — Tether stablecoin flows
 5. Cont & Kukanov (2013) — optimal order routing
 6. Glosten & Milgrom (1985) — adverse selection in market microstructure
-7. Salý-Kaufmann et al. (2026) — ML benchmark for crypto microstructure
+7. López de Prado (2018) — Advances in Financial Machine Learning (meta-labeling)
 8. Shleifer & Vishny (1997) — limits to arbitrage
-9. He & Krishnamurthy (2013) — intermediary asset pricing
-10. Gorton & Pennacchi (1990) — financial intermediaries and liquidity creation
-11. Gromb & Vayanos (2010) — limits to arbitrage and financial fragility
-12. Makarov & Schoar (2020) — trading and arbitrage in cryptocurrency markets
+9. Gromb & Vayanos (2010) — limits of arbitrage: state of the theory
+10. Makarov & Schoar (2020) — trading and arbitrage in cryptocurrency markets
+11. Vidal-Tomàs, Briola & Aste (2023) — FTX downfall and Binance consolidation
 13. Pennington et al. (2022) — algorithmic stablecoin failure modes
 14. Adams et al. (2021) — Uniswap v3 and AMM liquidity
 15. Prokopenko et al. (2023) — on-chain settlement latency under stress

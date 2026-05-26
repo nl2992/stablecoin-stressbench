@@ -15,7 +15,8 @@ This paper introduces **Stablecoin StressBench**, a transaction-cost-aware bench
 | Kwon, Minegishi & Nishi (2023) | Terra/LUNA de-peg dynamics; algorithmic stablecoin collapse | Motivates the validation split (May 2022 Terra event) |
 | Griffin & Shams (2020) | Tether/BTC flows as price manipulation signal | Background on stablecoin market microstructure; informs feature design |
 | Cont & Kukanov (2013) | Optimal order routing across fragmented markets | Theoretical basis for VWAP depth-walk as execution cost measure |
-| Salý-Kaufmann et al. (2026) | ML benchmark methodology for crypto market microstructure | Methodological template for split design, oracle construction, and ablation |
+| López de Prado (2018) | Meta-labeling framework: separating primary signal from execution filtering | Motivates MetaLabelingFilter design and two-stage evaluation |
+| Makarov & Schoar (2020) | Persistent crypto price gaps across venues; limits to triangular arbitrage | Establishes baseline expectation for execution barriers in crypto markets |
 
 ---
 
@@ -173,7 +174,7 @@ All non-oracle models produce **negative net bps** on the test split. The oracle
 - [x] No-lookahead labels verified (`tests/test_no_lookahead.py`)
 - [x] Split integrity verified (`tests/test_split_integrity.py`)
 - [x] Depth-source filter verified (`tests/test_depth_source_filter.py`)
-- [x] **187 tests passing** (`pytest tests/ -q`)
+- [x] **198 tests passing** (`pytest tests/ -q`)
 - [x] Full experiment grid committed (`results/experiments/all_results.csv`, 136 rows)
 - [x] Paper tables committed (`results/paper/table_{1-4}_*.csv`)
 - [x] Paper figures committed (`results/paper/figures/figure_{1-5}_*.png`)
@@ -213,7 +214,7 @@ Mechanism taxonomy: `results/paper_addon/table_18_mechanism_taxonomy_summary.csv
 - [x] No-lookahead labels verified (`tests/test_no_lookahead.py`)
 - [x] Split integrity verified (`tests/test_split_integrity.py`)
 - [x] Depth-source filter verified (`tests/test_depth_source_filter.py`)
-- [x] **187 tests passing** (`pytest tests/ -q`)
+- [x] **198 tests passing** (`pytest tests/ -q`)
 - [x] Full experiment grid committed (`results/experiments/all_results.csv`, 136 rows)
 - [x] Paper tables committed (`results/paper/table_{1-4}_*.csv`)
 - [x] Paper figures committed (`results/paper/figures/figure_{1-5}_*.png`)

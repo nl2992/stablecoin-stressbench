@@ -112,7 +112,7 @@ Source verification status for every event is in `src/stressbench/history/source
 | Paper figures | `results/paper/figures/figure_{1-5}_*.png` |
 | Historical tables (14–19) | `results/paper_addon/table_{14..19}_*.csv` |
 | Historical figures (25–28) | `results/paper_addon/figures/figure_{25..28}_*.png` |
-| Tests | **187 passing** (`pytest tests/ -q`) |
+| Tests | **198 passing** (`pytest tests/ -q`) |
 
 ## Benchmark-Freeze Tag
 

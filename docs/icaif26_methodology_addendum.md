@@ -164,7 +164,7 @@ spanning March 2020 to October 2023 across **7 mechanism classes**:
 - USDD/TRON Jun 2022 (B): UST-contagion sentiment on competing algorithmic stablecoin.
 
 **Fiat-Reserve Bank Shock (2 events, Tier A):**
-- **USDC/SVB Mar 10–15 2023 (A): PRIMARY benchmark event. −1300 bps. Full L2 captured.**
+- **USDC/SVB Mar 10–15 2023 (A): PRIMARY benchmark event. Raw USDC/USD spot peak −1300 bps; cross-quote BTC-route basis peak ~−350 bps (benchmark metric). Binance L2 captured; Coinbase/Kraken historical L2 requires Tardis subscription (not in committed dataset.parquet).**
 - USDC Recovery Mar 15–Apr 1 2023 (A partial): Normal conditions; low label density.
 
 **Regulatory / Issuer Winddown (2 events, Tier B–C):**
@@ -205,7 +205,7 @@ A formal coverage_score (0.25–1.00) summarizes data availability:
 | 0.25 | Price data only, or context-grade reconstruction | C |
 | 0.50 | Price + trades, OR price + DEX/on-chain | B |
 | 0.75 | Price + trades + L2 (partial — not all venues) | A (partial) |
-| 1.00 | Price + trades + L2 (all benchmark venues) + supplementary | A (full) |
+| 1.00 | Price + trades + L2 (Binance confirmed; Coinbase/Kraken partial, Tardis required) + supplementary | A (full) |
 
 The coverage_score is computed by `src/stressbench/history/data_availability.py` and exposed in
 `DataAvailabilityProfile`. The predefined profiles in `PREDEFINED_COVERAGE` are the authoritative
