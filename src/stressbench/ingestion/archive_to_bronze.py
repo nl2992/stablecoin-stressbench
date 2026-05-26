@@ -322,10 +322,13 @@ def tardis_to_bronze(
 ) -> int:
     """Convert a Tardis CSV.gz download to canonical Bronze Parquet.
 
-    Maps Tardis ``data_type`` to a canonical Bronze ``channel`` using
-    ``_TARDIS_CHANNEL_MAP``.  Rows are wrapped in a JSON payload whose
-    structure mirrors the native exchange WebSocket message as closely as
-    possible so the existing Silver normalizers can process them.
+    Maps Tardis ``data_type`` to a Tardis-specific Bronze ``channel`` name
+    (e.g. ``tardis_trades``, ``tardis_book_snapshot_1s``) using
+    ``_TARDIS_CHANNEL_MAP``.  Each row is wrapped in a JSON payload whose keys
+    are the original flat Tardis CSV column names.  The payload is **not**
+    converted into a native exchange WebSocket shape; instead, dedicated
+    Tardis normalizers in :mod:`stressbench.normalization.normalize_tardis`
+    interpret the flat column structure directly.
 
     Args:
         file_path: Path to the Tardis ``*.csv.gz`` file.
