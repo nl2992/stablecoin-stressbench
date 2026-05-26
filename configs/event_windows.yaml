@@ -5,7 +5,7 @@ events:
     assets: [USDC, USDT, DAI]
     venues: [binance, coinbase, kraken]
     reason: "USDC reserve-bank stress / depeg episode (SVB collapse)"
-    peak_deviation_bps: ~350
+    peak_deviation_bps: 350
     split: test
 
   usdc_depeg_2023_recovery:

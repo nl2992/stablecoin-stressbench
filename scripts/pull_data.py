@@ -5,18 +5,42 @@ Usage:
     python scripts/pull_data.py --start 2024-01-01 --end 2024-01-07
     python scripts/pull_data.py --start 2024-01-01 --end 2024-01-07 --venues binance coinbase
     python scripts/pull_data.py --start 2024-01-01 --end 2024-01-07 --mode archive
+    python scripts/pull_data.py --start 2024-01-15 --end 2024-01-16 --venues binance --dry-run
 """
 
 from __future__ import annotations
 
 import argparse
-import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
-from stressbench.common.config import load_config
+from stressbench.common.config import load_config, load_token_addresses
 from stressbench.common.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Binance data types pulled in archive mode
+_BINANCE_DATA_TYPES = ["aggTrades", "klines"]
+
+# Tardis data types to fetch for Coinbase / Kraken (requires API key)
+_TARDIS_DATA_TYPES = ["trades", "book_snapshot_1s"]
+
+# Map from instruments.yaml venue_id to Tardis exchange name
+_TARDIS_EXCHANGE_MAP = {
+    "coinbase": "coinbase",
+    "kraken": "kraken",
+}
+
+
+def _date_range(start: datetime, end: datetime) -> list[str]:
+    """Return list of ISO date strings [start.date, ..., end.date] inclusive."""
+    result = []
+    cur = start.date()
+    stop = end.date()
+    while cur <= stop:
+        result.append(cur.isoformat())
+        cur += timedelta(days=1)
+    return result
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,9 +65,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mode",
-        choices=["archive", "live", "tardis"],
+        choices=["archive", "tardis"],
         default="archive",
-        help="Data source mode (default: archive).",
+        help="Data source mode (default: archive). Use 'tardis' for Coinbase/Kraken historical data.",
     )
     parser.add_argument(
         "--output-dir",
@@ -53,62 +77,214 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print what would be pulled without actually pulling.",
+        help="Print what would be pulled without actually downloading.",
     )
     return parser.parse_args()
 
 
-def pull_binance_archive(start: datetime, end: datetime, output_dir: str, dry_run: bool) -> None:
-    from stressbench.ingestion.binance_archive import BinanceArchiveLoader
-    loader = BinanceArchiveLoader(output_dir=output_dir)
-    if dry_run:
-        logger.info("[DRY RUN] Would pull Binance archive: %s → %s", start.date(), end.date())
+# ---------------------------------------------------------------------------
+# Binance archive
+# ---------------------------------------------------------------------------
+
+def pull_binance_archive(
+    start: datetime,
+    end: datetime,
+    output_dir: str,
+    dry_run: bool,
+) -> None:
+    """Download Binance Vision spot+futures archive files for all configured symbols."""
+    from stressbench.ingestion.binance_archive import pull_event_window
+
+    cfg = load_config()
+    instruments = cfg.get("instruments", [])
+    binance_symbols = [
+        inst["native_symbol"]
+        for inst in instruments
+        if inst.get("venue_id") == "binance"
+    ]
+    if not binance_symbols:
+        logger.warning("No Binance symbols found in instruments.yaml; skipping.")
         return
-    loader.pull_range(start, end)
+
+    root = Path(output_dir)
+    start_date = start.date().isoformat()
+    end_date = end.date().isoformat()
+
+    for symbol in binance_symbols:
+        if dry_run:
+            logger.info(
+                "[DRY RUN] Would pull Binance archive: symbol=%s, %s → %s, types=%s",
+                symbol, start_date, end_date, _BINANCE_DATA_TYPES,
+            )
+            continue
+        logger.info("Pulling Binance archive: symbol=%s, %s → %s", symbol, start_date, end_date)
+        pull_event_window(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            data_types=_BINANCE_DATA_TYPES,
+            root=root,
+        )
 
 
-def pull_coinbase(start: datetime, end: datetime, output_dir: str, dry_run: bool) -> None:
-    logger.info("Coinbase archive pull not yet implemented; use Tardis mode for historical data.")
+# ---------------------------------------------------------------------------
+# Tardis (Coinbase / Kraken historical data)
+# ---------------------------------------------------------------------------
 
+def pull_tardis(
+    start: datetime,
+    end: datetime,
+    venues: list[str],
+    output_dir: str,
+    dry_run: bool,
+) -> None:
+    """Download historical data from Tardis for the requested venues."""
+    from stressbench.ingestion.tardis_loader import pull_tardis_day
 
-def pull_kraken(start: datetime, end: datetime, output_dir: str, dry_run: bool) -> None:
-    logger.info("Kraken archive pull not yet implemented; use Tardis mode for historical data.")
+    cfg = load_config()
+    instruments = cfg.get("instruments", [])
+    root = Path(output_dir)
+    dates = _date_range(start, end)
 
-
-def pull_tardis(start: datetime, end: datetime, venues: list[str], output_dir: str, dry_run: bool) -> None:
-    from stressbench.ingestion.tardis_loader import TardisLoader
-    loader = TardisLoader(output_dir=output_dir)
-    if dry_run:
-        logger.info("[DRY RUN] Would pull Tardis: venues=%s, %s → %s", venues, start.date(), end.date())
-        return
     for venue in venues:
-        loader.pull_range(venue=venue, start=start, end=end)
+        tardis_exchange = _TARDIS_EXCHANGE_MAP.get(venue)
+        if not tardis_exchange:
+            logger.debug("No Tardis mapping for venue '%s'; skipping.", venue)
+            continue
+
+        symbols = [
+            inst["native_symbol"]
+            for inst in instruments
+            if inst.get("venue_id") == venue
+        ]
+        if not symbols:
+            logger.warning("No symbols for venue '%s' in instruments.yaml; skipping.", venue)
+            continue
+
+        for symbol in symbols:
+            for data_type in _TARDIS_DATA_TYPES:
+                for day in dates:
+                    if dry_run:
+                        logger.info(
+                            "[DRY RUN] Would pull Tardis: exchange=%s symbol=%s type=%s date=%s",
+                            tardis_exchange, symbol, data_type, day,
+                        )
+                        continue
+                    logger.info(
+                        "Pulling Tardis: exchange=%s symbol=%s type=%s date=%s",
+                        tardis_exchange, symbol, data_type, day,
+                    )
+                    pull_tardis_day(
+                        exchange=tardis_exchange,
+                        symbol=symbol,
+                        data_type=data_type,
+                        date=day,
+                        root=root,
+                    )
 
 
-def pull_etherscan(start: datetime, end: datetime, output_dir: str, dry_run: bool) -> None:
-    from stressbench.ingestion.etherscan_loader import EtherscanLoader
-    from stressbench.common.config import load_token_addresses
-    loader = EtherscanLoader(output_dir=output_dir)
+# ---------------------------------------------------------------------------
+# Etherscan (on-chain stablecoin transfers)
+# ---------------------------------------------------------------------------
+
+def pull_etherscan(
+    start: datetime,
+    end: datetime,
+    output_dir: str,
+    dry_run: bool,
+) -> None:
+    """Download ERC-20 transfer events for all configured stablecoin tokens."""
+    from stressbench.ingestion.etherscan_loader import (
+        fetch_block_by_timestamp,
+        fetch_token_transfers,
+        save_transfers_to_bronze,
+    )
+
     tokens = load_token_addresses()
-    if dry_run:
-        logger.info("[DRY RUN] Would pull Etherscan: tokens=%s", list(tokens.keys()))
+    if not tokens:
+        logger.warning("No token addresses configured; skipping Etherscan pull.")
         return
-    for symbol, addresses in tokens.items():
-        for chain, address in addresses.items():
-            if chain == "ethereum":
-                loader.pull_transfers(
-                    token_address=address,
-                    token_symbol=symbol,
-                    start=start,
-                    end=end,
-                )
 
+    root = Path(output_dir)
+    dates = _date_range(start, end)
+
+    if dry_run:
+        for token_symbol, chain_map in tokens.items():
+            if "ethereum" not in chain_map:
+                continue
+            logger.info(
+                "[DRY RUN] Would pull Etherscan: token=%s, %s → %s",
+                token_symbol, start.date(), end.date(),
+            )
+        return
+
+    # Resolve block numbers for the full range once
+    start_block = fetch_block_by_timestamp(int(start.timestamp()))
+    end_block = fetch_block_by_timestamp(int(end.timestamp()))
+
+    if start_block is None or end_block is None:
+        logger.error(
+            "Could not resolve block numbers for range %s → %s. "
+            "Check ETHERSCAN_API_KEY.",
+            start.date(), end.date(),
+        )
+        return
+
+    logger.info(
+        "Etherscan block range: %d → %d (%s → %s)",
+        start_block, end_block, start.date(), end.date(),
+    )
+
+    for token_symbol, chain_map in tokens.items():
+        if "ethereum" not in chain_map:
+            continue
+
+        logger.info("Fetching Etherscan transfers: token=%s", token_symbol)
+        transfers = fetch_token_transfers(
+            token_symbol=token_symbol,
+            start_block=start_block,
+            end_block=end_block,
+        )
+
+        if not transfers:
+            logger.info("No transfers found for %s in range.", token_symbol)
+            continue
+
+        # Partition by date and save to Bronze
+        from collections import defaultdict
+        by_date: dict[str, list] = defaultdict(list)
+        for tx in transfers:
+            # Etherscan timeStamp is Unix seconds
+            try:
+                tx_date = datetime.fromtimestamp(
+                    int(tx.get("timeStamp", 0)), tz=timezone.utc
+                ).date().isoformat()
+            except (ValueError, TypeError):
+                tx_date = dates[0]  # fallback to start date
+            by_date[tx_date].append(tx)
+
+        for day, day_transfers in by_date.items():
+            save_transfers_to_bronze(
+                transfers=day_transfers,
+                token_symbol=token_symbol,
+                date=day,
+                root=root,
+            )
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def main() -> None:
     args = parse_args()
     cfg = load_config()
 
-    all_venues = list(cfg.get("venues", {}).keys())
+    all_venues = list(cfg.get("instruments", [{}]))
+    # Deduplicate venue_ids from instruments list
+    all_venues = list(dict.fromkeys(
+        inst.get("venue_id", "") for inst in cfg.get("instruments", [])
+    ))
     venues = args.venues or all_venues
 
     logger.info(
@@ -119,18 +295,18 @@ def main() -> None:
     if args.mode == "archive":
         if "binance" in venues:
             pull_binance_archive(args.start, args.end, args.output_dir, args.dry_run)
-        if "coinbase" in venues:
-            pull_coinbase(args.start, args.end, args.output_dir, args.dry_run)
-        if "kraken" in venues:
-            pull_kraken(args.start, args.end, args.output_dir, args.dry_run)
+        if "coinbase" in venues or "kraken" in venues:
+            logger.info(
+                "Coinbase/Kraken have no public archive; redirecting to Tardis mode "
+                "(requires TARDIS_API_KEY in environment)."
+            )
+            tardis_venues = [v for v in venues if v in ("coinbase", "kraken")]
+            pull_tardis(args.start, args.end, tardis_venues, args.output_dir, args.dry_run)
 
     elif args.mode == "tardis":
         pull_tardis(args.start, args.end, venues, args.output_dir, args.dry_run)
 
-    elif args.mode == "live":
-        logger.warning("Live mode is for development only; use archive or tardis for benchmark data.")
-
-    # Always pull on-chain data
+    # Always pull on-chain data regardless of mode
     pull_etherscan(args.start, args.end, args.output_dir, args.dry_run)
 
     logger.info("Data pull complete.")
