@@ -190,9 +190,11 @@ separates primary signal generation from execution filtering —
 directly applicable to our setting where price signals are
 plentiful but most are not executable.
 Cintra and Holloway \cite{cintra2023bocpd} apply Bayesian Online
-Changepoint Detection (BOCPD) to Curve stablecoin pools and
-report early detection of the March 2023 USDC de-peg, motivating
-our regime-detection add-on.
+Changepoint Detection (BOCPD) to Curve StableSwap pool reserves
+and report detection of the May 2022 Terra/UST de-peg with a
+12-hour lead, motivating our regime-detection add-on
+(though BOCPD achieves AUROC~0.23 on CEX cross-quote data,
+suggesting the pool-reserve signal does not transfer directly).
 
 %% =============================================================
 \section{Benchmark Design}
