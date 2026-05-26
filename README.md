@@ -13,9 +13,13 @@ Stablecoin StressBench is designed to test three hypotheses:
 2. **Naive price-only signals overstate arbitrage** because they ignore executable depth, fees, latency, and transfer constraints.
 3. **Joint feature models** (combining order-book state, cross-venue basis, stablecoin FX deviation, venue status, and on-chain settlement features) outperform price/candle-only baselines.
 
-### Preliminary empirical result
+### Empirical results
 
-During the SVB-crisis test window (March 2023), **35.1% of 1-minute windows** showed a cross-quote basis exceeding 10 bps on price alone — yet only **3.34% remained profitable** after a full VWAP order-book walk at $10K notional (including taker fees and price impact). This price-to-execution gap is the core quantitative claim of the benchmark.
+During the SVB-crisis test window (March 2023), **35.1% of 1-minute windows** showed a USDC cross-quote basis exceeding 10 bps on price alone — yet only **2.88% remained profitable** after a full VWAP order-book walk at $10K notional (including taker fees and market impact). This **12× price-to-execution gap** is the core quantitative claim of the benchmark.
+
+The hindsight oracle yields **161–225 net bps per trade** across tasks, confirming profitable windows exist. Every ML and rule-based model tested produces **negative net bps** on the test split — the oracle gap is an execution-barrier problem, not a model-selection problem.
+
+Full results: [`results/paper/table_2_price_execution_gap.csv`](results/paper/table_2_price_execution_gap.csv) · [`results/paper/table_4_oracle_gap.csv`](results/paper/table_4_oracle_gap.csv)
 
 ## Repository Structure
 
@@ -75,6 +79,11 @@ python scripts/start_live_capture.py
 ```bash
 pytest tests/ -q
 ```
+
+## Documentation
+
+- [Research Methodology](docs/research_methodology.md) — event-study design, execution-label construction, model stack, and empirical results summary
+- [Data Card](docs/data_card.md) — dataset provenance, schema, and depth-source tagging
 
 ## License
 MIT License
