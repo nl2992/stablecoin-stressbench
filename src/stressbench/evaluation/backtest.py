@@ -26,6 +26,7 @@ def run_backtest(
     task: str = "classification",
     notional_usd: float = 50_000.0,
     cost_threshold_bps: float = 0.0,
+    threshold: float = 0.5,
     model_name: str = "model",
 ) -> dict[str, Any]:
     """Run a backtest for a single model on the test set.
@@ -56,11 +57,10 @@ def run_backtest(
         # Clip to [0, 1] — regression models may produce out-of-range scores
         y_proba = np.clip(y_proba, 0.0, 1.0)
 
-        # Regression-style models (Ridge, Lasso, AR1) return continuous scores.
-        # Threshold at 0.5 to get binary predictions for classification metrics.
+        # Apply calibrated threshold from validation split (default 0.5)
         unique_vals = np.unique(y_pred[~np.isnan(y_pred)])
         if len(unique_vals) > 2 or (len(unique_vals) > 0 and not set(unique_vals.tolist()).issubset({0, 1, 0.0, 1.0})):
-            y_pred_binary = (y_pred > 0.5).astype(np.int8)
+            y_pred_binary = (y_proba > threshold).astype(np.int8)
         else:
             y_pred_binary = y_pred.astype(np.int8)
 

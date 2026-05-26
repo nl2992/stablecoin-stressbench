@@ -282,15 +282,19 @@ def _compute_book_1m(books_df: pl.DataFrame) -> pl.DataFrame:
     )
 
     # Level-0 best bid / ask
-    bids0 = snap.filter(
-        (pl.col("side") == "bid") & (pl.col("level") == 0)
-    ).select([
+    _has_depth_source = "depth_source" in snap.columns
+    bids0_cols = [
         "ts_1m_ns", "venue_id", "instrument_id",
         pl.col("price").alias("best_bid"),
         pl.col("size").alias("_bid0_sz"),
         pl.col("is_checksum_failed").cast(pl.Boolean).fill_null(False).alias("_chk"),
         pl.col("is_resync_period").cast(pl.Boolean).fill_null(False).alias("_resync"),
-    ])
+    ]
+    if _has_depth_source:
+        bids0_cols.append(pl.col("depth_source").first().alias("depth_source"))
+    bids0 = snap.filter(
+        (pl.col("side") == "bid") & (pl.col("level") == 0)
+    ).select(bids0_cols)
     asks0 = snap.filter(
         (pl.col("side") == "ask") & (pl.col("level") == 0)
     ).select([

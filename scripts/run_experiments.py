@@ -2,20 +2,21 @@
 """Run the full Stablecoin StressBench experiment grid.
 
 Iterates over all (task × feature_set × model) combinations, trains on the
-training split, evaluates on the test split, and writes one CSV per task.
+training split, calibrates threshold on the validation split, evaluates on the
+test split, and writes one CSV per task plus a combined all_results.csv.
 
 Usage:
     # Full grid (all tasks × all feature sets × all models)
     python scripts/run_experiments.py --data-dir data/gold
 
-    # Subset: specific tasks and feature sets
+    # Targeted subset
     python scripts/run_experiments.py \\
         --data-dir data/gold \\
-        --tasks basis_1m_gt10bps basis_usdc_1m_gt10bps executable_arb_q10000_5m \\
+        --tasks basis_usdc_1m_gt10bps executable_arb_q10000_5m \\
         --feature-sets price_only price_plus_book all \\
-        --models no_trade logistic lasso rf
+        --models no_trade price_threshold_10bps logistic lasso rf
 
-    # Include oracle (requires realized net profit in the dataset)
+    # Include oracle upper bound (uses realized net profit — cheater model)
     python scripts/run_experiments.py --data-dir data/gold --include-oracle
 
 Output:
@@ -29,8 +30,7 @@ import argparse
 import csv
 from datetime import datetime, timezone
 from pathlib import Path
-
-import polars as pl
+from typing import Any
 
 from stressbench.common.logging import get_logger
 from stressbench.experiments.feature_sets import FEATURE_SETS
@@ -42,6 +42,8 @@ logger = get_logger(__name__)
 _DEFAULT_MODELS = [
     "no_trade",
     "price_threshold_10bps",
+    "price_threshold_25bps",
+    "gross_arb_threshold",
     "last_value",
     "rolling_mean",
     "ar1",
@@ -82,6 +84,11 @@ def parse_args() -> argparse.Namespace:
         help="Include NetProfitOracleUpperBound (uses future net profit — upper bound only).",
     )
     parser.add_argument(
+        "--no-threshold-calibration",
+        action="store_true",
+        help="Skip validation-split threshold calibration (use fixed 0.5).",
+    )
+    parser.add_argument(
         "--model-save-dir",
         default=None,
         help="If set, save fitted model pickles here.",
@@ -90,25 +97,56 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _make_model(name: str, df_cols: list[str]):
-    """Instantiate a model by name."""
+def make_model(name: str, feature_cols: list[str]) -> Any:
+    """Instantiate a model by name, with access to resolved feature columns.
+
+    Rule-based baselines receive the correct column index here because
+    feature_cols are resolved *before* this function is called.
+    """
     from stressbench.models.rule_baselines import (
         NoTradeBaseline,
         PriceBasisThresholdBaseline,
         GrossArbThresholdBaseline,
+        NetProfitOracleUpperBound,
     )
 
     if name == "no_trade":
         return NoTradeBaseline()
+
     if name == "price_threshold_10bps":
-        col_idx = df_cols.index("cross_quote_basis_primary_bps") if "cross_quote_basis_primary_bps" in df_cols else 0
+        if "cross_quote_basis_primary_bps" not in feature_cols:
+            raise ValueError(
+                f"price_threshold_10bps requires 'cross_quote_basis_primary_bps' in the "
+                f"feature set. Available: {feature_cols}"
+            )
+        col_idx = feature_cols.index("cross_quote_basis_primary_bps")
         return PriceBasisThresholdBaseline(col_index=col_idx, threshold_bps=10.0)
+
     if name == "price_threshold_25bps":
-        col_idx = df_cols.index("cross_quote_basis_primary_bps") if "cross_quote_basis_primary_bps" in df_cols else 0
+        if "cross_quote_basis_primary_bps" not in feature_cols:
+            raise ValueError(
+                f"price_threshold_25bps requires 'cross_quote_basis_primary_bps' in the "
+                f"feature set. Available: {feature_cols}"
+            )
+        col_idx = feature_cols.index("cross_quote_basis_primary_bps")
         return PriceBasisThresholdBaseline(col_index=col_idx, threshold_bps=25.0)
+
     if name == "gross_arb_threshold":
-        col_idx = df_cols.index("cross_quote_basis_maxabs_bps") if "cross_quote_basis_maxabs_bps" in df_cols else 0
+        col_name = "cross_quote_basis_maxabs_bps"
+        if col_name not in feature_cols:
+            # Fall back to primary if max-abs not in feature set
+            col_name = "cross_quote_basis_primary_bps"
+        if col_name not in feature_cols:
+            raise ValueError(
+                f"gross_arb_threshold requires a basis column in the feature set. "
+                f"Available: {feature_cols}"
+            )
+        col_idx = feature_cols.index(col_name)
         return GrossArbThresholdBaseline(col_index=col_idx, threshold_bps=20.0)
+
+    if name == "oracle":
+        return NetProfitOracleUpperBound(threshold_bps=0.0)
+
     if name == "last_value":
         from stressbench.models.baselines import LastValueBaseline
         return LastValueBaseline()
@@ -140,7 +178,6 @@ def _make_model(name: str, df_cols: list[str]):
 
 
 def _flatten_result(result: dict) -> dict:
-    """Flatten a nested backtest result dict into one CSV row."""
     ml = result.get("ml_metrics", {})
     econ = result.get("economic_metrics", {})
     return {
@@ -148,7 +185,10 @@ def _flatten_result(result: dict) -> dict:
         "feature_set": result.get("feature_set", ""),
         "model": result.get("model", ""),
         "n_train": result.get("n_train", ""),
+        "n_val": result.get("n_val", ""),
         "n_test": result.get("n_test", ""),
+        "validation_threshold": result.get("validation_threshold", ""),
+        "validation_net_bps": result.get("validation_net_bps", ""),
         # ML metrics
         "auroc": ml.get("auroc", ""),
         "auprc": ml.get("auprc", ""),
@@ -176,9 +216,9 @@ def main() -> None:
 
     dataset_path = Path(args.data_dir) / "dataset.parquet"
     if not dataset_path.exists():
-        # Fall back to glob for partitioned datasets
         dataset_path = Path(args.data_dir)
 
+    calibrate = not args.no_threshold_calibration
     all_rows: list[dict] = []
 
     for task_name in tasks_to_run:
@@ -198,42 +238,40 @@ def main() -> None:
 
             models_to_run = list(args.models)
             if args.include_oracle:
-                models_to_run.append("oracle")
+                models_to_run = models_to_run + ["oracle"]
 
             for model_name in models_to_run:
                 if args.dry_run:
-                    logger.info("  [DRY RUN] Would run: %s / %s / %s", task_name, fs_name, model_name)
+                    logger.info(
+                        "  [DRY RUN] %s / %s / %s", task_name, fs_name, model_name
+                    )
                     continue
 
                 try:
-                    if model_name == "oracle":
-                        from stressbench.models.rule_baselines import NetProfitOracleUpperBound
-                        model = NetProfitOracleUpperBound(threshold_bps=0.0)
-                    else:
-                        # Feature cols are resolved inside run_experiment; pass dummy list here
-                        model = _make_model(model_name, [])
-
                     result = run_experiment(
                         dataset_path=dataset_path,
                         task_name=task_name,
                         feature_set_name=fs_name,
-                        model=model,
                         model_name=model_name,
+                        model_factory=make_model,
                         model_dir=args.model_save_dir,
+                        calibrate_threshold=calibrate,
                     )
                     row = _flatten_result(result)
                     task_rows.append(row)
                     all_rows.append(row)
                     logger.info(
-                        "    %s: AUROC=%.3f  net_bps=%.1f  n_trades=%s",
+                        "    %s: AUROC=%.3f  net_bps=%.1f  n_trades=%s  val_thr=%.2f",
                         model_name,
                         row.get("auroc") or float("nan"),
                         row.get("net_bps_captured") or float("nan"),
                         row.get("n_trades", "—"),
+                        row.get("validation_threshold") or 0.5,
                     )
                 except Exception as exc:
                     logger.error(
-                        "  FAILED: %s / %s / %s — %s", task_name, fs_name, model_name, exc
+                        "  FAILED: %s / %s / %s — %s",
+                        task_name, fs_name, model_name, exc,
                     )
 
         if task_rows:

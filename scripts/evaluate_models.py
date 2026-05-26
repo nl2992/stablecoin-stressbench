@@ -33,17 +33,34 @@ def parse_args() -> argparse.Namespace:
         default=50_000.0,
         help="Notional size per trade in USD for economic metrics.",
     )
+    parser.add_argument(
+        "--allow-synthetic",
+        action="store_true",
+        help="Generate synthetic demo data if dataset.parquet is missing. "
+             "For CI/demo only — never use for paper results.",
+    )
     return parser.parse_args()
 
 
-def load_test_data(data_dir: str, label_col: str, feature_cols: list[str] | None):
+def load_test_data(
+    data_dir: str,
+    label_col: str,
+    feature_cols: list[str] | None,
+    allow_synthetic: bool = False,
+):
     """Load test data from Gold Parquet files."""
     import polars as pl
 
     gold_path = Path(data_dir)
     parquet_files = list(gold_path.glob("**/*.parquet"))
     if not parquet_files:
-        logger.warning("No Parquet files found; generating synthetic test data.")
+        if not allow_synthetic:
+            raise FileNotFoundError(
+                f"No Parquet files found in '{data_dir}'. "
+                "Run scripts/build_features.py first, "
+                "or pass --allow-synthetic for demo/CI mode."
+            )
+        logger.warning("No data found; generating synthetic test data (--allow-synthetic).")
         rng = np.random.default_rng(99)
         n = 2_000
         X = rng.standard_normal((n, 20)).astype(np.float32)
@@ -115,7 +132,9 @@ def main() -> None:
         feature_cols = None
 
     logger.info("Loading test data from %s", args.data_dir)
-    X_test, y_test, y_net = load_test_data(args.data_dir, label_col, feature_cols)
+    X_test, y_test, y_net = load_test_data(
+        args.data_dir, label_col, feature_cols, allow_synthetic=args.allow_synthetic
+    )
     logger.info("Test data shape: X=%s, y=%s", X_test.shape, y_test.shape)
 
     results = []

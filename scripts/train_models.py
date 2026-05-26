@@ -65,10 +65,21 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Feature columns (default: all non-label columns).",
     )
+    parser.add_argument(
+        "--allow-synthetic",
+        action="store_true",
+        help="Generate synthetic demo data if dataset.parquet is missing. "
+             "For CI/demo only — never use for paper results.",
+    )
     return parser.parse_args()
 
 
-def load_train_data(data_dir: str, label_col: str, sort_by_time: bool = False):
+def load_train_data(
+    data_dir: str,
+    label_col: str,
+    sort_by_time: bool = False,
+    allow_synthetic: bool = False,
+):
     """Load training data from Gold Parquet files.
 
     Args:
@@ -76,13 +87,21 @@ def load_train_data(data_dir: str, label_col: str, sort_by_time: bool = False):
         label_col: Column name to use as the prediction target.
         sort_by_time: If True, sort by ``ts_1m_ns`` before returning arrays.
             Required for sequence models to ensure windows are time-ordered.
+        allow_synthetic: If True, generate synthetic demo data when no Parquet
+            files are found instead of raising an error.
     """
     import polars as pl
 
     gold_path = Path(data_dir)
     parquet_files = list(gold_path.glob("**/*.parquet"))
     if not parquet_files:
-        logger.warning("No Parquet files found in %s; generating synthetic data.", data_dir)
+        if not allow_synthetic:
+            raise FileNotFoundError(
+                f"No Parquet files found in '{data_dir}'. "
+                "Run scripts/build_features.py first to produce dataset.parquet, "
+                "or pass --allow-synthetic for demo/CI mode."
+            )
+        logger.warning("No data found in %s; generating synthetic demo data (--allow-synthetic).", data_dir)
         rng = np.random.default_rng(42)
         n = 10_000
         X = rng.standard_normal((n, 20)).astype(np.float32)
@@ -193,7 +212,9 @@ def main() -> None:
     model_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("Loading training data from %s", args.data_dir)
-    X, y, feature_cols = load_train_data(args.data_dir, args.label)
+    X, y, feature_cols = load_train_data(
+        args.data_dir, args.label, allow_synthetic=args.allow_synthetic
+    )
     logger.info("Training data shape: X=%s, y=%s", X.shape, y.shape)
 
     # Flat models
@@ -220,7 +241,8 @@ def main() -> None:
         )
         # Reload time-sorted so windows are chronological
         X_sorted, y_sorted, _ = load_train_data(
-            args.data_dir, args.label, sort_by_time=True
+            args.data_dir, args.label,
+            sort_by_time=True, allow_synthetic=args.allow_synthetic,
         )
         X_seq, y_seq = make_sequence_windows(X_sorted, y_sorted, args.seq_len)
         logger.info("Sequence windows: X_seq=%s  y_seq=%s", X_seq.shape, y_seq.shape)

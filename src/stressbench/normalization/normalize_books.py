@@ -109,6 +109,7 @@ def normalize_coinbase_level2(df: pl.DataFrame) -> pl.DataFrame:
                         price=float(price),
                         size=float(size),
                         row=row,
+                        depth_source="real_l2_snapshot",
                     )
                 )
             for level_idx, (price, size) in enumerate(payload.get("asks", [])):
@@ -123,6 +124,7 @@ def normalize_coinbase_level2(df: pl.DataFrame) -> pl.DataFrame:
                         price=float(price),
                         size=float(size),
                         row=row,
+                        depth_source="real_l2_snapshot",
                     )
                 )
         else:
@@ -140,6 +142,7 @@ def normalize_coinbase_level2(df: pl.DataFrame) -> pl.DataFrame:
                         price=float(price),
                         size=float(size),
                         row=row,
+                        depth_source="real_l2_incremental",
                     )
                 )
 
@@ -188,6 +191,7 @@ def normalize_kraken_book(df: pl.DataFrame) -> pl.DataFrame:
                         row=row,
                         checksum=checksum,
                         is_checksum_failed=checksum_failed,
+                        depth_source="real_l2_snapshot",
                     )
                 )
             for level_idx, level in enumerate(entry.get("asks", [])):
@@ -204,6 +208,7 @@ def normalize_kraken_book(df: pl.DataFrame) -> pl.DataFrame:
                         row=row,
                         checksum=checksum,
                         is_checksum_failed=checksum_failed,
+                        depth_source="real_l2_snapshot",
                     )
                 )
 
@@ -291,6 +296,7 @@ def normalize_binance_klines(df: pl.DataFrame) -> pl.DataFrame:
                     "checksum": None,
                     "raw_source": "binance:klines",
                     "payload_hash": row.get("payload_hash", ""),
+                    "depth_source": "synthetic_kline",
                     "is_crossed_book": False,
                     "is_negative_size": False,
                     "is_sequence_gap": False,
@@ -316,6 +322,7 @@ def _make_level_record(
     row: dict,
     checksum: str | None = None,
     is_checksum_failed: bool = False,
+    depth_source: str = "real_l2_incremental",
 ) -> dict:
     return {
         "ts_event_ns": ts_event_ns,
@@ -330,6 +337,7 @@ def _make_level_record(
         "checksum": checksum,
         "raw_source": f"{venue_id}:book",
         "payload_hash": row.get("payload_hash", ""),
+        "depth_source": depth_source,
         "is_crossed_book": False,
         "is_negative_size": size < 0,
         "is_sequence_gap": row.get("_sequence_gap", False),
