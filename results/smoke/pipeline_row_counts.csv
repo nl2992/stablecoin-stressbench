@@ -1,0 +1,14 @@
+stage,table,rows,notes
+bronze,aggTrades,2182116,Binance Vision archive 2024-01-15 (5 symbols × 24 hours)
+bronze,klines,7200,Binance Vision 1-minute klines 2024-01-15 (5 symbols × 24 hours)
+silver,aggTrades,220254497,Normalized trade rows (all event windows)
+silver,depth,2377740,Normalized Binance depth update rows (all event windows)
+silver,klines,72000,Synthetic book levels from klines (5 levels bid+ask per bar)
+silver,level2,1136940,Coinbase level2 order book rows (all event windows)
+silver,matches,113812,Coinbase matches trade rows (all event windows)
+gold,feat_book_1m,332445,1-minute microstructure aggregates (spread/depth/imbalance)
+gold,feat_basis_1m,57569,1-minute cross-quote basis between venues
+gold,feat_net_profit_1m,55112,1-minute VWAP-walk execution cost estimates
+gold,feat_fragmentation_1m,56909,1-minute cross-venue mid dispersion
+gold,feat_stablecoin_dev_1m,105830,1-minute per-asset deviation from $1.00
+gold,dataset,47487,Final joined dataset (train=20125 / validation=11523 / test=15839)
