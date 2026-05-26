@@ -29,14 +29,22 @@ _NOTIONAL_SIZES_USD = [10_000, 50_000, 100_000, 500_000]
 
 # Map (venue, channel) → short key used in _get_normalizer
 _CHANNEL_MAP: dict[tuple[str, str], str] = {
+    # Live WebSocket channels
     ("binance", "trade"): "binance_trades",
-    ("binance", "aggTrades"): "binance_trades",
     ("binance", "depth"): "binance_depth",
     ("coinbase", "matches"): "coinbase_trades",
     ("coinbase", "level2"): "coinbase_level2",
     ("kraken", "trade"): "kraken_trades",
     ("kraken", "book"): "kraken_book",
     ("uniswap_v3", "swap"): "uniswap_swaps",
+    # Archive / historical channels (written by archive_to_bronze.py)
+    ("binance", "aggTrades"): "binance_trades",   # aggTrade WS-format payload
+    ("binance", "klines"): "binance_klines",       # kline WS-format payload → synthetic book
+    # Tardis channel aliases
+    ("coinbase", "trade"): "coinbase_trades",
+    ("kraken", "trade"): "kraken_trades",
+    ("coinbase", "depth"): "coinbase_level2",
+    ("kraken", "depth"): "kraken_book",
 }
 
 
@@ -88,6 +96,9 @@ def _get_normalizer(venue: str, channel: str) -> Callable | None:
     if key == "binance_depth":
         from stressbench.normalization.normalize_books import normalize_binance_depth
         return normalize_binance_depth
+    if key == "binance_klines":
+        from stressbench.normalization.normalize_books import normalize_binance_klines
+        return normalize_binance_klines
     if key == "coinbase_trades":
         from stressbench.normalization.normalize_trades import normalize_coinbase_trades
         return normalize_coinbase_trades
@@ -694,7 +705,7 @@ def build_gold_features(
         logger.info("Gold: processing %s", date_str)
         one_day = {date_str}
 
-        books = _load_silver_channels(silver_root, ["depth", "level2", "book"], one_day)
+        books = _load_silver_channels(silver_root, ["depth", "level2", "book", "klines"], one_day)
         trades = _load_silver_channels(silver_root, ["trade", "aggTrades", "matches"], one_day)
         transfers = _load_silver_channels(silver_root, ["transfer"], one_day)
         swaps = _load_silver_channels(silver_root, ["swap"], one_day)

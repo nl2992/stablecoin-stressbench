@@ -83,6 +83,50 @@ def parse_args() -> argparse.Namespace:
 
 
 # ---------------------------------------------------------------------------
+# Canonicalization helpers — vendor staging → canonical Bronze layout
+# ---------------------------------------------------------------------------
+
+def _canonicalize_binance(csv_paths: list[Path], symbol: str, bronze_root: Path) -> None:
+    """Convert downloaded Binance archive CSVs into canonical Bronze Parquet."""
+    from stressbench.ingestion.archive_to_bronze import (
+        binance_aggtrades_to_bronze,
+        binance_klines_to_bronze,
+    )
+    for csv_path in csv_paths:
+        if not csv_path or not csv_path.exists():
+            continue
+        # Derive date from file name e.g. BTCUSDT-aggTrades-2024-01-15.csv
+        parts = csv_path.stem.split("-")
+        try:
+            date = "-".join(parts[-3:])  # last three segments = YYYY-MM-DD
+        except IndexError:
+            logger.warning("Cannot parse date from %s; skipping canonicalizer.", csv_path)
+            continue
+        name_lower = csv_path.name.lower()
+        if "aggtrades" in name_lower:
+            binance_aggtrades_to_bronze(csv_path, symbol, date, bronze_root)
+        elif "klines" in name_lower or "1m" in name_lower:
+            binance_klines_to_bronze(csv_path, symbol, date, bronze_root)
+        else:
+            logger.debug("No canonicalizer for Binance file %s; skipping.", csv_path.name)
+
+
+def _canonicalize_tardis(
+    file_path: Path | None,
+    exchange: str,
+    symbol: str,
+    data_type: str,
+    date: str,
+    bronze_root: Path,
+) -> None:
+    """Convert a downloaded Tardis CSV.gz file into canonical Bronze Parquet."""
+    if not file_path or not Path(file_path).exists():
+        return
+    from stressbench.ingestion.archive_to_bronze import tardis_to_bronze
+    tardis_to_bronze(Path(file_path), exchange, symbol, data_type, date, bronze_root)
+
+
+# ---------------------------------------------------------------------------
 # Binance archive
 # ---------------------------------------------------------------------------
 
@@ -118,13 +162,15 @@ def pull_binance_archive(
             )
             continue
         logger.info("Pulling Binance archive: symbol=%s, %s → %s", symbol, start_date, end_date)
-        pull_event_window(
+        csv_paths = pull_event_window(
             symbol=symbol,
             start_date=start_date,
             end_date=end_date,
             data_types=_BINANCE_DATA_TYPES,
-            root=root,
+            root=root / "vendor=binance_archive",  # vendor staging area
         )
+        # Canonicalize: convert vendor CSVs → venue=binance/channel=.../... Bronze
+        _canonicalize_binance(csv_paths, symbol, root)
 
 
 # ---------------------------------------------------------------------------
@@ -174,12 +220,21 @@ def pull_tardis(
                         "Pulling Tardis: exchange=%s symbol=%s type=%s date=%s",
                         tardis_exchange, symbol, data_type, day,
                     )
-                    pull_tardis_day(
+                    vendor_path = pull_tardis_day(
                         exchange=tardis_exchange,
                         symbol=symbol,
                         data_type=data_type,
                         date=day,
-                        root=root,
+                        root=root / "vendor=tardis",  # vendor staging area
+                    )
+                    # Canonicalize into venue=<exchange>/channel=<ch>/...
+                    _canonicalize_tardis(
+                        file_path=Path(vendor_path) if vendor_path else None,
+                        exchange=tardis_exchange,
+                        symbol=symbol,
+                        data_type=data_type,
+                        date=day,
+                        bronze_root=root,
                     )
 
 

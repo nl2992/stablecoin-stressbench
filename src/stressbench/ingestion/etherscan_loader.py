@@ -128,33 +128,86 @@ def save_transfers_to_bronze(
     token_symbol: str,
     date: str,
     root: Path | None = None,
-) -> Path | None:
-    """Save a list of transfer events to Bronze as Parquet.
+) -> list[Path]:
+    """Save a list of transfer events to canonical Bronze Parquet.
+
+    Writes to the same Hive-partitioned layout used by live collectors::
+
+        venue=etherscan/
+          channel=transfer/
+            symbol=<TOKEN>/
+              date=YYYY-MM-DD/
+                hour=HH/
+                  part-0.parquet
+
+    The Silver builder's ``is_etherscan`` path reads from
+    ``venue=etherscan / channel=transfer`` at ``hour=*`` granularity.
 
     Args:
         transfers: List of Etherscan transfer event dicts.
-        token_symbol: Token symbol for partitioning.
-        date: ISO date string for partitioning.
+        token_symbol: Token symbol for Hive partitioning (e.g. ``"USDC"``).
+        date: ISO date string ``YYYY-MM-DD`` for partitioning.
         root: Bronze root override.
 
     Returns:
-        Path to the written Parquet file, or ``None`` if empty.
+        List of paths to written Parquet files (one per hour bucket).
     """
+    import json
+    from datetime import datetime, timezone
+
     if not transfers:
-        return None
+        return []
 
     root = root or bronze_root()
-    out_dir = (
-        root
-        / "venue=ethereum"
-        / "channel=onchain_transfer"
-        / f"symbol={token_symbol}"
-        / f"date={date}"
-    )
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"transfers-{token_symbol}-{date}.parquet"
 
-    df = pl.DataFrame(transfers)
-    df.write_parquet(out_file)
-    logger.info("Saved %d transfers to %s", len(transfers), out_file)
-    return out_file
+    # Bucket transfers by hour using the Etherscan ``timeStamp`` field (Unix s)
+    hour_buckets: dict[int, list[dict[str, Any]]] = {}
+    for tx in transfers:
+        try:
+            ts_s = int(tx.get("timeStamp", 0))
+            hour = datetime.fromtimestamp(ts_s, tz=timezone.utc).hour
+        except (ValueError, TypeError):
+            hour = 0
+        hour_buckets.setdefault(hour, []).append(tx)
+
+    written_paths: list[Path] = []
+    for hour, hour_transfers in sorted(hour_buckets.items()):
+        out_dir = (
+            root
+            / "venue=etherscan"
+            / "channel=transfer"
+            / f"symbol={token_symbol}"
+            / f"date={date}"
+            / f"hour={hour:02d}"
+        )
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / "part-0.parquet"
+
+        # Wrap each transfer event as a Bronze-schema record so the Silver
+        # normalizer receives a consistent payload column
+        bronze_rows = []
+        for tx in hour_transfers:
+            try:
+                ts_s = int(tx.get("timeStamp", 0))
+                ts_ns = ts_s * 1_000_000_000
+            except (ValueError, TypeError):
+                ts_ns = 0
+            bronze_rows.append({
+                "source": "etherscan",
+                "channel": "transfer",
+                "symbol": token_symbol,
+                "ts_exchange": tx.get("timeStamp", ""),
+                "ts_receive_ns": ts_ns,
+                "payload": json.dumps(tx, sort_keys=True),
+                "payload_hash": "",
+                "schema_version": "raw.v1",
+                "ingest_batch_id": "etherscan_api",
+            })
+
+        pl.DataFrame(bronze_rows).write_parquet(out_file)
+        written_paths.append(out_file)
+        logger.info(
+            "Saved %d transfers to %s", len(hour_transfers), out_file
+        )
+
+    return written_paths

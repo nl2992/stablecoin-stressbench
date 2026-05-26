@@ -212,6 +212,94 @@ def normalize_kraken_book(df: pl.DataFrame) -> pl.DataFrame:
     return _apply_quality_flags(pl.DataFrame(records))
 
 
+def normalize_binance_klines(df: pl.DataFrame) -> pl.DataFrame:
+    """Normalize Binance 1-minute klines archive records into synthetic book levels.
+
+    Expects Bronze records whose ``payload`` JSON contains a ``"k"`` sub-object
+    matching the ``@kline_1m`` WebSocket message format:
+
+        payload.k.t  — kline open time (milliseconds)
+        payload.k.o/h/l/c  — OHLC prices
+        payload.k.v  — base volume
+        payload.k.V  — taker-buy base volume
+        payload.k.s  — symbol
+
+    Generates 5 synthetic bid and 5 synthetic ask levels using the same
+    H-L spread schedule used by :mod:`scripts.fetch_real_data`.
+
+    Args:
+        df: Raw Bronze DataFrame with ``payload`` column (JSON string).
+
+    Returns:
+        Normalized DataFrame conforming to the Silver book-level schema.
+    """
+    _SIZE_SCHEDULE = [0.30, 0.25, 0.20, 0.15, 0.10]
+    _SPREAD_SCHEDULE = [1.0, 2.0, 3.5, 6.0, 10.0]
+    _N_LEVELS = 5
+
+    records = []
+    for row in df.iter_rows(named=True):
+        try:
+            outer = json.loads(row["payload"])
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        k = outer.get("k", outer)  # support both wrapped and flat payloads
+        open_time_ms = int(k.get("t", 0))
+        ts_ns = open_time_ms * 1_000_000
+        symbol = row.get("symbol") or k.get("s", "UNKNOWN")
+
+        try:
+            mid = float(k.get("c", 0))
+        except (TypeError, ValueError):
+            continue
+        if mid <= 0:
+            continue
+
+        try:
+            hl_range = float(k.get("h", mid)) - float(k.get("l", mid))
+        except (TypeError, ValueError):
+            hl_range = 0.0
+        half_spread = max(hl_range / 2.0, mid * 0.00005)  # floor at 0.5 bps
+
+        try:
+            taker_buy = max(float(k.get("V", 0)), 1e-9)
+            total_vol = max(float(k.get("v", 0)), 1e-9)
+        except (TypeError, ValueError):
+            taker_buy = 1e-9
+            total_vol = 1e-9
+        taker_sell = max(total_vol - taker_buy, 1e-9)
+
+        for i in range(_N_LEVELS):
+            bid_price = mid - _SPREAD_SCHEDULE[i] * half_spread
+            ask_price = mid + _SPREAD_SCHEDULE[i] * half_spread
+            base = dict(
+                ts_event_ns=ts_ns,
+                ts_receive_ns=row.get("ts_receive_ns", ts_ns),
+                venue_id="binance",
+                instrument_id=make_instrument_id("binance", symbol),
+                native_symbol=symbol,
+                level=i,
+                checksum=None,
+                raw_source="binance:klines",
+                payload_hash=row.get("payload_hash", ""),
+                is_crossed_book=False,
+                is_negative_size=False,
+                is_sequence_gap=False,
+                is_checksum_failed=False,
+                is_stale_quote=False,
+                is_resync_period=False,
+            )
+            records.append({**base, "side": "bid", "price": bid_price,
+                            "size": taker_sell * _SIZE_SCHEDULE[i]})
+            records.append({**base, "side": "ask", "price": ask_price,
+                            "size": taker_buy * _SIZE_SCHEDULE[i]})
+
+    if not records:
+        return pl.DataFrame()
+    return _apply_quality_flags(pl.DataFrame(records))
+
+
 def _make_level_record(
     ts_event_ns: int,
     ts_receive_ns: int,
