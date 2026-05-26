@@ -189,6 +189,8 @@ def _flatten_result(result: dict) -> dict:
         "n_test": result.get("n_test", ""),
         "validation_threshold": result.get("validation_threshold", ""),
         "validation_net_bps": result.get("validation_net_bps", ""),
+        "validation_n_trades": result.get("validation_n_trades", ""),
+        "validation_objective": result.get("validation_objective", ""),
         # ML metrics
         "auroc": ml.get("auroc", ""),
         "auprc": ml.get("auprc", ""),

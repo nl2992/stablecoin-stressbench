@@ -236,9 +236,13 @@ def _load_silver_channels(
         silver_root: Root of the Silver layer.
         channels: Channel names to scan.
         dates: ISO date strings to include.
-        depth_source: When set, adds a ``depth_source`` column with this value
-            to every loaded frame. Use ``"real_l2"`` or ``"synthetic_kline"``
-            to distinguish executable-quality data from OHLCV-derived data.
+        depth_source: Fallback ``depth_source`` value to add when the column is
+            absent in a loaded frame (or to fill nulls when it is present).
+            Use granular values like ``"real_l2_snapshot"``,
+            ``"real_l2_incremental"``, or ``"synthetic_kline"`` to preserve
+            provenance from Silver normalizers.  A frame that already carries a
+            ``depth_source`` column (written by the normalizer) is not
+            overwritten — only null entries are filled.
     """
     frames: list[pl.DataFrame] = []
     for channel in channels:
@@ -251,7 +255,12 @@ def _load_silver_channels(
             try:
                 frame = pl.read_parquet(f)
                 if depth_source is not None and not frame.is_empty():
-                    frame = frame.with_columns(pl.lit(depth_source).alias("depth_source"))
+                    if "depth_source" not in frame.columns:
+                        frame = frame.with_columns(pl.lit(depth_source).alias("depth_source"))
+                    else:
+                        frame = frame.with_columns(
+                            pl.col("depth_source").fill_null(depth_source).alias("depth_source")
+                        )
                 frames.append(frame)
             except Exception as exc:
                 logger.warning("Skip %s: %s", f, exc)
@@ -767,7 +776,7 @@ def build_gold_features(
             "depth", "level2", "book",
             "tardis_book_snapshot_1s", "tardis_incremental_book_l2",
         ]
-        books_real = _load_silver_channels(silver_root, _REAL_L2_CHANNELS, one_day, depth_source="real_l2")
+        books_real = _load_silver_channels(silver_root, _REAL_L2_CHANNELS, one_day, depth_source="real_l2_snapshot")
         books_synth = _load_silver_channels(silver_root, ["klines"], one_day, depth_source="synthetic_kline")
         book_frames = [df for df in [books_real, books_synth] if not df.is_empty()]
         books = pl.concat(book_frames, how="diagonal") if book_frames else pl.DataFrame()
@@ -802,10 +811,18 @@ def build_gold_features(
             frag = _compute_fragmentation(book_1m, instruments)
             _write_gold(gold_root, "feat_fragmentation_1m", date_str, frag)
 
-        # Net profit uses full depth-of-book (raw Silver levels) for VWAP walk
-        if not books.is_empty():
-            net_profit = _compute_net_profit_1m(books, instruments, fee_cfg)
+        # Paper-grade net profit: real L2 books only (real_l2_snapshot / real_l2_incremental).
+        # Synthetic kline books are NOT allowed here — they do not represent executable depth.
+        if not books_real.is_empty():
+            net_profit = _compute_net_profit_1m(books_real, instruments, fee_cfg)
             _write_gold(gold_root, "feat_net_profit_1m", date_str, net_profit)
+
+        # Proxy net profit: all books including synthetic klines.
+        # Written only when no real L2 is available — for CI / smoke / demo mode only.
+        # Never use this table for paper results.
+        if books_real.is_empty() and not books.is_empty():
+            net_profit_proxy = _compute_net_profit_1m(books, instruments, fee_cfg)
+            _write_gold(gold_root, "feat_net_profit_1m_proxy", date_str, net_profit_proxy)
 
         settle = _compute_settlement_1m(transfers, swaps)
         _write_gold(gold_root, "feat_settlement_1m", date_str, settle)

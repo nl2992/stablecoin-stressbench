@@ -95,23 +95,42 @@ def _calibrate_threshold(
     y_proba: np.ndarray,
     y_net: np.ndarray,
     n_candidates: int = 17,
-) -> tuple[float, float]:
-    """Find the probability threshold maximising net_bps_captured on a held-out set.
+    min_trades: int = 25,
+) -> tuple[float, float, int]:
+    """Find the probability threshold maximising total net P&L on a held-out set.
+
+    Objective: total net profit (sum of y_net for signalled trades) rather than
+    mean net bps per trade, so a threshold selecting 1 lucky trade can never win.
+    A minimum trade count is required; candidates with fewer trades are skipped.
+
+    Args:
+        y_proba: Model probability scores, shape (n,).
+        y_net: Realized net profit in bps for each sample, shape (n,).
+        n_candidates: Number of threshold candidates in (0.05, 0.95).
+        min_trades: Minimum number of signalled trades required to accept a
+            threshold.  Prevents selection of thresholds that produce very few
+            high-profit trades at the expense of generalisability.
 
     Returns:
-        (best_threshold, best_net_bps) — the threshold and the net bps achieved
-        at that threshold on the calibration set.
+        ``(best_threshold, best_mean_net_bps, n_trades_at_threshold)``
     """
-    best_t, best_net = 0.5, -np.inf
+    best_t, best_total, best_n = 0.5, -np.inf, 0
     for t in np.linspace(0.05, 0.95, n_candidates):
         signal = (y_proba > t).astype(np.int8)
-        if signal.sum() == 0:
+        n_sig = int(signal.sum())
+        if n_sig < min_trades:
             continue
-        net = float(np.mean(y_net[signal == 1]))
-        if net > best_net:
-            best_net = net
+        total_net = float(np.sum(y_net[signal == 1]))
+        if total_net > best_total:
+            best_total = total_net
             best_t = float(t)
-    return best_t, best_net if best_net > -np.inf else float("nan")
+            best_n = n_sig
+    if best_total == -np.inf:
+        # No candidate met min_trades — fall back to 0.5 without constraint
+        signal_05 = (y_proba > 0.5).astype(np.int8)
+        best_n = int(signal_05.sum())
+    mean_net = float(np.mean(y_net[(y_proba > best_t).astype(bool)])) if best_n > 0 else float("nan")
+    return best_t, mean_net, best_n
 
 
 def run_experiment(
@@ -202,12 +221,16 @@ def run_experiment(
     # Threshold calibration on validation split
     val_threshold = 0.5
     val_net_bps = float("nan")
+    val_n_trades = 0
     if calibrate_threshold and len(X_val) > 0 and ml_task == "classification":
         try:
             y_val_proba = model.predict_proba(X_val)[:, 1]
             y_val_proba = np.clip(y_val_proba, 0.0, 1.0)
-            val_threshold, val_net_bps = _calibrate_threshold(y_val_proba, y_net_val)
-            logger.info("  Val threshold: %.2f  (val net_bps=%.1f)", val_threshold, val_net_bps)
+            val_threshold, val_net_bps, val_n_trades = _calibrate_threshold(y_val_proba, y_net_val)
+            logger.info(
+                "  Val threshold: %.2f  (val net_bps=%.1f  n_trades=%d)",
+                val_threshold, val_net_bps, val_n_trades,
+            )
         except (AttributeError, ValueError):
             pass
 
@@ -237,5 +260,7 @@ def run_experiment(
     result["feature_cols"] = feature_cols
     result["validation_threshold"] = round(val_threshold, 4)
     result["validation_net_bps"] = round(val_net_bps, 2) if not np.isnan(val_net_bps) else None
+    result["validation_n_trades"] = val_n_trades
+    result["validation_objective"] = "total_pnl_min25trades"
 
     return result

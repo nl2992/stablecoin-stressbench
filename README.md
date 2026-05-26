@@ -46,8 +46,13 @@ pip install -e .
 
 ### 2. Build Bronze → Silver → Gold (historical data)
 ```bash
-# Ingest Binance Vision archive for a date range
-python scripts/archive_to_bronze.py --start 2023-03-10 --end 2023-03-15
+# Pull Binance Vision archive (public, no API key needed)
+python scripts/pull_data.py --start 2023-03-10 --end 2023-03-15 \
+  --venues binance --mode archive
+
+# Pull Coinbase / Kraken via Tardis (requires TARDIS_API_KEY in .env)
+python scripts/pull_data.py --start 2023-03-10 --end 2023-03-15 \
+  --venues coinbase kraken --mode tardis
 
 # Normalize Bronze to Silver, then build Gold feature tables
 python scripts/build_features.py --start 2023-03-10 --end 2023-03-15
