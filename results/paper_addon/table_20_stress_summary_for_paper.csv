@@ -1,0 +1,8 @@
+event,mechanism,tier,role,available_rows_or_minutes,stress_metric,execution_label_available,allowed_claim
+Terra/UST 2022,algorithmic/reflexive,B / validation,threshold calibration,11523 minutes,13.76% price-basis positive (maxabs >10 bps); 3.08% executable-label positive rate,partial (validation split label only),calibration only — not Tier-A execution inference
+USDC/SVB 2023,fiat-reserve bank shock,A,main execution test,15839 minutes,35.1% primary/max basis >10 bps; 2.88% executable at $10K ($net_profit>10 bps),yes — real L2 VWAP labels,execution gap / oracle gap / model evaluation / P&L
+USDC recovery 2023,fiat-reserve recovery,A comparator,post-stress comparator,included in test split,low basis; near-peg recovery dynamics,yes — real L2 VWAP labels,comparator only — not an independent stress mechanism
+USDT/Curve 2023,DeFi pool imbalance,B,price/liquidity context,price/pool data only,est. −80 bps peg deviation (pool imbalance),no,no execution P&L claims; price/liquidity estimates only (est.)
+FTX 2022,exchange credit/liquidity,B,market stress context,price/trade data,est. −20 to −50 bps CEX contagion; exchange insolvency,no,no execution P&L claims; market stress context only
+BUSD 2023,regulatory winddown,B,issuer/regulatory context,price/supply data,est. −30 bps managed dislocation; NYDFS regulatory order,no,no execution P&L claims; issuer/regulatory context only
+IRON/TITAN 2021,algorithmic/reflexive,C,taxonomy context,partial (Polygon DEX only),terminal depeg (est. −10000 bps); no CEX exposure,no,taxonomy and mechanism context only; no numerical claims

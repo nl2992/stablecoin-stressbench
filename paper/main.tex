@@ -349,7 +349,7 @@ arbitrage-profitability argument.
 \toprule
 \textbf{Event} & \textbf{Mechanism} & \textbf{Tier} & \textbf{Role}\\
 \midrule
-Terra/UST 2022    & Algorithmic/reflexive    & B / validation & Threshold calibration\\
+Terra/UST 2022    & Algorithmic/reflexive    & Validation     & Threshold calibration\\
 USDC/SVB 2023     & Fiat-reserve bank shock  & A              & Main execution test\\
 USDC recovery     & Fiat-reserve recovery    & A              & Comparator\\
 USDT/Curve 2023   & DeFi pool imbalance      & B              & Price/liquidity context\\
@@ -366,16 +366,19 @@ used.
 The catalogue establishes that stablecoin stress recurs across
 mechanisms, but only Tier-A events support execution-aware P\&L
 claims.
-Terra/UST provides an independent stress validation split;
 USDC/SVB is the primary execution-grade test;
 USDC recovery is a Tier-A comparator;
 and Tier-B / Tier-C events provide external validity and mechanism
 taxonomy rather than arbitrage-profitability evidence.
 
-The Terra/LUNA validation split is not used to claim a second
-execution-grade test result.
-Its role is calibration: it exposes the thresholding procedure to
-stress dynamics outside the USDC/SVB episode before final testing.
+Terra/UST serves as the validation split (Tier~B, Algorithmic/reflexive
+mechanism): it is used for threshold calibration and exposes the
+thresholding procedure to independent stress dynamics before final
+evaluation.
+It is \emph{not} used to claim a second execution-grade result —
+the validation split has executable-arb labels ($3.08\%$ positive at
+\$10K) but lacks the full Tier-A L2 depth reconstruction required for
+execution P\&L inference.
 
 \subsection{Feature Sets}
 \label{sec:features}
