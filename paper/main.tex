@@ -231,7 +231,7 @@ the May~2022 Terra depeg with a 12-hour lead.
 Their target is \emph{depeg risk}; ours is \emph{executable
 arbitrage} --- related but distinct, as we find BOCPD achieves only
 AUROC~0.23 on CEX cross-quote data.
-No prior benchmark provides execution-aware stablecoin arbitrage
+To our knowledge, no prior benchmark provides execution-aware stablecoin arbitrage
 labels with documented route-depth provenance and a systematic
 price-to-execution gap analysis.
 
@@ -279,8 +279,8 @@ leg in 2023 requires a paid Tardis archive subscription.
 \centering
 \caption{Route-leg depth provenance per benchmark window.}
 \label{tab:route_provenance}
-\setlength{\tabcolsep}{3pt}
-{\small
+\setlength{\tabcolsep}{2pt}
+{\scriptsize
 \begin{tabular}{lp{2.2cm}p{2.2cm}}
 \toprule
 \textbf{Leg (instrument)} & \textbf{SVB test Mar~2023} & \textbf{2024 windows}\\
@@ -346,7 +346,8 @@ evaluation on USDC/SVB.
   \includegraphics[width=\columnwidth]{../results/paper/figures/figure_1_usdc_basis_svb.png}
   \caption{Cross-quote basis (bps) during the SVB stress window
     (March 2023), exceeding 100\,bps for sustained periods.
-    With real USDCUSDT futures bookDepth, the USDC-specific basis
+    Using available USDC-USDT futures bookDepth from March~12 onward,
+    the USDC-specific basis
     exceeds 10\,bps in 12.5\% of test minutes (capturing the actual
     SVB-period USDC de-peg); the USDT route exceeds 10\,bps in
     27.4\% of minutes; the max-abs basis (maximum of both routes)
@@ -613,6 +614,8 @@ Primary economic task: {\small\ttfamily executable\_\allowbreak{}arb\_\allowbrea
 The forward-max in Eq.~(\ref{eq:label}) asks whether any profitable
 window exists in the next $h$ minutes, matching the constraint
 that a trader may execute at any point in the horizon.
+Table~\ref{tab:gap} is same-minute; model evaluation uses the forward
+5-minute executable-arbitrage task.
 
 \subsection{Oracle Upper Bound}
 \label{sec:oracle}
@@ -750,8 +753,9 @@ only 2.88\% yield net profit above 10\,bps after execution costs at
 \$10K notional --- a \textbf{12$\times$ price-to-execution ratio}
 (block bootstrap 95\,\% CI: $8\times$--$24\times$, 60-min blocks,
 $B{=}10{,}000$ resamples).
-With real USDCUSDT futures bookDepth, the USDC-specific basis fires
-in 12.5\% of minutes (correctly capturing the SVB-period USDC discount);
+Using available USDC-USDT futures bookDepth from March~12 onward, the
+USDC-specific basis fires in 12.5\% of minutes (correctly capturing the
+SVB-period USDC discount);
 the USDT route contributes the majority of the max-abs signal
 (USDT ${>}10\bps$ in 27.4\% of minutes), with USDC dominating the
 max-abs signal in 34.3\% of those minutes.
@@ -1041,16 +1045,16 @@ Mechanism                       & Fiat-reserve & Alg./reflexive\\
 Price-basis ${>}10\bps$ (max)   & 34.3\%   & 13.5\%\\
 Executable ${>}10\bps$ (\$10K)  & 2.88\%   & 2.30\%\\
 Price-to-exec ratio             & $12\times$  & $5.9\times$\\
-Oracle (hindsight, ${>}10\bps$)$^{\ddagger}$ & $+260\bps$  & $+88\bps$$^\dagger$\\
-Route depth                     & 2-of-3 real L2 & kline-proxy\\
+Oracle bps$^{\ddagger}$         & $+260\bps$  & $+88\bps$$^\dagger$\\
+Route depth                     & real/proxy$^\S$ & kline-proxy\\
 \bottomrule
 \end{tabular}
 }
 \vspace{2pt}
 {\footnotesize $^\dagger$Kline-proxy labels; directional comparison only --- not
 Tier-A under the SVB route-provenance standard.\\
-$^{\ddagger}$Oracle bps: executable\_arb\_q10000 task (see Table~\ref{tab:oracle}
-for full task breakdown).}
+$^{\ddagger}$Oracle bps: executable\_arb\_q10000 task.
+$^\S$Leg-level provenance in Table~\ref{tab:route_provenance}.}
 \end{table}
 
 The cross-mechanism pattern supports the paper's central claim:
@@ -1163,6 +1167,7 @@ Anonymised for review.
 
 %% =============================================================
 \bibliographystyle{ACM-Reference-Format}
+\scriptsize
 \begin{thebibliography}{15}
 
 \bibitem{uhlig2022luna}
@@ -1219,15 +1224,15 @@ L\'{o}pez de Prado, M.\ (2018).
 
 \bibitem{cintra2023bocpd}
 Cintra, R. and Holloway, C.\ (2023).
-\newblock Bayesian online changepoint detection for stablecoin depeg events:
-  Evidence from Curve StableSwap pools.
-\newblock {\em Working Paper}.
+\newblock Detecting depegs: Towards safer passive liquidity provision on
+  Curve Finance.
+\newblock {\em arXiv:2306.10612}.
 
 \bibitem{vidalthomas2023ftx}
 Vidal-Tom\`{a}s, D., Briola, A., and Aste, T.\ (2023).
 \newblock FTX's downfall and Binance's consolidation: The fragility of
-  centralised exchanges.
-\newblock {\em SSRN Working Paper}.
+  centralised digital finance.
+\newblock {\em arXiv:2302.11371}.
 
 \bibitem{gatev2006pairs}
 Gatev, E., Goetzmann, W.~N., and Rouwenhorst, K.~G.\ (2006).
