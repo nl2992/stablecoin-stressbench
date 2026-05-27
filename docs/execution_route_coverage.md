@@ -64,7 +64,7 @@ bookDepth, which is not committed to the public release.
 | Calm control | train | Jan 2022 | kline-proxy (2022 not in Binance Vision archive) | kline-proxy (synthetic_kline) | route legs present | **No — 2022 not in public archive** |
 | Terra/UST | validation | May 7–14, 2022 | kline-proxy (2022 not in Binance Vision archive) | kline-proxy (synthetic_kline) | route legs present | **No — 2022 not in public archive** |
 | BUSD regulatory | (not in splits) | Feb 1–7, 2023 | BTCUSDT + ETHUSDT only (no BTCUSDC, no USDCUSDT) | kline-proxy | **USDC route missing** | No |
-| USDC/SVB | test | Mar 10–20, 2023 | **real futures bookDepth** (`raw_source: binance:futures_bookdepth`) | kline-proxy (synthetic_kline) | BTCUSDT sell leg real L2; BTCUSDC buy leg synthetic | **Sell leg real L2 ✓** |
+| USDC/SVB | test | Mar 10–20, 2023 | **real futures bookDepth** (`raw_source: binance:futures_bookdepth`) | kline-proxy (synthetic_kline) | BTCUSDT sell ✅; USDCUSDT cross ✅ (Mar 12–20); BTCUSDC buy ❌ (perp not listed until 2024) | **2 of 3 legs real L2** |
 | FTX collapse | (not in splits) | Nov 2022 | None | None | No | No |
 | Celsius/3AC | (not in splits) | Jun 2022 | None | None | No | No |
 | USDT/Curve | (not in splits) | Jun 2023 | real futures bookDepth (not in benchmark split) | None | No (out of benchmark) | No |
@@ -119,6 +119,6 @@ Even if Tardis archives were acquired, each event would require:
 |-------|---------------------|----------------------|------------------------|------|
 | Calm control (train) | Yes | synthetic_kline (2022 not in Binance Vision) | Via committed dataset.parquet | A (committed labels) |
 | Terra/UST (validation) | Yes | synthetic_kline (2022 not in Binance Vision) | Via committed dataset.parquet | A (committed labels) |
-| USDC/SVB (test) | Yes | **binance:futures_bookdepth** (real L2) | Yes — real sell-leg L2 | **A (real L2 sell leg)** |
+| USDC/SVB (test) | Yes | **binance:futures_bookdepth** (real L2 on BTCUSDT + USDCUSDT) | Yes — sell + cross legs real L2; buy leg (BTCUSDC) kline-proxy | **A (2 of 3 legs real L2)** |
 | BUSD regulatory | Partial (USDC route missing) | synthetic_kline | No (USDC leg missing) | B |
 | FTX, Celsius, USDT/Curve, others | None | — | No | B or C |

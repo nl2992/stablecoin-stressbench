@@ -329,8 +329,12 @@ def ingest_binance_klines(
 
 _FUTURES_BOOKDEPTH_BASE = "https://data.binance.vision/data/futures/um/daily/bookDepth"
 
-# Futures USDM symbols with bookDepth archive (spot equivalents)
-_FUTURES_BOOKDEPTH_SYMBOLS = ["BTCUSDT"]
+# Futures USDM symbols with bookDepth archive — all three route legs.
+# Archive coverage (Binance Vision public):
+#   BTCUSDT:  2023-01-01 → present  (sell leg, all benchmark windows)
+#   USDCUSDT: 2023-03-12 → present  (cross leg, SVB test days 3-10 + all 2024 windows)
+#   BTCUSDC:  2024-01-04 → present  (buy leg, 2024 calm-control only; perp didn't exist in 2023)
+_FUTURES_BOOKDEPTH_SYMBOLS = ["BTCUSDT", "USDCUSDT", "BTCUSDC"]
 
 
 def ingest_binance_futures_bookdepth(
