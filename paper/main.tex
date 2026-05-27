@@ -274,6 +274,10 @@ dynamics; \textit{(ii)} threshold calibration on validation uses an
 independent stress event, not a held-out portion of the same episode.
 No lookahead: labels are constructed by \texttt{join\_asof} at
 $t + h$ and formally verified.
+The Terra/LUNA validation split is not used to claim a second
+execution-grade test result; its role is calibration, exposing the
+thresholding procedure to independent stress dynamics before final
+evaluation on USDC/SVB.
 
 \begin{figure}[t]
   \centering
@@ -286,7 +290,7 @@ $t + h$ and formally verified.
   \label{fig:basis}
 \end{figure}
 
-\subsection{Historical Stress Taxonomy and Data Coverage}
+\subsection{Historical Stress Taxonomy and Data Tiering}
 \label{sec:historical}
 
 Stablecoin stress is not a single phenomenon.
@@ -322,40 +326,6 @@ C ($N{=}5$)  & Partial          & Mechanism taxonomy and historical context only
 }
 \end{table}
 
-Table~\ref{tab:stress_summary} shows the USDC/SVB event is one instance
-of a broader stress taxonomy.
-We use the historical catalogue to establish external validity across
-mechanism classes, but restrict all execution-aware claims to Tier-A
-events.
-Terra/UST~(May~2022) provides an independent stress window for
-threshold calibration (the validation split; 13.76\% price-basis
-positive, 3.08\% executable at \$10K);
-USDC/SVB~(March~2023) is the primary execution test;
-USDT/Curve, FTX, and BUSD support mechanism-diversity context only.
-
-\begin{table}[t]
-\centering
-\caption{Stress-event summary and role in the benchmark. Execution
-labels available only for Tier-A events. Tier-B figures are
-price-grade estimates (\textit{est.}); no arbitrage-profitability
-claims are made from Tier-B data.}
-\label{tab:stress_summary}
-{\small
-\begin{tabular}{lllcc}
-\toprule
-\textbf{Event} & \textbf{Mechanism} & \textbf{Tier} & \textbf{Role} & \textbf{Exec.\ labels}\\
-\midrule
-Terra/UST 2022    & Algorithmic/reflexive    & B & Validation  & Partial / split label \\
-USDC/SVB 2023     & Fiat-reserve bank shock  & A & Main test   & Yes \\
-USDC recovery     & Fiat-reserve recovery    & A & Comparator  & Yes \\
-USDT/Curve 2023   & DeFi pool imbalance      & B & Context     & No \\
-FTX 2022          & Exchange liquidity shock & B & Context     & No \\
-BUSD 2023         & Regulatory winddown      & B & Context     & No \\
-\bottomrule
-\end{tabular}
-}
-\end{table}
-
 \noindent Execution-grade labels are available for the USDC/SVB stress
 window and its immediate post-stress recovery window (both Tier~A).
 The price-to-execution gap, oracle net bps, and model evaluation in
@@ -365,6 +335,47 @@ mechanism.
 Price-grade claims for Tier-B events are labelled as estimates
 (\textit{est.}) and are excluded from any
 arbitrage-profitability argument.
+
+\subsection{Stress-Event Roles in the Benchmark}
+\label{sec:roles}
+
+\begin{table}[t]
+\centering
+\caption{Stress-event roles in Stablecoin StressBench.}
+\label{tab:stress_roles}
+\setlength{\tabcolsep}{3pt}
+{\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Event} & \textbf{Mechanism} & \textbf{Tier} & \textbf{Role}\\
+\midrule
+Terra/UST 2022    & Algorithmic/reflexive    & B / validation & Threshold calibration\\
+USDC/SVB 2023     & Fiat-reserve bank shock  & A              & Main execution test\\
+USDC recovery     & Fiat-reserve recovery    & A              & Comparator\\
+USDT/Curve 2023   & DeFi pool imbalance      & B              & Price/liquidity context\\
+FTX 2022          & Exchange credit/liq.     & B              & Market stress context\\
+BUSD 2023         & Regulatory winddown      & B              & Issuer/regulatory context\\
+IRON/TITAN 2021   & Algorithmic/reflexive    & C              & Taxonomy context\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+Table~\ref{tab:stress_roles} clarifies how the historical catalogue is
+used.
+The catalogue establishes that stablecoin stress recurs across
+mechanisms, but only Tier-A events support execution-aware P\&L
+claims.
+Terra/UST provides an independent stress validation split;
+USDC/SVB is the primary execution-grade test;
+USDC recovery is a Tier-A comparator;
+and Tier-B / Tier-C events provide external validity and mechanism
+taxonomy rather than arbitrage-profitability evidence.
+
+The Terra/LUNA validation split is not used to claim a second
+execution-grade test result.
+Its role is calibration: it exposes the thresholding procedure to
+stress dynamics outside the USDC/SVB episode before final testing.
 
 \subsection{Feature Sets}
 \label{sec:features}
@@ -827,6 +838,37 @@ This directly illustrates the execution-barrier problem: the rule
 fires on price dislocations where the book is too thin to fill the
 arbitrage leg.
 
+\subsection{Stress Recurs Across Mechanisms, But Execution Labels Are Scarce}
+\label{sec:stress_recurrence}
+
+The benchmark is evaluated on a single Tier-A stress event, which
+raises the question of whether the price-to-execution gap and oracle
+gap are specific to the USDC/SVB episode.
+The historical catalogue (Table~\ref{tab:stress_roles}) provides
+indirect evidence that execution barriers are a structural property
+of stablecoin stress rather than an artefact of one event.
+
+Across seven mechanism classes, stress events share common features:
+a price dislocation arises rapidly, order-book depth deteriorates at
+the moment when arbitrage would be most profitable, and settlement
+risk rises simultaneously.
+This pattern holds regardless of whether the stress originates from a
+bank-reserve shock (USDC/SVB), an algorithmic-reflexive collapse
+(Terra/UST), an exchange credit event (FTX), a DeFi pool imbalance
+(USDT/Curve), or a regulatory winddown (BUSD).
+
+The constraint is not whether stress occurs — it does, repeatedly —
+but whether execution-grade order-book data exists to measure the
+gap precisely.
+Only Tier-A events provide the L2 depth required for VWAP label
+construction.
+The Terra/LUNA validation split ($N{=}11{,}523$ minutes,
+13.76\% price-basis positive, 3.08\% executable) demonstrates
+similar dynamics under an independent mechanism, but without the
+full Tier-A execution reconstruction needed for P\&L claims.
+Expanding Tier-A coverage to additional mechanism classes is the
+primary path to testing whether the oracle gap generalises across
+stress regimes.
 
 %% =============================================================
 \section{Limitations}
@@ -892,11 +934,9 @@ observing price dislocations, but predicting which dislocations
 survive execution.
 The benchmark defines an oracle gap between hindsight-executable
 opportunities and ex-ante deployable models.
-The historical catalogue of 18 events across seven mechanism classes
-demonstrates that execution barriers recur across different stress
-regimes; acquiring Tier-A depth for additional mechanisms remains the
-primary path to testing whether these results generalise beyond the
-fiat-reserve bank-shock class.
+The historical catalogue shows why this benchmark matters beyond one
+event: stablecoin stress recurs across mechanisms, while only some
+episodes provide the depth required for execution-aware evaluation.
 Closing the oracle gap — through better microstructure features, improved
 calibration, or deeper sequence and network models — is the central
 challenge for future work on crypto market microstructure, financial
