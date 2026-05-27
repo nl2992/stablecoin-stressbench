@@ -217,25 +217,28 @@ labels with real L2 depth provenance.
 
 The gold-layer dataset contains 47,487 1-minute bars across three
 event windows (Table~\ref{tab:dataset}).
-Price data comes from the Binance Vision public archive (klines,
-aggTrades) and Coinbase REST candles.
-Execution-grade order-book depth comes from Binance USDM futures
-bookDepth snapshots and incremental updates.
-We track four instruments — BTC-USDC, BTC-USDT, ETH-USDC, ETH-USDT
-— across Binance, Coinbase, and Kraken.
+Price and reference features are derived from the Binance Vision public
+archive (klines, aggTrades) and Coinbase REST candles.
+Net-profit labels are computed on routes with confirmed order-book
+depth coverage; the cross-quote route uses Binance BTC-USDC and
+BTC-USDT depth alongside Coinbase BTC-USD as the reference leg.
 
-\textbf{Depth provenance.}
-Each row carries a \texttt{depth\_source} tag:
-\texttt{real\_l2\_snapshot}, \texttt{real\_l2\_incremental},
-or \texttt{synthetic\_kline}.
-Net-profit labels use only \texttt{real\_l2\_*} rows;
-synthetic kline depth is isolated to a separate
-\texttt{is\_paper\_grade\_depth} flag.
-Binance USDM futures bookDepth is the confirmed execution-grade source
-in the committed dataset.
-Full historical L2 for Coinbase and Kraken during the SVB period
-(March~2023) requires a Tardis subscription not included in the
-released benchmark.
+\textbf{Depth provenance and reproducibility.}
+The pipeline distinguishes \texttt{real\_l2\_snapshot},
+\texttt{real\_l2\_incremental}, and \texttt{synthetic\_kline} depth
+sources.
+Net-profit labels are written only from the real-L2 path;
+the synthetic kline fallback produces a separate
+\texttt{feat\_net\_profit\_1m\_proxy} file that is never used for
+paper results.
+The \texttt{feat\_net\_profit\_1m} and \texttt{dataset.parquet} files
+committed at \texttt{v0.1.0-benchmark-freeze} were computed from
+Binance bookDepth real-time snapshots; those raw depth files are not
+included in the public release.
+To reproduce net-profit labels from scratch, the pipeline requires
+Binance bookDepth API access (for the benchmark dates) or a Tardis
+subscription for archived L2 snapshots; Coinbase and Kraken full-depth
+archives also require Tardis.
 
 \begin{table}[t]
 \centering
@@ -335,6 +338,15 @@ mechanism.
 Price-grade claims for Tier-B events are labelled as estimates
 (\textit{est.}) and are excluded from any
 arbitrage-profitability argument.
+
+\textbf{L2 data availability is not equivalent to execution-grade coverage.}
+A stablecoin arbitrage label requires route-complete depth: synchronized
+buy- and sell-leg order books, sufficient depth at the tested notional,
+and non-synthetic provenance for the relevant instruments and venues.
+For Tier-B and Tier-C events — FTX, Celsius/3AC, USDT/Curve, BUSD,
+and others — no order-book depth data is available in the repository.
+Those events support price and taxonomy claims only
+(see \texttt{docs/execution\_route\_coverage.md}).
 
 \subsection{Stress-Event Roles in the Benchmark}
 \label{sec:roles}

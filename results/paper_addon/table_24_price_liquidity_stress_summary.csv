@@ -1,0 +1,12 @@
+event_id,event_name,mechanism_class,tier,max_abs_depeg_bps_est,duration_above_10bps_est,duration_above_50bps_est,volume_spike_proxy,pool_imbalance_proxy,claim_allowed
+mim_wonderland_2022,MIM/Wonderland Shock 2022,algorithmic_reflexive,B,est. −300 bps,days,no,not available,Curve MIM-3pool imbalance,price/liquidity estimates only (est.); no execution P&L
+terra_ust_2022,Terra/UST Collapse 2022,algorithmic_reflexive,B,est. −10000 bps (terminal),days to weeks,yes (days),CEX trade volume spike reported,Curve 3Pool severely imbalanced,price/liquidity estimates only (est.); no execution P&L from Tier-B data
+celsius_3ac_2022,Celsius/3AC Contagion 2022,exchange_credit_liquidity,B,est. −100 bps,hours to days,no,exchange withdrawal freeze reported,not applicable (CEX credit event),price/liquidity context only; no depth data in repo
+husd_depeg_2022,HUSD Issuer Failure 2022,exchange_credit_liquidity,B,est. −800 bps,days,yes,Huobi withdrawal reports,not applicable,price/liquidity context only; no depth data in repo
+ftx_collapse_2022,FTX Collapse 2022,exchange_credit_liquidity,B,est. −20 to −50 bps (CEX contagion),hours,no,massive FTX withdrawal rush,not applicable (CEX insolvency),price/liquidity context only; no depth data in repo
+busd_regulatory_2023,BUSD Regulatory Winddown 2023,regulatory_issuer_winddown,B,est. −30 bps managed,weeks,no,supply migration (BUSD→USDT/USDC),not applicable,price/liquidity context only; USDC route depth missing for Feb 2023
+usdc_dai_secondary_svb_2023,USDC/DAI DeFi Secondary SVB 2023,defi_pool_imbalance,B,est. −200 bps,hours,no,MakerDAO PSM stress reported,DAI PSM depleted,price/liquidity context only (co-incident with Tier-A SVB event)
+usdt_curve_2023,USDT/Curve Pool Imbalance 2023,defi_pool_imbalance,B,est. −8 bps,hours,no,minor pool rebalancing,Curve 3Pool minor imbalance,price/liquidity context only; no depth data in repo
+usdd_tron_2022,USDD/TRON Stress 2022,algorithmic_reflexive,B,est. −200 bps,days,no,contagion from UST,not applicable,price/liquidity context only; no depth data in repo
+dai_black_thursday_2020,DAI Black Thursday 2020,collateral_liquidation_oracle,B,+150 bps (above peg),hours,yes,ETH collateral crash cascade,not applicable (collateral-side event),price/liquidity context only; no depth data in repo
+usdr_2023,USDR RWA Failure 2023,rwa_niche_stablecoin,B,est. −5000 bps,days,yes,illiquid real-estate backing,not applicable,price/liquidity context only; no depth data in repo
