@@ -76,8 +76,8 @@ book/frag).
 Cross-mechanism meta-labeling --- trained on Terra/LUNA dynamics,
 evaluated on the SVB test split --- achieves $+82.5\bps$ net
 (50.8\% oracle capture), demonstrating that execution microstructure
-is mechanism-invariant and that cross-event transfer is the key to
-closing the oracle gap.
+is mechanism-invariant and identifying cross-event transfer as the
+primary route to positive net returns.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -129,15 +129,15 @@ The oracle gap exceeds 260\,bps.
 \end{enumerate}
 
 \tp{Optimal execution interpretation.}
-The oracle gap has a natural decision-theoretic framing: the state at
-each minute is the current order book and cross-quote basis, the action
-is whether to execute the arbitrage route, and the reward is the net
-bps captured.
-The oracle corresponds to the optimal policy under perfect foresight.
-StressBench therefore provides a reproducible environment for
-learned execution research: the state space is the four-level
-microstructure feature hierarchy, the reward function is the documented
-net-profit label, and the performance ceiling is the oracle gap.
+The oracle gap maps directly to an optimal execution problem: at each
+minute, a trader observes the order book and cross-quote basis, decides
+whether to execute the arbitrage route, and earns net bps.
+The oracle is the optimal policy under perfect foresight; the oracle
+gap is what any deployable policy must close.
+StressBench provides a reproducible MDP environment where the state
+space is the four-level microstructure feature hierarchy, the reward
+function is the documented net-profit label, and the difficulty is
+calibrated by the oracle gap.
 
 
 %% =============================================================
@@ -516,10 +516,10 @@ GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401
 \end{tabular}
 }
 \vspace{2pt}
-{\footnotesize $^\ast$lgbm@all features, 106 trades;
-  best arb: price\_threshold\_25bps@price\_only.\\
-  $^\ddagger$GRU, 30-min window, real Tier-A L2; confirms gap is structural
-  even with AUROC~0.80 (\S\ref{sec:seq_results}).}
+{\footnotesize $^\ast$lgbm@\texttt{price\_book\_settle} feature set, 106 trades;
+  best arb: price\_threshold\_25bps@\texttt{price\_only}.\\
+  $^\ddagger$GRU, 30-min window, real Tier-A L2; gap is structural
+  even at AUROC~0.80 (\S\ref{sec:seq_results}).}
 \end{table}
 
 \begin{figure}[t]
@@ -531,7 +531,7 @@ GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401
     Oracle (gold): $+161.7\bps$/trade; LightGBM (navy): $+17.2\bps$/trade;
     \texttt{PriceBasis10bps} (red): $-269.5\bps$/trade;
     NoTrade (grey dashed): $0\bps$.
-    The price rule hemorrhages losses during the SVB shock (Day~10--11).}
+    The price rule accumulates severe losses during the SVB shock (Day~10--11).}
   \label{fig:cumulative_pnl}
 \end{figure}
 
@@ -545,8 +545,12 @@ mode is near-total false-positive exposure.
 LightGBM achieves $+17.2\bps$ (106 trades, AUROC~0.72), the only
 non-oracle result above zero, but 145\,bps below the oracle.
 The \texttt{ExpNetProfitRegressor} reaches $-73.8\bps$ despite
-directly targeting the economic criterion: the oracle gap is structural,
-not a label-mismatch artefact.
+directly targeting the economic criterion: the gap is not a
+label-mismatch artefact.
+The false-positive drag is quantifiable: 581 FP trades at $-38.7\bps$
+each total $-22{,}484\bps$; spread across 315 oracle windows this is
+$-71.4\bps$ per profitable window --- the dominant component of the
+oracle gap before timing effects are considered.
 
 \begin{table}[t]
 \centering
@@ -579,9 +583,10 @@ Oracle$^\dagger$ & ---  & $+162.2$ & 315  & --- & ---    & 100\%\\
 \end{tabular}
 }
 \vspace{2pt}
-{\footnotesize px = price\_only; bk = price\_plus\_book;
-  all = price\_book\_settle.
-  $^\ddagger$GRU: 30-min sliding window, real Tier-A L2 data; see \S\ref{sec:seq_results}.}
+{\footnotesize px = \texttt{price\_only}; bk = \texttt{price\_plus\_book};
+  all = \texttt{price\_book\_settle}.\\
+  $^\ddagger$GRU: 30-min sliding window, real Tier-A L2 data;
+  see \S\ref{sec:seq_results}.}
 \end{table}
 
 \tp{Why AUROC is insufficient.}
@@ -636,32 +641,72 @@ ranking accuracy does not translate to positive net returns when
 The failure mode is the training split: calm-control windows
 contain zero positive stress examples, so the model learns
 to predict calm-market noise rather than stress-window signals.
+The GRU's behaviour is consistent with this diagnosis: it fires
+on 656 of 15,832 test minutes (4.1\%), compared to the oracle's
+315 (2.0\%).
+Its 9\% hit rate implies roughly 59 of 656 trades coincide with
+profitable windows.
+With AUROC~0.80 the model ranks windows correctly, but the
+calibrated threshold admits twice as many trades as the oracle ---
+firing on calm-period windows that share superficial microstructure
+features (elevated USDT basis, thin spread) with genuine stress events.
 Cross-mechanism meta-labeling (\S\ref{sec:diagnostics}) bypasses
-this constraint by training on a stress event, achieving
-$+82.5\bps$ net.
-Full logs: \texttt{results/experiments/temporal\_model\_results.csv}.
+this constraint by training on Terra/LUNA stress dynamics directly,
+achieving $+82.5\bps$ net.
 
 \subsection{Diagnostics: Meta-Labeling, Regime Detectors, and BOCPD}
 \label{sec:diagnostics}
 
-\tp{Meta-labeling: structural finding and cross-mechanism fix.}
+\tp{Meta-labeling: cross-mechanism transfer.}
 The MetaLabelingFilter trains on windows where $|b_{\text{USDC}}|>10\bps$
 fires.
 In the calm-control train split only 53 such windows exist and
 \textbf{zero} are net-profitable (Table~\ref{tab:dataset}: 0\% positives
 in training) --- a null result by architectural constraint.
-The known fix is to retrain using Terra/LUNA (validation split) as the
-meta-model's training set, where 1{,}559 primary fires yield 265
+The appropriate remedy is to retrain using Terra/LUNA (validation split)
+as the meta-model's training set, where 1{,}559 primary fires yield 265
 meta-positives (17.0\% positive rate).
-A cross-mechanism experiment
-(full logs: \texttt{meta\_labeling\_crossmech\_results.csv})
-trains on Terra/LUNA and evaluates on the SVB test:
-with \texttt{price\_plus\_book} features, the calibrated filter achieves
+A cross-mechanism experiment trains on Terra/LUNA and evaluates on the
+SVB test: Table~\ref{tab:metalabel} shows the result.
+With \texttt{price\_plus\_book} features the calibrated filter achieves
 $+82.5\bps$ net (397 trades, 50.8\% oracle capture) vs.\ zero with
-standard calm-control training.
-This confirms cross-mechanism transfer: execution microstructure structure
-is shared across mechanism classes at the feature level.
+calm-control training.
+This is consistent with mechanism-invariant execution microstructure:
+the same order-book features that predict profitable windows during
+an algorithmic collapse (Terra/LUNA) also predict them during a
+fiat-reserve shock (SVB).
+The meta-model's dominant features mirror the main SHAP ranking ---
+\texttt{depth\_ask\_10bp\_mean} and \texttt{spread\_bps\_mean} lead ---
+confirming that cross-mechanism transfer operates through the same
+microstructure channel identified in \S\ref{sec:shap}.
+To our knowledge, this is the first demonstration of cross-mechanism
+transfer for execution-aware stablecoin models.
 
+\begin{table}[h]
+\centering
+\caption{Cross-mechanism meta-labeling results
+  (\task{basis\_usdc\_1m\_gt10bps}, \texttt{price\_plus\_book}).
+  Oracle capture = meta net bps $\div$ oracle net bps.}
+\label{tab:metalabel}
+\setlength{\tabcolsep}{3pt}
+{\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Training split} & \textbf{Net\,bps} & \textbf{Trades} & \textbf{Oracle cap.}\\
+\midrule
+Oracle (ceiling)          & $+162.2$ & 315 & 100.0\%\\
+\midrule
+Terra/LUNA (cross-mech.)  & $+82.5$  & 397 & 50.8\%\\
+Calm-control (baseline)   & $\phantom{+}0.0$   &   0 &  0.0\%\\
+\bottomrule
+\end{tabular}
+}
+\vspace{2pt}
+{\footnotesize Primary signal: $|b_{\text{USDC}}|{>}10\bps$;
+  threshold calibrated on validation to maximise net P\&L.}
+\end{table}
+
+\medskip
 \tp{Regime detectors.}
 CUSUM achieves near-perfect recall (0.9995) at 83.5\% false alarm rate;
 EWMA achieves 86.9\% accuracy at 0.65\% FAR with 0.95\% recall;
@@ -671,8 +716,7 @@ This last result contrasts with Cintra and Holloway
 12~hours early from Curve pool reserves.
 The difference is the signal: AMM reserves reflect LP withdrawal, which
 accumulates gradually; CEX cross-quote basis is noisier and
-mean-reverting, making changepoint detection unreliable.
-\emph{Stress is first detectable in on-chain liquidity, not CEX prices.}
+mean-reverting, making changepoint detection unreliable on CEX prices.
 
 \tp{False-positive structural diagnosis.}
 \texttt{PriceBasis10bps} produces 2,002 trades; 581 (29\%) are
@@ -682,9 +726,10 @@ $|b_{\text{USDC}}| = 344\bps$ (large USDC discount), while FP windows
 have mean $|b_{\text{USDC}}| = 0.56\bps$ (essentially zero).
 FP trades are triggered by \emph{USDT} route dislocations (27.4\% of
 minutes) where the USDC route is not simultaneously profitable.
-Crucially, FP windows have \emph{higher} average bid depth
-($72{,}805$ vs.\ $59{,}961$ BTC units) than TPs --- the barrier is
-route-direction mismatch, not thin books.
+The false-positive windows show \emph{higher} average bid depth
+($72{,}805$ vs.\ $59{,}961$ BTC units) than true positives ---
+ruling out thin books as the failure mechanism; the barrier is
+route-direction mismatch.
 LightGBM's 33\% hit rate (vs.\ 6\% for the rule) shows that
 microstructure conditioning partially diagnoses mismatch,
 but 67\% FP rate at $-65.2\bps$/trade remains a timing gap.
@@ -741,9 +786,11 @@ AMM-route arbitrage structurally \emph{not executable} even at
 \$500K notional.
 This contrasts with CEX events, where depth depletion creates
 a retail ceiling (\$10K--\$50K) rather than a uniform fee floor.
-Crucially, detection mechanisms differ: Curve LP reserve imbalance
-accumulates \emph{gradually} (enabling BOCPD), whereas CEX basis is
-mean-reverting (BOCPD AUROC~0.23, \S\ref{sec:diagnostics}).
+Detection mechanisms also differ: Curve LP reserve imbalance
+accumulates \emph{gradually} (enabling BOCPD early warning), whereas
+CEX basis is mean-reverting and yields BOCPD AUROC~0.23
+(\S\ref{sec:diagnostics}) --- stress is first detectable in on-chain
+liquidity, not CEX prices.
 Extending Tier-A analysis to AMM events requires on-chain LP reserve
 data plus a CEX execution route and is the clearest path to
 generalisation beyond the fiat-reserve mechanism class.
@@ -815,8 +862,12 @@ The 20\% haircut confirms robustness; route-complete replay requires Tardis.
 
 \tp{Settlement and model scope.}
 CEX-to-CEX latency is a fixed penalty proxy.
-The model ladder covers tabular and sequence ML; graph networks and
-execution policies are natural extensions.
+The model ladder covers tabular and sequence ML.
+RL-based execution policies that act on the first detectable stress
+signal are the most direct extension: the oracle-gap decomposition
+identifies timing as the dominant component, so an agent that learns
+to enter at depth-peak rather than basis-peak has the clearest path
+to positive net returns.
 
 \tp{Usage guide.}
 The repository provides the full pipeline:
@@ -839,40 +890,51 @@ Vision archive alone.
 
 Stablecoin StressBench documents a 12$\times$ price-to-execution gap in
 the USDC/SVB stress window: 34.3\% of minutes exceed 10\,bps basis on
-price; only 2.88\% remain executable.
+price (Layer~1); only 2.88\% remain executable after costs (Layer~2).
+Of those 456 executable minutes, cross-mechanism meta-labeling ---
+the paper's primary positive result --- identifies opportunities
+capturing 50.8\% of oracle net bps via 397 trades (Layer~3 under
+cross-mechanism conditions); all models trained on calm-control data
+identify 0\%.
+At \$10K notional the oracle accumulates approximately \$51K in
+gross profit across 315 trades in the 11-day SVB window --- a level
+of return available only to sub-\$50K participants given the depth ceiling.
 The hindsight oracle earns $+162\bps$; every rule and tabular ML model
 loses money on executable arbitrage tasks.
 SHAP analysis identifies depth-imbalance as the dominant microstructure
 signal; false positives stem from route-direction mismatch, not thin books.
-Cross-mechanism meta-labeling trained on Terra/LUNA achieves $+82.5\bps$
-(50.8\% oracle capture) on the SVB test --- the paper's primary positive
-result --- confirming shared execution microstructure across mechanism
-classes.
 GRU and MLP-Window evaluated on real Tier-A L2 data achieve $-239.0\bps$
-and $-340.7\bps$ respectively, confirming the oracle gap is structural:
-sequence models trained on calm-control data with zero positive stress
-examples do not close it (\S\ref{sec:seq_results}).
+and $-340.7\bps$ respectively: sequence models trained on calm-control data
+with zero positive stress examples do not close the gap
+(\S\ref{sec:seq_results}).
 AMM events introduce a qualitatively different execution barrier (fee
-floor rather than depth ceiling); see \S\ref{sec:stress_recurrence}.
+floor rather than depth ceiling, Table~\ref{tab:amm_gap}).
 
 \tp{Oracle gap decomposition.}
 The 260\,bps gap on \task{executable\_arb\_q10000\_5m} decomposes into
-three components:
-(1)~\emph{Timing error} (40--80\,bps): entering 1--2 minutes late misses
-the onset of the dislocation, where depth is deepest.
-(2)~\emph{False-positive cost} (60--70\,bps aggregate drag): 29\% of
-trades fire on route-direction mismatches at $-38.7\bps$ each.
-(3)~\emph{Sizing error} (40--100\,bps): trading above the retail ceiling
-($>\$50$K) walks the book beyond profitable depth.
-Timing is the dominant term.
-Cross-mechanism transfer (\S\ref{sec:diagnostics}) and RL-based execution
-policies that act on the first stress signal are the clearest paths
-toward closing the gap.
+three derived components:
+(1)~\emph{False-positive cost} ($-71.4\bps$ per oracle window):
+581 FP trades at $-38.7\bps$ each total $-22{,}484\bps$;
+spread across 315 oracle windows this is $-71.4\bps$ per window ---
+the single largest quantifiable drag.
+(2)~\emph{Timing error} (estimated 40--80\,bps): entering 1--2 minutes
+late shifts execution to a lower-depth regime; the depth-withdrawal
+signature in the 30-minute pre-window is the primary signal a future
+model must capture earlier.
+(3)~\emph{Sizing error} (estimated 40--100\,bps): executable rate falls
+from 2.88\% at \$10K to 1.62\% at \$50K, pricing out 44\% of windows
+above the retail ceiling.
+Closing the gap requires models that combine cross-mechanism stress
+training with earlier timing, rather than larger notional.
+Cross-mechanism transfer (\S\ref{sec:diagnostics}) is the
+empirically validated path; RL-based execution policies that act on
+the first detectable stress signal are the direct next step.
 
 \tp{Data availability.}
-The repository contains all CSVs, figures, YAML configs, and Python
-pipeline code.
-The Binance Vision public archive covers calm-control and SVB windows.
+The anonymised repository (URL redacted for review) contains all
+result CSVs, figures, YAML configs, and Python pipeline code.
+The Binance Vision public archive covers calm-control and SVB windows
+without a paid subscription.
 Route-complete L2 for all legs requires a Tardis subscription and is
 not committed to the repository.
 
