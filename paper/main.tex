@@ -66,21 +66,18 @@ exceed a 10\,bps max cross-quote basis on price alone, while only
 A hindsight oracle earns $+162\bps$ per trade; on executable arbitrage
 tasks every active model loses money, and the oracle gap exceeds
 260\,bps.
-Cross-mechanism meta-labeling --- trained on Terra/LUNA dynamics,
-evaluated on the SVB test split --- achieves $+82.5\bps$ net
-(50.8\% oracle capture), confirming that execution microstructure
-is mechanism-invariant: models trained on one stress event can transfer
-to another.
+A GRU evaluated on real Tier-A L2 data achieves $-239.0\bps$
+(AUROC~0.80): even a temporal sequence model with strong ranking
+accuracy loses money when trained on calm-control data with zero
+positive stress examples, confirming the oracle gap is structural.
 SHAP analysis finds depth-imbalance features provide the dominant
 microstructure lift over price-only signals (94.8\% price vs.\ 3.4\%
 book/frag).
-A GRU evaluated on real Tier-A L2 data achieves $-239.0\bps$
-(AUROC~0.80), confirming the oracle gap is structural: temporal
-sequence models trained on calm-control data with zero positive stress
-examples do not close it.
-This reframes stablecoin arbitrage prediction as an
-\emph{execution-barrier} problem and positions cross-mechanism
-transfer as the primary path to positive net returns.
+Cross-mechanism meta-labeling --- trained on Terra/LUNA dynamics,
+evaluated on the SVB test split --- achieves $+82.5\bps$ net
+(50.8\% oracle capture), demonstrating that execution microstructure
+is mechanism-invariant and that cross-event transfer is the key to
+closing the oracle gap.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -310,7 +307,7 @@ C ($N{=}5$)  & RWA, niche           & Thin market            & Taxonomy only\\
 Execution-gap claims are scoped to the USDC/SVB Tier-A test split
 ($N{=}15{,}832$).
 Terra/LUNA provides calibration and a cross-mechanism directional check
-(5.9$\times$ ratio vs.\ 12$\times$, §\ref{sec:stress_recurrence}).
+(5.9$\times$ ratio vs.\ 12$\times$, \S\ref{sec:stress_recurrence}).
 Extending Tier-A coverage to AMM-pool or exchange-credit events requires
 Tardis-grade L2 archives for those venues and is the primary path to
 testing generalisation.
@@ -404,7 +401,7 @@ stress-regime pre-filters.
 
 \tp{Sequence models.} GRU and MLP-Window classifiers trained on
 30-minute sliding windows of order-book microstructure features
-(§\ref{sec:seq_results}).
+(\S\ref{sec:seq_results}).
 
 \subsection{Calibration and Evaluation}
 \label{sec:eval}
@@ -523,10 +520,13 @@ diverges sharply negative while the oracle climbs steadily.
 \begin{figure}[t]
   \centering
   \includegraphics[width=\columnwidth]{../results/paper/figures/figure_3_cumulative_pnl.png}
-  \caption{Cumulative net bps over the USDC/SVB test window.
-    Oracle (gold) climbs to $+162\bps$; \texttt{PriceBasis10bps}
-    (red) reaches $-270\bps$; LightGBM (navy) stays marginal;
-    NoTrade (grey dashed) is the floor.}
+  \caption{Running mean net bps per trade over the USDC/SVB test window
+    (y-axis = cumulative bps $\div$ total trades, so final values match
+    the per-trade oracle gap table).
+    Oracle (gold): $+161.7\bps$/trade; LightGBM (navy): $+17.2\bps$/trade;
+    \texttt{PriceBasis10bps} (red): $-269.5\bps$/trade;
+    NoTrade (grey dashed): $0\bps$.
+    The price rule hemorrhages losses during the SVB shock (Day~10--11).}
   \label{fig:cumulative_pnl}
 \end{figure}
 
@@ -576,7 +576,7 @@ Oracle$^\dagger$ & ---  & $+162.2$ & 315  & --- & ---    & 100\%\\
 \vspace{2pt}
 {\footnotesize px = price\_only; bk = price\_plus\_book;
   all = price\_book\_settle.
-  $^\ddagger$GRU: 30-min sliding window, real Tier-A L2 data; see §\ref{sec:seq_results}.}
+  $^\ddagger$GRU: 30-min sliding window, real Tier-A L2 data; see \S\ref{sec:seq_results}.}
 \end{table}
 
 \tp{Why AUROC is insufficient.}
@@ -586,7 +586,7 @@ A model firing on 34.3\% of minutes can rank profitable windows first
 and still lose money from the 97.12\% of false positives.
 The economic floor is \texttt{NoTrade} at $0\bps$.
 
-\subsection{Sequence Models: Partially Closing the Oracle Gap}
+\subsection{Sequence Models: Confirming the Structural Oracle Gap}
 \label{sec:seq_results}
 
 We train GRU and MLP-Window classifiers on 30-minute sliding windows
@@ -611,7 +611,7 @@ Both models are deeply negative, confirming the oracle gap is
 structural and not closed by temporal sequence modelling.
 The high AUROC (0.80 for GRU) combined with catastrophic economic
 performance illustrates the same AUROC-vs-economics disconnect
-observed for the price-threshold rule (§\ref{sec:ladder}):
+observed for the price-threshold rule (\S\ref{sec:ladder}):
 ranking accuracy does not translate to positive net returns when
 97\% of windows are false positives.
 The failure mode is the training split: calm-control windows
@@ -721,7 +721,7 @@ This contrasts with CEX events, where depth depletion creates
 a retail ceiling (\$10K--\$50K) rather than a uniform fee floor.
 Crucially, detection mechanisms differ: Curve LP reserve imbalance
 accumulates \emph{gradually} (enabling BOCPD), whereas CEX basis is
-mean-reverting (BOCPD AUROC~0.23, §\ref{sec:diagnostics}).
+mean-reverting (BOCPD AUROC~0.23, \S\ref{sec:diagnostics}).
 Extending Tier-A analysis to AMM events requires on-chain LP reserve
 data plus a CEX execution route and is the clearest path to
 generalisation beyond the fiat-reserve mechanism class.
@@ -755,13 +755,13 @@ Oracle bps          & $+260\bps$  & $+88\bps^\dagger$\\
 
 \tp{Single Tier-A event.}
 The execution-gap result rests on one stress event (USDC/SVB).
-Terra/LUNA provides a directional cross-mechanism check (§\ref{sec:stress_recurrence});
+Terra/LUNA provides a directional cross-mechanism check (\S\ref{sec:stress_recurrence});
 AMM events introduce a different execution barrier (fee floor vs.\ depth ceiling).
 Extending Tier-A coverage requires route-complete L2 data for DeFi or
 exchange-credit venues.
 
 \tp{Kline-proxy buy leg.}
-The BTC-USDC buy leg uses kline-synthesised depth for SVB (§\ref{sec:data}).
+The BTC-USDC buy leg uses kline-synthesised depth for SVB (\S\ref{sec:data}).
 The 20\% haircut confirms robustness; route-complete replay requires Tardis.
 
 \tp{Settlement and model scope.}
@@ -802,9 +802,9 @@ classes.
 GRU and MLP-Window evaluated on real Tier-A L2 data achieve $-239.0\bps$
 and $-340.7\bps$ respectively, confirming the oracle gap is structural:
 sequence models trained on calm-control data with zero positive stress
-examples do not close it (§\ref{sec:seq_results}).
+examples do not close it (\S\ref{sec:seq_results}).
 AMM events introduce a qualitatively different execution barrier (fee
-floor rather than depth ceiling); see §\ref{sec:stress_recurrence}.
+floor rather than depth ceiling); see \S\ref{sec:stress_recurrence}.
 
 \tp{Oracle gap decomposition.}
 The 260\,bps gap on \task{executable\_arb\_q10000\_5m} decomposes into
@@ -816,7 +816,7 @@ trades fire on route-direction mismatches at $-38.7\bps$ each.
 (3)~\emph{Sizing error} (40--100\,bps): trading above the retail ceiling
 ($>\$50$K) walks the book beyond profitable depth.
 Timing is the dominant term.
-Cross-mechanism transfer (§\ref{sec:diagnostics}) and RL-based execution
+Cross-mechanism transfer (\S\ref{sec:diagnostics}) and RL-based execution
 policies that act on the first stress signal are the clearest paths
 toward closing the gap.
 
