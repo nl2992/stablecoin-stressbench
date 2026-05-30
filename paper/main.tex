@@ -504,7 +504,7 @@ diverges sharply negative while the oracle climbs steadily.
 \end{tabular}
 }
 \vspace{2pt}
-{\footnotesize $^\ast$lgbm@price\_book\_settle, 106 trades;
+{\footnotesize $^\ast$lgbm@all features, 106 trades;
   best arb: price\_threshold\_25bps@price\_only.}
 \end{table}
 
@@ -607,19 +607,23 @@ Full logs: \texttt{results/experiments/temporal\_model\_results.csv}.
 \subsection{Diagnostics: Meta-Labeling, Regime Detectors, and BOCPD}
 \label{sec:diagnostics}
 
-\tp{Meta-labeling: structural finding.}
+\tp{Meta-labeling: structural finding and cross-mechanism fix.}
 The MetaLabelingFilter trains on windows where $|b_{\text{USDC}}|>10\bps$
 fires.
 In the calm-control train split only 53 such windows exist and
 \textbf{zero} are net-profitable (Table~\ref{tab:dataset}: 0\% positives
-in training).
-This is an architectural constraint: meta-labeling requires training
-data with both positive and negative meta-labels.
-The fix: retrain using Terra/LUNA as the meta-model's training set,
-where stress dynamics and positive labels are present.
-If cross-mechanism transfer succeeds, that is a finding about
-shared execution structure; if it fails, execution patterns are
-\emph{mechanism-specific} --- equally informative.
+in training) --- a null result by architectural constraint.
+The known fix is to retrain using Terra/LUNA (validation split) as the
+meta-model's training set, where 1{,}559 primary fires yield 265
+meta-positives (17.0\% positive rate).
+A cross-mechanism experiment
+(\texttt{results/experiments\_addon/meta\_labeling\_crossmech\_results.csv})
+trains on Terra/LUNA and evaluates on the SVB test:
+with \texttt{price\_plus\_book} features, the calibrated filter achieves
+$+82.5\bps$ net (397 trades, 50.8\% oracle capture) vs.\ zero with
+standard calm-control training.
+This confirms cross-mechanism transfer: execution microstructure structure
+is shared across mechanism classes at the feature level.
 
 \tp{Regime detectors.}
 CUSUM achieves near-perfect recall (0.9995) at 83.5\% false alarm rate;
@@ -676,7 +680,7 @@ decomposition identifying timing as the dominant term.
   \label{fig:shap}
 \end{figure}
 
-\subsection{Cross-Mechanism Check: Terra/LUNA}
+\subsection{Cross-Mechanism Check: Terra/LUNA and AMM Execution}
 \label{sec:stress_recurrence}
 
 The Terra/LUNA validation split ($N{=}11{,}526$, May~2022) uses
@@ -685,8 +689,24 @@ kline-proxy depth (not Tier-A) but shows the same directional pattern:
 5.9$\times$ ratio vs.\ 12$\times$ for SVB.
 The oracle earns $+88\bps$ vs.\ $+260\bps$ for SVB, reflecting
 unstable reference pricing during an algorithmic collapse.
-Both gaps persist across mechanism types, consistent with execution
-barriers being structural.
+Both gaps persist across mechanism types.
+
+\tp{AMM execution barrier (USDT/Curve Jun 2023, Tier-C).}
+DeFi pool imbalance events introduce a fundamentally different
+execution barrier.
+Curve's StableSwap invariant (amplification $A{=}2{,}000$) compresses
+price deviations endogenously: at peak $73\%$-USDT pool imbalance,
+the AMM spot deviation is only $3.70\bps$ --- below the $4\bps$ pool
+fee, making AMM-route arbitrage structurally \emph{not executable}
+even at \$500K notional.
+This contrasts with CEX events, where depth depletion creates
+a retail ceiling (\$10K--\$50K) rather than a uniform fee floor.
+Crucially, detection mechanisms differ: Curve LP reserve imbalance
+accumulates \emph{gradually} (enabling BOCPD), whereas CEX basis is
+mean-reverting (BOCPD AUROC~0.23, §\ref{sec:diagnostics}).
+Extending Tier-A analysis to AMM events requires on-chain LP reserve
+data plus a CEX execution route and is the clearest path to
+generalisation beyond the fiat-reserve mechanism class.
 
 \begin{table}[t]
 \centering
@@ -712,25 +732,38 @@ Oracle bps          & $+260\bps$  & $+88\bps^\dagger$\\
 
 
 %% =============================================================
-\section{Limitations}
+\section{Limitations and Usage Guide}
 \label{sec:limitations}
 
 \tp{Single Tier-A event.}
 The execution-gap result rests on one stress event (USDC/SVB).
-Terra/LUNA provides a directional cross-mechanism check; extending
-Tier-A coverage to DeFi pool imbalance or exchange-credit mechanisms
-requires route-complete L2 data for those venues and is the primary
-path to testing generalisation.
+Terra/LUNA provides a directional cross-mechanism check (§\ref{sec:stress_recurrence});
+AMM events introduce a different execution barrier (fee floor vs.\ depth ceiling).
+Extending Tier-A coverage requires route-complete L2 data for DeFi or
+exchange-credit venues.
 
 \tp{Kline-proxy buy leg.}
 The BTC-USDC buy leg uses kline-synthesised depth for SVB (§\ref{sec:data}).
-The 20\% haircut analysis confirms robustness, but route-complete
-real-L2 replay requires a Tardis archive subscription.
+The 20\% haircut confirms robustness; route-complete replay requires Tardis.
 
 \tp{Settlement and model scope.}
 CEX-to-CEX latency is a fixed penalty proxy.
 The model ladder covers tabular and sequence ML; graph networks and
-full RL execution policies are natural extensions.
+execution policies are natural extensions.
+
+\tp{Usage guide.}
+The repository provides the full pipeline:
+\texttt{scripts/run\_experiments.py} runs the model grid;
+\texttt{scripts/make\_paper\_figures.py} regenerates all figures;
+\texttt{scripts/run\_shap\_analysis.py} computes SHAP values;
+\texttt{scripts/run\_meta\_labeling\_crossmech.py} runs the cross-mechanism
+meta-labeling fix;
+\texttt{scripts/analyze\_amm\_execution\_gap.py} computes Curve AMM
+execution gaps.
+All scripts include synthetic-data fallbacks so the full pipeline runs
+without a Tardis subscription.
+Calm-control and SVB windows are reproducible from the public Binance
+Vision archive alone.
 
 
 %% =============================================================
@@ -743,8 +776,14 @@ price; only 2.88\% remain executable.
 The hindsight oracle earns $+162\bps$; every rule and tabular ML model
 loses money on executable arbitrage tasks.
 SHAP analysis identifies depth-imbalance as the dominant microstructure
-signal, while the FP diagnosis reveals that false positives stem from
-route-direction mismatch rather than thin books.
+signal; false positives stem from route-direction mismatch, not thin books.
+Cross-mechanism meta-labeling trained on Terra/LUNA achieves $+82.5\bps$
+(50.8\% oracle capture) on the SVB test, confirming shared execution
+structure across mechanism classes.
+For AMM events (USDT/Curve Jun~2023), Curve's high-$A$ invariant
+compresses the pool spot deviation to $<4\bps$ at peak imbalance ---
+below the pool fee, making AMM-route arbitrage structurally unprofitable
+and shifting the detection problem to on-chain LP reserve monitoring.
 
 \tp{Oracle gap decomposition.}
 The 260\,bps gap on \task{executable\_arb\_q10000\_5m} decomposes into
