@@ -73,7 +73,7 @@ A GRU trained on 30-minute order-book windows partially closes the
 oracle gap ($+36.7\bps$ vs.\ oracle's $+162.2\bps$).
 This reframes stablecoin arbitrage prediction as an
 \emph{execution-barrier} problem and provides infrastructure for future
-RL-based execution policy research.
+work on execution policy design and optimal execution research.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -121,14 +121,16 @@ The oracle gap exceeds 260\,bps.
         challenge for future models.
 \end{enumerate}
 
-\tp{RL interpretation.}
-The oracle gap is an MDP: state = current order book and basis,
-action = whether to execute, reward = net bps captured.
-The oracle is the optimal policy under perfect foresight.
-StressBench thus provides a reproducible MDP environment for
-RL-based execution research: the state space is the four-level
-microstructure feature hierarchy, the reward is the net-profit label,
-and the ceiling is the oracle gap.
+\tp{Optimal execution interpretation.}
+The oracle gap has a natural decision-theoretic framing: the state at
+each minute is the current order book and cross-quote basis, the action
+is whether to execute the arbitrage route, and the reward is the net
+bps captured.
+The oracle corresponds to the optimal policy under perfect foresight.
+StressBench therefore provides a reproducible environment for
+learned execution research: the state space is the four-level
+microstructure feature hierarchy, the reward function is the documented
+net-profit label, and the performance ceiling is the oracle gap.
 
 
 %% =============================================================
