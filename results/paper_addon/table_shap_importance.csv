@@ -1,0 +1,23 @@
+rank,feature,category,mean_abs_shap
+1,cross_quote_basis_usdc_bps,price,2.024248
+2,cross_quote_basis_primary_bps,price,1.340381
+3,deviation_from_1_usd_bps,price,0.410655
+4,cross_quote_basis_usdt_bps,price,0.083250
+5,depth_ask_10bp_mean,book / frag,0.021421
+6,spread_bps_mean,book / frag,0.019062
+7,transfer_volume_1m,settle,0.019061
+8,imbalance_1bp_mean,book / frag,0.018853
+9,trade_volume_1m_total,book / frag,0.016693
+10,depth_bid_10bp_mean,book / frag,0.014767
+11,block_lag_proxy,settle,0.013738
+12,mid_dispersion_bps_mean,book / frag,0.013236
+13,gas_proxy,settle,0.011525
+14,num_active_venues_mean,book / frag,0.011163
+15,cross_quote_basis_maxabs_bps,price,0.010163
+16,data_quality_score_min,book / frag,0.009719
+17,transfer_count_1m,settle,0.009220
+18,dex_swap_volume_1m,settle,0.007846
+19,trade_count_1m_total,book / frag,0.007589
+20,max_minus_min_bps_mean,book / frag,0.006419
+21,dex_net_flow_1m,settle,0.006150
+22,large_transfer_count_1m,settle,0.005467
