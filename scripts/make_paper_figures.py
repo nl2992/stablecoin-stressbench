@@ -27,7 +27,7 @@ from stressbench.common.logging import get_logger
 logger = get_logger(__name__)
 
 _STRESS_START_NS = 1_678_406_400_000_000_000  # 2023-03-10T00:00:00Z
-_STRESS_END_NS = 1_678_838_400_000_000_000  # 2023-03-15T00:00:00Z
+_STRESS_END_NS = 1_679_356_740_000_000_000  # 2023-03-20T23:59:00Z  (full test split)
 
 _COLORS = {
     "price": "#2166ac",
@@ -59,9 +59,10 @@ def _savefig(fig, path: Path, fmt: str) -> None:
 
 
 def figure_1_usdc_basis(dataset_path: Path, output_dir: Path, fmt: str) -> None:
-    """Time-series of USDC cross-quote basis during the SVB stress window."""
+    """Time-series of USDC/USDT cross-quote basis during the full SVB test window."""
     import matplotlib.dates as mdates
     import matplotlib.pyplot as plt
+    import numpy as np
     import polars as pl
 
     if not dataset_path.exists():
@@ -69,53 +70,46 @@ def figure_1_usdc_basis(dataset_path: Path, output_dir: Path, fmt: str) -> None:
         return
 
     df = pl.read_parquet(str(dataset_path))
-    stress = df.filter(
-        (pl.col("ts_1m_ns") >= _STRESS_START_NS)
-        & (pl.col("ts_1m_ns") <= _STRESS_END_NS)
-    ).sort("ts_1m_ns")
+    stress = df.filter(pl.col("split") == "test").sort("ts_1m_ns")
 
-    basis_col = (
-        "cross_quote_basis_usdc_bps"
-        if "cross_quote_basis_usdc_bps" in stress.columns
-        else "cross_quote_basis_bps"
-    )
-    if stress.is_empty() or basis_col not in stress.columns:
-        logger.warning("No stress-window data for Figure 1.")
+    required = ["cross_quote_basis_usdc_bps", "cross_quote_basis_usdt_bps",
+                "cross_quote_basis_maxabs_bps"]
+    missing = [c for c in required if c not in stress.columns]
+    if stress.is_empty() or missing:
+        logger.warning("Missing columns for Figure 1: %s", missing)
         return
 
-    import pandas as pd
-
     dt = _ns_to_dt(stress["ts_1m_ns"].to_list())
-    basis = stress[basis_col].to_list()
+    usdc = np.array(stress["cross_quote_basis_usdc_bps"].to_list(), dtype=float)
+    usdt = np.array(stress["cross_quote_basis_usdt_bps"].to_list(), dtype=float)
+    maxabs = np.array(stress["cross_quote_basis_maxabs_bps"].to_list(), dtype=float)
+
+    n_outliers = int(np.sum(np.abs(usdc) > 200))
+
+    # Clip values so matplotlib doesn't draw artifacts at the axis boundary
+    clip = 200
+    usdc_plot = np.where(np.abs(usdc) > clip, np.nan, usdc)
+    usdt_plot = np.where(np.abs(usdt) > clip, np.nan, usdt)
+    maxabs_plot = np.where(np.abs(maxabs) > clip, np.nan, maxabs)
 
     fig, ax = plt.subplots(figsize=(9, 3.5))
-    ax.plot(dt, basis, lw=0.8, color=_COLORS["price"], label="USDC basis (bps)")
-    ax.axhline(10, ls="--", lw=0.8, color="gray", alpha=0.7, label="10 bps threshold")
-    ax.axhline(-10, ls="--", lw=0.8, color="gray", alpha=0.7)
-    basis_clean = [b if b is not None else 0.0 for b in basis]
-    ax.fill_between(
-        dt,
-        basis_clean,
-        10,
-        where=[b > 10 for b in basis_clean],
-        alpha=0.25,
-        color=_COLORS["price"],
-        label="|basis| > 10 bps",
-    )
-    ax.fill_between(
-        dt,
-        basis_clean,
-        -10,
-        where=[b < -10 for b in basis_clean],
-        alpha=0.25,
-        color=_COLORS["price"],
-    )
-    ax.set_xlabel("UTC time")
+    ax.plot(dt, usdc_plot, lw=0.7, color="#003057", label="USDC basis", zorder=3)
+    ax.plot(dt, usdt_plot, lw=0.7, color="#d73027", label="USDT basis", zorder=2)
+    ax.plot(dt, maxabs_plot, lw=0.9, color="#F2A900", label="Max-abs basis", zorder=1)
+    ax.axhline(10, ls="--", lw=0.8, color="#F2A900", alpha=0.8, label="+10 bps threshold")
+    ax.set_ylim(-200, 200)
+    ax.set_xlabel("UTC date (SVB stress window, Mar 10–20 2023)")
     ax.set_ylabel("Basis (bps)")
-    ax.set_title("Figure 1 — USDC Cross-Quote Basis During SVB Crisis (Mar 10–14 2023)")
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-    ax.legend(fontsize=9)
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
+    ax.legend(fontsize=8, ncol=4, loc="upper right")
     ax.grid(axis="y", alpha=0.3)
+    if n_outliers > 0:
+        ax.annotate(
+            f"{n_outliers} windows beyond ±200 bps not shown",
+            xy=(0.01, 0.04), xycoords="axes fraction",
+            fontsize=7, color="gray", style="italic",
+        )
     fig.tight_layout()
     _savefig(fig, output_dir / "figure_1_usdc_basis_svb", fmt)
     plt.close(fig)
