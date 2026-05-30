@@ -498,23 +498,28 @@ diverges sharply negative while the oracle climbs steadily.
 \begin{table}[t]
 \centering
 \caption{Oracle gap summary (test split).
-  $^\ast$=only non-oracle result above zero.}
+  $^\ast$=only non-oracle tabular result above zero;
+  $^\ddagger$=real Tier-A L2 sequence model.}
 \label{tab:oracle}
 \setlength{\tabcolsep}{3pt}
 {\small
 \begin{tabular}{lrrr}
 \toprule
-\textbf{Task} & \textbf{Oracle} & \textbf{Best model} & \textbf{Gap}\\
+\textbf{Task / Model} & \textbf{Oracle} & \textbf{Best model} & \textbf{Gap}\\
 \midrule
 \task{basis\_usdc\_1m}     & $+162.2\bps$ & $+17.2\bps^\ast$ & 145\,bps\\
-\task{exec\_arb\_q10k\_5m} & $+225.0\bps$ & $-41.1\bps$  & 266\,bps\\
-\task{exec\_arb\_q50k\_5m} & $+147.1\bps$ & $-113.0\bps$ & 260\,bps\\
+\task{exec\_arb\_q10k\_5m} & $+225.0\bps$ & $-41.1\bps$      & 266\,bps\\
+\task{exec\_arb\_q50k\_5m} & $+147.1\bps$ & $-113.0\bps$     & 260\,bps\\
+\midrule
+GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401\,bps\\
 \bottomrule
 \end{tabular}
 }
 \vspace{2pt}
 {\footnotesize $^\ast$lgbm@all features, 106 trades;
-  best arb: price\_threshold\_25bps@price\_only.}
+  best arb: price\_threshold\_25bps@price\_only.\\
+  $^\ddagger$GRU, 30-min window, real Tier-A L2; confirms gap is structural
+  even with AUROC~0.80 (\S\ref{sec:seq_results}).}
 \end{table}
 
 \begin{figure}[t]
@@ -595,17 +600,31 @@ to exploit the temporal signature of depth withdrawal before a basis fires.
 The protocol matches the main leaderboard: calibrate threshold on validation
 split to maximise net P\&L, require $\geq 25$ trades, evaluate on test.
 
-On \task{basis\_usdc\_1m\_gt10bps}, evaluated on real Tier-A L2 data:
+On \task{basis\_usdc\_1m\_gt10bps}, evaluated on real Tier-A L2 data
+(Table~\ref{tab:seq_models}):
 
-\vspace{2pt}
-\noindent
-{\scriptsize
+\begin{table}[h]
+\centering
+\caption{Sequence model results (\task{basis\_usdc\_1m\_gt10bps},
+  real Tier-A L2 data, test split).
+  Oracle gap = $+162.2\bps$ oracle minus model net bps.}
+\label{tab:seq_models}
+\setlength{\tabcolsep}{3pt}
+{\small
 \begin{tabular}{lrrrr}
-\textbf{Model} & \textbf{Net\,bps} & \textbf{N} & \textbf{AUROC} & \textbf{Gap}\\
-GRU (30-min)       & $-239.0$ & 656    & 0.80 & 401\,bps\\
-MLP-Window (30-min)& $-340.7$ & 1{,}052 & 0.65 & 502\,bps\\
-\end{tabular}}
+\toprule
+\textbf{Model} & \textbf{Net\,bps} & \textbf{Trades} & \textbf{AUROC} & \textbf{Gap}\\
+\midrule
+GRU (30-min)        & $-239.0$ & 656     & 0.798 & 401\,bps\\
+MLP-Window (30-min) & $-340.7$ & 1{,}052 & 0.648 & 502\,bps\\
+\bottomrule
+\end{tabular}
+}
 \vspace{2pt}
+{\footnotesize Both trained on calm-control windows (0\% positive
+  examples); threshold calibrated on validation split to maximise
+  net P\&L; evaluated on SVB test split.}
+\end{table}
 
 Both models are deeply negative, confirming the oracle gap is
 structural and not closed by temporal sequence modelling.
@@ -713,10 +732,13 @@ Both gaps persist across mechanism types.
 DeFi pool imbalance events introduce a fundamentally different
 execution barrier.
 Curve's StableSwap invariant (amplification $A{=}2{,}000$) compresses
-price deviations endogenously: at peak $73\%$-USDT pool imbalance,
-the AMM spot deviation is only $3.70\bps$ --- below the $4\bps$ pool
-fee, making AMM-route arbitrage structurally \emph{not executable}
-even at \$500K notional.
+price deviations endogenously, keeping the AMM spot below the pool fee
+floor across all but the most extreme imbalances
+(Table~\ref{tab:amm_gap}).
+At peak $73\%$-USDT pool imbalance (Jun 16, 2023), the spot deviation
+is only $3.70\bps$ --- still below the $4\bps$ pool fee, making
+AMM-route arbitrage structurally \emph{not executable} even at
+\$500K notional.
 This contrasts with CEX events, where depth depletion creates
 a retail ceiling (\$10K--\$50K) rather than a uniform fee floor.
 Crucially, detection mechanisms differ: Curve LP reserve imbalance
@@ -725,6 +747,33 @@ mean-reverting (BOCPD AUROC~0.23, \S\ref{sec:diagnostics}).
 Extending Tier-A analysis to AMM events requires on-chain LP reserve
 data plus a CEX execution route and is the clearest path to
 generalisation beyond the fiat-reserve mechanism class.
+
+\begin{table}[h]
+\centering
+\caption{Curve StableSwap AMM execution gap ($A{=}2{,}000$, pool
+  fee $= 4\bps$, TVL \$800M).
+  Spot deviation remains below the fee floor until extreme imbalance;
+  computed by \texttt{analyze\_amm\_execution\_gap.py}.}
+\label{tab:amm_gap}
+\setlength{\tabcolsep}{4pt}
+{\small
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Pool state} & \textbf{Spot dev.\ (bps)} & \textbf{Net (bps)} & \textbf{Exec.?}\\
+\midrule
+Balanced (0\%)          & 0.00 & $-4.00$ & No\\
+Moderate (10\% drift)   & 1.08 & $-2.92$ & No\\
+Peak Jun 16 (23\% drift)& 3.70 & $-0.30$ & No\\
+Extreme stress          & 7.32 & $+3.32$ & Yes\\
+\bottomrule
+\end{tabular}
+}
+\vspace{2pt}
+{\footnotesize Net = spot deviation $-$ pool fee.
+  73\%-USDT pool imbalance $\Rightarrow$ 23\% drift (peak observed Jun 2023).
+  Arbitrage requires $\text{net} > 0$; pool fee acts as a
+  hard floor that depth does not.}
+\end{table}
 
 \begin{table}[t]
 \centering
