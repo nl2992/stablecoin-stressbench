@@ -75,9 +75,9 @@ microstructure lift over price-only signals (94.8\% price vs.\ 3.4\%
 book/frag).
 Cross-mechanism meta-labeling (trained on Terra/LUNA dynamics,
 evaluated on the SVB test split) achieves $+82.5\bps$ net
-(50.8\% oracle capture), demonstrating that execution microstructure
-is mechanism-invariant and identifying cross-event transfer as the
-primary route to positive net returns.
+(50.8\% of the oracle's $+162.2\bps$ per trade), demonstrating that
+execution microstructure is mechanism-invariant and identifying
+cross-event transfer as the primary route to positive net returns.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -341,9 +341,11 @@ testing generalisation.
 \subsection{Feature Sets}
 \label{sec:features}
 
-Four nested feature sets isolate marginal information value:
+Four nested feature sets (Table~\ref{tab:features}) isolate marginal
+information value:
 {\small
 \begin{tabular}{lp{4.5cm}}
+\label{tab:features}
 \texttt{price\_only}        & 5 cross-quote basis cols\\
 \texttt{price\_plus\_book}  & $+$7 microstructure (spread, depth, imbalance)\\
 \texttt{price\_book\_frag}  & $+$3 cross-venue fragmentation cols\\
@@ -435,7 +437,9 @@ stress-regime pre-filters.
 Threshold calibration on validation split:
 $\theta^* = \arg\max_\theta \sum_{i:\hat{p}_i>\theta} \text{net}(q,t_i)$
 subject to $\geq 25$ trades.
-Primary metrics: \texttt{net\_bps\_captured}, \texttt{oracle\_capture\_pct}.
+Primary metrics: \texttt{net\_bps\_captured} and
+\texttt{oracle\_capture\_pct} $=$ model net bps $\div$ oracle net bps
+(the fraction of the oracle's per-trade return that a model recovers).
 Secondary: AUROC, AUPRC.
 \texttt{NoTrade} at $0\bps$ is the economic floor.
 
@@ -575,8 +579,11 @@ LightGBM achieves $+17.2\bps$ (106 trades, AUROC~0.72), the only
 non-oracle result above zero, but 145\,bps below the oracle.
 The \texttt{ExpNetProfitRegressor} reaches $-73.8\bps$ despite
 directly targeting the economic criterion: the gap is not a
-label-mismatch artefact but a structural consequence of execution friction
-(see oracle gap decomposition, \S\ref{sec:conclusion}).
+label-mismatch artefact.
+A structural gap, in this context, means that no standard ML approach
+trained on the available features can consistently identify the 2.88\%
+of profitable windows ex ante, because the limiting factor is not signal
+quality but execution timing and training-distribution mismatch.
 
 \begin{table}[t]
 \centering
@@ -670,7 +677,7 @@ to predict calm-market noise rather than stress-window signals.
 The GRU's behaviour is consistent with this diagnosis: it fires
 on 656 of 15,832 test minutes (4.1\%), compared to the oracle's
 315 (2.0\%).
-Its 9\% hit rate implies roughly 59 of 656 trades coincide with
+Its 9\% hit rate implies approximately 59 of 656 trades coincide with
 profitable windows.
 With AUROC~0.80 the model ranks windows correctly, but the
 calibrated threshold admits twice as many trades as the oracle,
@@ -687,8 +694,9 @@ achieving $+82.5\bps$ net.
 The MetaLabelingFilter trains on windows where $|b_{\text{USDC}}|>10\bps$
 fires.
 In the calm-control train split only 53 such windows exist and
-\textbf{zero} are net-profitable (Table~\ref{tab:dataset}: 0\% positives
-in training: a null result by architectural constraint.
+\textbf{zero} are net-profitable, consistent with the 0\% positive
+rate in Table~\ref{tab:dataset}: a null result by architectural
+constraint.
 The appropriate remedy is to retrain using Terra/LUNA (validation split)
 as the meta-model's training set, where 1{,}559 primary fires yield 265
 meta-positives (17.0\% positive rate).
@@ -705,6 +713,10 @@ The meta-model's dominant features mirror the main SHAP ranking:
 \texttt{depth\_ask\_10bp\_mean} and \texttt{spread\_bps\_mean} lead,
 confirming that cross-mechanism transfer operates through the same
 microstructure channel identified in \S\ref{sec:shap}.
+The intuition is that regardless of whether the stress trigger is an
+algorithmic redemption spiral or a bank reserve shock, the order book
+thins in the same way before the price fragments: depth withdrawal
+preceding basis widening is a mechanism-invariant precursor.
 We are not aware of prior work demonstrating cross-mechanism transfer
 for execution-aware stablecoin models.
 
@@ -900,14 +912,15 @@ to enter at depth-peak rather than basis-peak has the clearest path
 to positive net returns.
 
 \tp{Usage guide.}
-The repository provides the full pipeline:
-\texttt{scripts/run\_experiments.py} runs the model grid;
-\texttt{scripts/make\_paper\_figures.py} regenerates all figures;
-\texttt{scripts/run\_shap\_analysis.py} computes SHAP values;
-\texttt{scripts/run\_meta\_labeling\_crossmech.py} runs the cross-mechanism
-meta-labeling fix;
-\texttt{scripts/analyze\_amm\_execution\_gap.py} computes Curve AMM
-execution gaps.
+The anonymised repository provides the full pipeline.
+Key entry points:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=2pt]
+  \item \texttt{run\_experiments.py} --- model grid and leaderboard
+  \item \texttt{make\_paper\_figures.py} --- regenerate all figures
+  \item \texttt{run\_shap\_analysis.py} --- SHAP feature importance
+  \item \texttt{run\_meta\_labeling\_crossmech.py} --- cross-mechanism meta-labeling
+  \item \texttt{analyze\_amm\_execution\_gap.py} --- Curve AMM analysis
+\end{itemize}
 All scripts include synthetic-data fallbacks so the full pipeline runs
 without a Tardis subscription.
 Calm-control and SVB windows are reproducible from the public Binance
@@ -943,7 +956,9 @@ floor rather than depth ceiling, Table~\ref{tab:amm_gap}).
 
 \tp{Oracle gap decomposition.}
 The 260\,bps gap on \task{executable\_arb\_q10000\_5m} decomposes into
-three derived components:
+three components; component~1 is derived directly from test-split
+results, components~2 and~3 are estimates from the executable-rate
+sensitivity analysis:
 (1)~\emph{False-positive cost} (dominant quantifiable drag):
 for \texttt{PriceBasis10bps}, 581 FP trades at $-38.7\bps$ each
 total $-22{,}484\bps$ of losses, the largest identifiable component
@@ -960,6 +975,11 @@ training with earlier timing, rather than larger notional.
 Cross-mechanism transfer (\S\ref{sec:diagnostics}) is the
 empirically validated path; RL-based execution policies that act on
 the first detectable stress signal are the direct next step.
+The MDP framing established in \S\ref{sec:intro} makes the connection
+concrete: RL policies trained on cross-mechanism stress data, rather
+than calm-control baselines, can exploit the state representation,
+reward function, and difficulty ceiling already defined by the
+benchmark.
 
 \tp{Data availability.}
 The anonymised repository (URL redacted for review) contains all
@@ -1007,12 +1027,6 @@ Gromb, D. and Vayanos, D.\ (2010).
 Cont, R. and Kukanov, A.\ (2013).
 \newblock Optimal order placement in limit order markets.
 \newblock {\em Quantitative Finance}, 17(1):21--39.
-
-\bibitem{glosten1985bid}
-Glosten, L.~R. and Milgrom, P.~R.\ (1985).
-\newblock Bid, ask and transaction prices in a specialist market with
-  heterogeneously informed traders.
-\newblock {\em Journal of Financial Economics}, 14(1):71--100.
 
 \bibitem{makarov2020trading}
 Makarov, I. and Schoar, A.\ (2020).
