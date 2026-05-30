@@ -1,0 +1,49 @@
+event,mechanism,scenario,usdc_frac,usdt_frac,pool_tvl_m_usd,A,fee_bps,notional_usd,amm_spot_dev_bps,price_impact_bps,total_cost_bps,net_profit_bps,is_executable,note
+USDT/Curve Jun 2023,DeFi pool imbalance,Balanced (pre-event),0.5,0.5,800.0,2000,4.0,1000,0.0,4.0,8.0,-4.0,False,AMM compresses spot to 0.00 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Balanced (pre-event),0.5,0.5,800.0,2000,4.0,5000,0.0,4.0,8.0,-4.0,False,AMM compresses spot to 0.00 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Balanced (pre-event),0.5,0.5,800.0,2000,4.0,10000,0.0,4.0,8.0,-4.0,False,AMM compresses spot to 0.00 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Balanced (pre-event),0.5,0.5,800.0,2000,4.0,25000,0.0,4.0,8.0,-4.0,False,AMM compresses spot to 0.00 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Balanced (pre-event),0.5,0.5,800.0,2000,4.0,50000,0.0,4.0,8.0,-4.0,False,AMM compresses spot to 0.00 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Balanced (pre-event),0.5,0.5,800.0,2000,4.0,100000,0.0,4.0,8.0,-4.0,False,AMM compresses spot to 0.00 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Balanced (pre-event),0.5,0.5,800.0,2000,4.0,250000,0.0,4.0,8.0,-4.0,False,AMM compresses spot to 0.00 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Balanced (pre-event),0.5,0.5,800.0,2000,4.0,500000,0.0,4.0,8.0,-4.0,False,AMM compresses spot to 0.00 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Mild (5% drift),0.45,0.55,800.0,2000,4.0,1000,0.51,4.0,8.0,-3.49,False,AMM compresses spot to 0.51 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Mild (5% drift),0.45,0.55,800.0,2000,4.0,5000,0.51,4.0,8.0,-3.49,False,AMM compresses spot to 0.51 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Mild (5% drift),0.45,0.55,800.0,2000,4.0,10000,0.51,4.0,8.0,-3.49,False,AMM compresses spot to 0.51 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Mild (5% drift),0.45,0.55,800.0,2000,4.0,25000,0.51,4.0,8.0,-3.49,False,AMM compresses spot to 0.51 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Mild (5% drift),0.45,0.55,800.0,2000,4.0,50000,0.51,4.0,8.0,-3.49,False,AMM compresses spot to 0.51 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Mild (5% drift),0.45,0.55,800.0,2000,4.0,100000,0.51,4.0,8.0,-3.49,False,AMM compresses spot to 0.51 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Mild (5% drift),0.45,0.55,800.0,2000,4.0,250000,0.51,4.0,8.0,-3.49,False,AMM compresses spot to 0.51 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Mild (5% drift),0.45,0.55,800.0,2000,4.0,500000,0.51,4.0,8.0,-3.49,False,AMM compresses spot to 0.51 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Moderate (10% drift),0.4,0.6,800.0,2000,4.0,1000,1.085,4.0,8.0,-2.92,False,AMM compresses spot to 1.08 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Moderate (10% drift),0.4,0.6,800.0,2000,4.0,5000,1.085,4.0,8.0,-2.92,False,AMM compresses spot to 1.08 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Moderate (10% drift),0.4,0.6,800.0,2000,4.0,10000,1.085,4.0,8.0,-2.92,False,AMM compresses spot to 1.08 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Moderate (10% drift),0.4,0.6,800.0,2000,4.0,25000,1.085,4.0,8.0,-2.92,False,AMM compresses spot to 1.08 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Moderate (10% drift),0.4,0.6,800.0,2000,4.0,50000,1.085,4.0,8.0,-2.92,False,AMM compresses spot to 1.08 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Moderate (10% drift),0.4,0.6,800.0,2000,4.0,100000,1.085,4.0,8.0,-2.92,False,AMM compresses spot to 1.08 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Moderate (10% drift),0.4,0.6,800.0,2000,4.0,250000,1.085,4.0,8.0,-2.92,False,AMM compresses spot to 1.08 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Moderate (10% drift),0.4,0.6,800.0,2000,4.0,500000,1.085,4.0,8.0,-2.92,False,AMM compresses spot to 1.08 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Elevated (17% drift),0.33,0.67,800.0,2000,4.0,1000,2.173,4.0,8.0,-1.83,False,AMM compresses spot to 2.17 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Elevated (17% drift),0.33,0.67,800.0,2000,4.0,5000,2.173,4.0,8.0,-1.83,False,AMM compresses spot to 2.17 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Elevated (17% drift),0.33,0.67,800.0,2000,4.0,10000,2.173,4.0,8.0,-1.83,False,AMM compresses spot to 2.17 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Elevated (17% drift),0.33,0.67,800.0,2000,4.0,25000,2.173,4.0,8.0,-1.83,False,AMM compresses spot to 2.17 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Elevated (17% drift),0.33,0.67,800.0,2000,4.0,50000,2.173,4.0,8.0,-1.83,False,AMM compresses spot to 2.17 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Elevated (17% drift),0.33,0.67,800.0,2000,4.0,100000,2.173,4.0,8.0,-1.83,False,AMM compresses spot to 2.17 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Elevated (17% drift),0.33,0.67,800.0,2000,4.0,250000,2.173,4.0,8.0,-1.83,False,AMM compresses spot to 2.17 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Elevated (17% drift),0.33,0.67,800.0,2000,4.0,500000,2.173,4.01,8.01,-1.83,False,AMM compresses spot to 2.17 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Peak Jun 16 (23% drift),0.27,0.73,800.0,2000,4.0,1000,3.699,4.0,8.0,-0.3,False,AMM compresses spot to 3.70 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Peak Jun 16 (23% drift),0.27,0.73,800.0,2000,4.0,5000,3.699,4.0,8.0,-0.3,False,AMM compresses spot to 3.70 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Peak Jun 16 (23% drift),0.27,0.73,800.0,2000,4.0,10000,3.699,4.0,8.0,-0.3,False,AMM compresses spot to 3.70 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Peak Jun 16 (23% drift),0.27,0.73,800.0,2000,4.0,25000,3.699,4.0,8.0,-0.3,False,AMM compresses spot to 3.70 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Peak Jun 16 (23% drift),0.27,0.73,800.0,2000,4.0,50000,3.699,4.0,8.0,-0.3,False,AMM compresses spot to 3.70 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Peak Jun 16 (23% drift),0.27,0.73,800.0,2000,4.0,100000,3.699,4.0,8.0,-0.3,False,AMM compresses spot to 3.70 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Peak Jun 16 (23% drift),0.27,0.73,800.0,2000,4.0,250000,3.699,4.01,8.01,-0.31,False,AMM compresses spot to 3.70 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Peak Jun 16 (23% drift),0.27,0.73,800.0,2000,4.0,500000,3.699,4.01,8.01,-0.31,False,AMM compresses spot to 3.70 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Extreme stress,0.2,0.8,800.0,2000,4.0,1000,7.321,4.0,8.0,3.32,True,AMM compresses spot to 7.32 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Extreme stress,0.2,0.8,800.0,2000,4.0,5000,7.321,4.0,8.0,3.32,True,AMM compresses spot to 7.32 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Extreme stress,0.2,0.8,800.0,2000,4.0,10000,7.321,4.0,8.0,3.32,True,AMM compresses spot to 7.32 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Extreme stress,0.2,0.8,800.0,2000,4.0,25000,7.321,4.0,8.0,3.32,True,AMM compresses spot to 7.32 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Extreme stress,0.2,0.8,800.0,2000,4.0,50000,7.321,4.01,8.01,3.32,True,AMM compresses spot to 7.32 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Extreme stress,0.2,0.8,800.0,2000,4.0,100000,7.321,4.01,8.01,3.31,True,AMM compresses spot to 7.32 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Extreme stress,0.2,0.8,800.0,2000,4.0,250000,7.321,4.02,8.02,3.31,True,AMM compresses spot to 7.32 bps vs fee 4.0 bps
+USDT/Curve Jun 2023,DeFi pool imbalance,Extreme stress,0.2,0.8,800.0,2000,4.0,500000,7.321,4.03,8.03,3.29,True,AMM compresses spot to 7.32 bps vs fee 4.0 bps

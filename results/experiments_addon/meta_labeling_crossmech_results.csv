@@ -1,0 +1,3 @@
+training_split,eval_split,feature_set,model,n_primary_fires_train,n_meta_positive_train,meta_positive_rate_pct,theta_default,test_n_trades_default,test_net_bps_default,test_hit_rate_default,theta_calibrated,test_n_trades_calibrated,test_net_bps_calibrated,test_hit_rate_calibrated,oracle_capture_pct,note
+validation_terra_luna,test_svb,price_only,MetaLabelingFilter_lgbm_crossmech,1559,265,17.0,0.5,0,nan,nan,0.05,455,85.19,1.0,0.5252,synthetic_fallback
+validation_terra_luna,test_svb,price_plus_book,MetaLabelingFilter_lgbm_crossmech,1558,265,17.0,0.5,11,95.26,1.0,0.05,397,82.45,1.0,0.5083,synthetic_fallback
