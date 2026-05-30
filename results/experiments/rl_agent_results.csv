@@ -1,0 +1,3 @@
+split,n_trades,net_bps_captured,auroc,hit_rate_above_cost,oracle_capture_pct,threshold
+train_TerraLUNA,0,nan,nan,nan,nan,0.5
+test_SVB,0,nan,nan,nan,nan,0.5

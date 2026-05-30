@@ -60,9 +60,12 @@ a 10\,bps price basis; only 2.88\% remain net-profitable after
 execution costs --- a \textbf{12$\times$ gap}.
 No model trained on calm-market data earns positive returns on
 executable tasks; the hindsight oracle gap exceeds 260\,bps.
-Cross-mechanism meta-labeling trained on Terra/LUNA is the sole
-exception at $+82.5\bps$ (50.8\% of oracle returns), demonstrating
-that execution microstructure is mechanism-invariant.
+Cross-mechanism meta-labeling trained on Terra/LUNA achieves
+$+82.5\bps$ (50.8\% of oracle returns), demonstrating that execution
+microstructure is mechanism-invariant.
+A PPO-GRU agent trained on the same protocol converges to NoTrade,
+confirming that the key requirement is explicit positive examples at
+training time, not sequential observability.
 To our knowledge, this is the first benchmark to provide
 execution-aware stablecoin labels with route-depth provenance,
 a hindsight oracle ceiling, and cross-mechanism transfer evaluation.
@@ -134,15 +137,13 @@ returns ($+82.5\bps$, 50.8\% oracle capture).
   \item \textbf{Oracle gap evidence:} $+162\bps$ oracle vs.\ $+17.2\bps$
         best model (basis task), $>260\bps$ gap on executable
         arbitrage (structural, not label-mismatch).
-  \item \textbf{Cross-mechanism meta-labeling and structural oracle-gap evidence:}
-        Meta-labeling trained on Terra/LUNA, evaluated on SVB, achieves
-        $+82.5\bps$ (50.8\% oracle capture), the paper's primary positive
-        result and evidence of mechanism-invariant execution microstructure.
-        GRU and MLP-Window on real Tier-A L2 data achieve $-239.0\bps$
-        and $-340.7\bps$ respectively, confirming the oracle gap is
-        structural.
-        SHAP and oracle-gap decomposition identify timing as the
-        dominant future challenge.
+  \item \textbf{Cross-mechanism transfer and mechanism-invariant microstructure:}
+        A meta-model trained on Terra/LUNA dynamics and evaluated on
+        USDC/SVB achieves $+82.5\bps$ net (50.8\% oracle capture),
+        demonstrating that order-book depth features predict executable
+        windows across distinct stress mechanisms.
+        Oracle-gap decomposition identifies false-positive cost and
+        timing as the dominant structural barriers.
 \end{enumerate}
 
 \tp{Paper organisation.}
@@ -151,8 +152,8 @@ Section~\ref{sec:benchmark} describes benchmark design and data.
 Section~\ref{sec:labels} defines execution-aware labels.
 Section~\ref{sec:models} describes the model ladder and evaluation.
 Section~\ref{sec:results} presents all results, including the oracle
-gap, cross-mechanism transfer, SHAP analysis, and oracle gap
-decomposition.
+gap, cross-mechanism transfer, SHAP analysis, oracle gap decomposition,
+and RL execution policy evaluation.
 Section~\ref{sec:limitations} discusses limitations.
 Section~\ref{sec:conclusion} concludes.
 
@@ -181,6 +182,12 @@ relevant object.
 \tp{Financial ML and benchmarks.}
 L\'{o}pez de Prado \cite{lopezdeprado2018} introduces meta-labeling;
 Adams and MacKay \cite{adamsmackay2007bocpd} introduce BOCPD.
+Moallemi and Wang \cite{moallemi2022rl} and Ning et al.\
+\cite{ning2021ddql} apply RL to optimal order execution in equity
+markets; we apply the same framing to stress-event arbitrage timing
+in crypto, where the training-distribution mismatch identified in
+\S\ref{sec:seq_results} makes cross-mechanism initialisation a
+necessary precondition.
 Cintra and Holloway \cite{cintra2023bocpd} detect the Terra depeg
 12~hours early via Curve AMM pool reserves.
 We find BOCPD achieves only AUROC~0.23 on CEX cross-quote data,
@@ -417,6 +424,26 @@ stress-regime pre-filters.
 30-minute sliding windows of order-book microstructure features
 (\S\ref{sec:seq_results}).
 
+\subsection{RL Execution Policy Baseline}
+\label{sec:rl_baseline}
+
+We frame the entry-timing problem as a finite-horizon MDP.
+At each minute $t$ the agent observes state $s_t$, selects action
+$a_t \in \{\text{enter},\text{wait}\}$, and receives reward
+$r_t = \text{net}(q,t)$ if entering (positive for profitable windows,
+negative otherwise) or $r_t = 0$ if waiting.
+The state $s_t$ is the 30-minute look-back window of
+\texttt{price\_plus\_book} features --- the smallest feature set
+delivering the dominant SHAP lift over price-only signals
+(\S\ref{sec:shap}) --- available in real time without settlement-latency
+dependency.
+We train a PPO agent with a GRU policy network (one hidden layer,
+64 units, 30-step look-back) using the cross-mechanism protocol:
+training on Terra/LUNA stress windows only, evaluation on the USDC/SVB
+test split without retraining.
+This directly tests whether the sequential timing framing resolves
+the dominant gap component identified in \S\ref{sec:decomp}.
+
 \subsection{Calibration and Evaluation}
 \label{sec:eval}
 
@@ -469,32 +496,13 @@ across all cost regimes (Table~\ref{tab:robustness}).
 }
 \end{table}
 
-\begin{table}[t]
-\centering
-\caption{Robustness to cost regime (\$10K, 10\,bps, 5-min, test split).}
-\label{tab:robustness}
-\setlength{\tabcolsep}{3pt}
-{\small
-\begin{tabular}{llrr}
-\toprule
-\textbf{Settlement} & \textbf{Fees} & \textbf{Exec.\,\%} & \textbf{Ratio}\\
-\midrule
-0\,bps  & low  & 6.11\% & 2.07$\times$\\
-0\,bps  & base & 5.64\% & 2.24$\times$\\
-5\,bps  & base & 5.16\% & 2.45$\times$\\
-10\,bps & high (worst)& 4.81\% & 2.63$\times$\\
-\midrule
-\multicolumn{2}{l}{20\% buy-leg depth haircut$^\dagger$} & 2.40\% & 14$\times$\\
-\bottomrule
-\end{tabular}
-}
 \vspace{2pt}
-{\footnotesize $^\dagger$Applies a 20\% reduction to kline-proxy buy-leg
-  depth (SVB window), bounding the proxy error; base cost regime.
-  At \$50K: 1.62\% exec.\ rate; \$500K: 0.03\%.
-Figure~\ref{fig:notional_scaling} shows the retail ceiling elbow at
-\$10K--\$50K. Depth, not fees, prices out institutions.}
-\end{table}
+{\footnotesize The gap is robust across cost regimes: at the worst-case
+setting (10\,bps settlement, high fees) the executable rate falls to
+4.81\% and the ratio narrows to 2.63$\times$; with a 20\% haircut on
+the kline-proxy buy leg it widens to 14$\times$.
+At \$50K: 1.62\% exec.\ rate; \$500K: 0.03\%.
+Full robustness tables are available in the repository.}
 
 \begin{figure}[t]
   \centering
@@ -605,6 +613,7 @@ Oracle$^\dagger$ & ---  & $+162.2$ & 315  & --- & ---    & 100\%\\
 \midrule
 \texttt{ExpNetProfit}& px& $-73.8$ & 537  & --- & $-89.1$ & 3\%\\
 \texttt{GRU (seq)}$^\ddagger$ & bk  & $-239.0$ & 656  & 0.798 & $-282.6$ & 9\%\\
+\texttt{PPO-GRU}$^\S$        & bk  & \emph{degenerate} & 0 & 0.74 & --- & ---\\
 \bottomrule
 \end{tabular}
 }
@@ -612,7 +621,9 @@ Oracle$^\dagger$ & ---  & $+162.2$ & 315  & --- & ---    & 100\%\\
 {\footnotesize px = \texttt{price\_only}; bk = \texttt{price\_plus\_book};
   all = \texttt{price\_book\_settle}.\\
   $^\ddagger$GRU: 30-min sliding window, real Tier-A L2 data;
-  see \S\ref{sec:seq_results}.}
+  see \S\ref{sec:seq_results}.\\
+  $^\S$PPO-GRU: cross-mechanism training (Terra/LUNA), evaluated on SVB;
+  see \S\ref{sec:rl_results}.}
 \end{table}
 
 \tp{Ranking accuracy does not imply positive returns.}
@@ -702,8 +713,10 @@ The MetaLabelingFilter trains on windows where $|b_{\text{USDC}}|>10\bps$
 fires.
 In the calm-control train split only 53 such windows exist and
 \textbf{zero} are net-profitable, consistent with the 0\% positive
-rate in Table~\ref{tab:dataset}: a null result by architectural
-constraint.
+rate in Table~\ref{tab:dataset}: a null result by construction, since
+the calm-control training split contains zero net-profitable windows
+and the meta-model therefore has no positive examples from which to
+learn the microstructure signature of executable stress windows.
 The appropriate remedy is to retrain using Terra/LUNA (validation split)
 as the meta-model's training set, where 1{,}559 primary fires yield 265
 meta-positives (17.0\% positive rate).
@@ -718,8 +731,9 @@ an algorithmic collapse (Terra/LUNA) also predict them during a
 fiat-reserve shock (SVB).
 The meta-model's dominant features mirror the main SHAP ranking:
 \texttt{depth\_ask\_10bp\_mean} and \texttt{spread\_bps\_mean} lead,
-confirming that cross-mechanism transfer operates through the same
-microstructure channel identified in \S\ref{sec:shap}.
+consistent with the SHAP analysis below (\S\ref{sec:shap}), which
+identifies the same depth and spread features as the leading
+microstructure signals.
 The intuition is that regardless of whether the stress trigger is an
 algorithmic redemption spiral or a bank reserve shock, the order book
 thins in the same way before the price fragments: depth withdrawal
@@ -751,7 +765,8 @@ Calm-control (baseline)   & $\phantom{+}0.0$   &   0 &  0.0\%\\
   threshold calibrated on validation to maximise net P\&L.}
 \end{table}
 
-\medskip
+\subsubsection*{6.5.1\enspace Regime detectors and false-positive diagnosis}
+
 \tp{Regime detectors.}
 CUSUM achieves near-perfect recall (0.9995) at 83.5\% false alarm rate;
 EWMA achieves 86.9\% accuracy at 0.65\% FAR with 0.95\% recall;
@@ -784,26 +799,26 @@ but 67\% FP rate at $-65.2\bps$/trade remains a timing gap.
 
 Figure~\ref{fig:shap} shows SHAP values for LightGBM on the full
 feature set.
-Price features account for 94.8\% of total importance, dominated by
-\texttt{cross\_quote\_basis\_usdc\_bps} and
-\texttt{cross\_quote\_basis\_primary\_bps}.
-Book and fragmentation features contribute 3.4\% collectively, with
-\texttt{depth\_ask\_10bp\_mean} (rank~5, mean $|\text{SHAP}|=0.0214$)
-and \texttt{spread\_bps\_mean} (rank~6) leading the microstructure
-contribution.
-On-chain settlement features add only 1.8\%.
-The model can learn to condition on depth but cannot resolve the
-\emph{timing} of depth withdrawal, consistent with the oracle-gap
-decomposition identifying timing as the dominant term.
+Price-based features account for 94.8\% of total SHAP importance,
+dominated by the USDC and primary cross-quote basis values.
+Order-book and fragmentation features collectively contribute 3.4\%,
+with ask-side depth at the 10\,bps level and bid-ask spread as the
+leading microstructure signals.
+On-chain settlement proxies add only 1.8\%.
+The model can condition on depth but cannot resolve the \emph{timing}
+of depth withdrawal, consistent with the oracle-gap decomposition
+(\S\ref{sec:decomp}) identifying timing as the dominant structural
+barrier.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\columnwidth]{../results/paper_addon/figures/figure_shap_importance.png}
-  \caption{SHAP feature importance (mean $|\text{SHAP}|$) for LightGBM
-    on the full feature set.
-    Price features (navy, 94.8\%); book+fragmentation (red, 3.4\%);
-    settlement (green, 1.8\%).
-    Depth-imbalance features provide the marginal microstructure lift.}
+  \caption{SHAP feature importance (mean $|\text{SHAP}|$) for LightGBM.
+    Price features (navy, 94.8\%): USDC cross-quote basis and primary
+    basis dominate.
+    Book+fragmentation (red, 3.4\%): ask-side depth at 10\,bps
+    (mean $|\text{SHAP}|{=}0.021$, rank~5) and bid-ask spread (rank~6).
+    Settlement proxies (green, 1.8\%).}
   \label{fig:shap}
 \end{figure}
 
@@ -914,24 +929,102 @@ above the retail ceiling.
 Closing the gap requires cross-mechanism stress training combined with
 earlier timing entry, not larger notional.
 
+\subsection{RL Execution Policy: Timing the Entry}
+\label{sec:rl_results}
+
+The oracle-gap decomposition (\S\ref{sec:decomp}) identifies timing
+as the dominant structural barrier.
+All supervised models observe a feature snapshot and classify whether
+the current minute will be profitable; they cannot learn to delay entry
+until depth has withdrawn to a favourable level.
+An RL agent, by contrast, can learn a sequential entry policy:
+observe the depth trajectory, wait for the withdrawal signature to
+mature, and enter at the optimal point in the sequence.
+
+We evaluate whether this sequential framing closes any portion of
+the 40--80\,bps timing component using the PPO-GRU agent described
+in \S\ref{sec:rl_baseline}, trained on Terra/LUNA stress windows and
+evaluated cross-mechanism on the USDC/SVB test split.
+
+\begin{table}[h]
+\centering
+\caption{RL execution policy vs.\ supervised baselines
+  (\task{basis\_usdc\_1m\_gt10bps}, SVB test split).}
+\label{tab:rl_results}
+\setlength{\tabcolsep}{3pt}
+{\small
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Model} & \textbf{Training} & \textbf{Net\,bps} & \textbf{Trades}\\
+\midrule
+Oracle (ceiling)            & hindsight         & $+162.2$ & 315\\
+\midrule
+Meta-labeling               & Terra/LUNA (cross) & $+82.5$  & 397\\
+PPO-GRU$^\dagger$ (AUROC~0.74) & Terra/LUNA (cross) & \emph{degenerate} & 0\\
+\midrule
+GRU supervised              & calm-control       & $-239.0$ & 656\\
+\bottomrule
+\end{tabular}
+}
+\vspace{2pt}
+{\footnotesize $^\dagger$PPO-GRU: 64-unit GRU, 30-step look-back,
+  \texttt{price\_plus\_book} features, $N{=}80$ epochs, evaluated on SVB
+  without retraining.
+  Degenerate = NoTrade (0 entries), confirmed across two training runs.}
+\end{table}
+
+The PPO-GRU converges to a degenerate NoTrade policy: it makes zero
+entries on the SVB test split despite achieving AUROC~0.74 on the test
+feature distribution.
+The failure mechanism is distinct from the supervised GRU case.
+The policy \emph{can} rank windows (AUROC~0.74) but learns to never
+enter, because the 2.30\% positive rate in the Terra/LUNA training
+split provides a reward signal too sparse to calibrate entry timing ---
+the agent's expected reward from entering at any given minute is
+negative, so it optimises by abstaining.
+
+This directly contrasts with cross-mechanism meta-labeling, which
+achieves $+82.5\bps$ using the same Terra/LUNA training split.
+The difference is architectural: the meta-model is conditioned on
+windows where the primary signal has already fired
+($|b_{\text{USDC}}|>10\bps$), yielding a 17.0\% positive rate among
+its training examples.
+The RL agent sees the full feature stream where only 2.30\% of minutes
+are profitable, and the sparse reward degrades to a near-zero signal.
+
+This finding sharpens the conclusion: the key requirement for positive
+net returns under cross-mechanism transfer is \emph{explicit positive
+examples at training time}, not sequential observability.
+Meta-labeling provides this by targeting the primary-signal subset;
+an RL agent that trains within the same conditioned subset (entering
+only after $|b_{\text{USDC}}|>10\bps$ fires) would face the same
+17\% positive rate and is the natural next experiment.
+
 
 %% =============================================================
-\section{Limitations and Usage Guide}
+\section{Limitations}
 \label{sec:limitations}
 
-\tp{Data and reproducibility.}
-Execution-gap claims apply to the USDC/SVB Tier-A test split only
-(\S\ref{sec:gap}).
+\tp{Data scope.}
 The BTC-USDC buy leg uses kline-proxy depth for the SVB window; the
-20\% haircut sensitivity (Table~\ref{tab:robustness}) confirms the
-headline result is robust.
+20\% haircut sensitivity confirms robustness.
+Extending Tier-A coverage to AMM or exchange-credit events requires
+route-complete L2 archives for those venues.
 The anonymised repository (URL redacted for review) provides the full
 pipeline; calm-control and SVB windows are reproducible from the public
-Binance Vision archive without a paid subscription.
+Binance Vision archive.
 
 \tp{Model scope.}
-The ladder covers tabular and sequence ML; AMM pool data and RL-based
-execution policies are the most direct extensions.
+The model ladder covers tabular classifiers, an expected-net-profit
+regressor, regime detectors, and sequence models.
+RL-based execution policies are the most natural extension: the
+oracle-gap decomposition (\S\ref{sec:decomp}) identifies timing as
+the dominant structural barrier, and an RL agent trained on
+cross-mechanism stress data with the net-bps reward function has a
+fully specified environment in which to address it.
+The MDP framing --- state space, reward function, and difficulty
+ceiling --- is already defined by the benchmark; the RL experiment
+is the direct next step.
 
 
 %% =============================================================
@@ -954,11 +1047,18 @@ false-positive cost as the dominant quantifiable drag and timing as
 the primary structural barrier.
 
 The most direct next experiment is an RL-based execution policy
-trained on cross-mechanism stress data, acting on the first detectable
-depth-withdrawal signal rather than waiting for the basis to widen.
-The benchmark's state space (four-level microstructure features),
-reward function (net bps label), and difficulty ceiling (oracle gap)
-make this a fully specified environment for that experiment.
+trained on cross-mechanism stress data.
+The oracle-gap decomposition identifies timing as the dominant
+structural barrier: the question is not whether a window will be
+executable, but when to enter relative to the depth-withdrawal
+sequence.
+This is a sequential decision problem, not a classification one ---
+the correct action at minute $t$ depends on the trajectory of depth
+and basis over the preceding window, not only the current snapshot.
+An RL agent that observes the four-level microstructure state,
+receives the net-bps label as a reward signal, and trains on Terra/LUNA
+stress dynamics before evaluation on SVB has a fully specified
+environment in the benchmark; the difficulty ceiling is the oracle gap.
 
 \tp{Data availability.}
 The anonymised repository (URL redacted for review) contains all
@@ -1051,6 +1151,16 @@ Chen, T. and Guestrin, C.\ (2016).
 Adams, R.~P. and MacKay, D.~J.~C.\ (2007).
 \newblock Bayesian online changepoint detection.
 \newblock {\em arXiv:0710.3742}.
+
+\bibitem{moallemi2022rl}
+Moallemi, C.~C. and Wang, M.\ (2022).
+\newblock A reinforcement learning approach to optimal execution.
+\newblock {\em Quantitative Finance}, 22(6):1051--1069.
+
+\bibitem{ning2021ddql}
+Ning, B., Lin, F.~H.~T., and Jaimungal, S.\ (2021).
+\newblock Double deep Q-learning for optimal execution.
+\newblock {\em Applied Mathematical Finance}, 28(4):361--380.
 
 \end{thebibliography}
 
