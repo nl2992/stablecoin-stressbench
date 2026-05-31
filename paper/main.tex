@@ -32,11 +32,15 @@
 \setlength{\emergencystretch}{3em}
 \tolerance=1000
 \hbadness=1500
-\setlength{\textfloatsep}{6pt plus 1pt minus 2pt}
-\setlength{\floatsep}{5pt plus 1pt minus 2pt}
-\setlength{\intextsep}{5pt plus 1pt minus 2pt}
-\setlength{\abovecaptionskip}{3pt}
-\setlength{\belowcaptionskip}{0pt}
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{1pt}
+\setlength{\abovedisplayskip}{5pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{5pt plus 1pt minus 1pt}
+\setlength{\abovedisplayshortskip}{3pt plus 1pt}
+\setlength{\belowdisplayshortskip}{4pt plus 1pt minus 1pt}
 
 %% ---- Convenience macros ------------------------------------
 \newcommand{\bps}{\,\text{bps}}
@@ -333,8 +337,8 @@ C ($N{=}5$)  & RWA, niche           & Thin market            & Taxonomy only\\
 \subsection{Feature Sets}
 \label{sec:features}
 
-Four nested feature sets (Table~\ref{tab:features}) isolate marginal
-information value:
+Four nested feature sets isolate the marginal information value of
+each signal layer:
 {\small
 \begin{tabular}{lp{4.5cm}}
 \label{tab:features}
@@ -357,7 +361,6 @@ This section details label construction.
 \subsection{Cross-Quote Basis and Labels}
 \label{sec:basis}
 
-\vspace{-2pt}
 \[
   b_{\text{USDC}}(t) = 10{,}000 \times
     \frac{P_{\text{BTC/USDC}}(t) - P_{\text{BTC/USD}}(t)}
@@ -370,7 +373,6 @@ Primary task: \task{basis\_usdc\_1m\_gt10bps}.
 \subsection{VWAP Execution and Net Profit Labels}
 \label{sec:netlabels}
 
-\vspace{-2pt}
 \begin{align}
   \text{net}(q,t) &= \text{VWAP}_{\text{sell}} - \text{VWAP}_{\text{buy}}
     - f_{\text{buy}} - f_{\text{sell}} - \delta_{\text{settle}}\\
@@ -480,6 +482,9 @@ is robust across cost regimes: at the worst-case setting (10\,bps
 settlement, high fees) the executable rate falls to 4.81\% and the
 ratio narrows to 2.63$\times$; with a 20\% haircut on the kline-proxy
 buy leg it widens to 14$\times$.
+At \$50K notional the executable rate falls to 1.62\%; at \$500K it
+reaches 0.03\%, confirming that book depth, not fees, prices out
+institutional participants.
 
 \begin{table}[t]
 \centering
@@ -500,9 +505,6 @@ buy leg it widens to 14$\times$.
 \end{tabular}
 }
 \end{table}
-
-{\footnotesize At \$50K: 1.62\% exec.\ rate; \$500K: 0.03\%.
-Full robustness tables are in the repository.}
 
 \begin{figure}[t]
   \centering
@@ -949,7 +951,9 @@ evaluated cross-mechanism on the USDC/SVB test split.
 \begin{table}[h]
 \centering
 \caption{RL execution policy vs.\ supervised baselines
-  (\task{basis\_usdc\_1m\_gt10bps}, SVB test split).}
+  (\task{basis\_usdc\_1m\_gt10bps}, SVB test split).
+  Supervised GRU and MLP-Window trained on calm-control;
+  PPO-GRU trained cross-mechanism on Terra/LUNA.}
 \label{tab:rl_results}
 \setlength{\tabcolsep}{3pt}
 {\small
@@ -963,6 +967,7 @@ Meta-labeling               & Terra/LUNA (cross) & $+82.5$  & 397\\
 PPO-GRU$^\dagger$ (AUROC~0.74) & Terra/LUNA (cross) & \emph{degenerate} & 0\\
 \midrule
 GRU supervised              & calm-control       & $-239.0$ & 656\\
+MLP-Window supervised       & calm-control       & $-340.7$ & 1{,}052\\
 \bottomrule
 \end{tabular}
 }
@@ -1045,9 +1050,9 @@ depth and transaction costs are applied.
 No model trained on calm-market data closes this gap; cross-mechanism
 training on a different stress event is the empirically validated path
 to positive net returns ($+82.5\bps$, 50.8\% oracle capture).
-Of the 456 executable minutes, all models trained on calm-control data
-identify 0\% ex ante; cross-mechanism meta-labeling recovers 50.8\% of
-oracle returns (Layer~3 under cross-mechanism conditions).
+All models trained on calm-control data identify 0\% of executable
+windows ex ante; only cross-mechanism training provides a learnable
+signal.
 The oracle gap decomposition (\S\ref{sec:decomp}) identifies
 false-positive cost as the dominant quantifiable drag and timing as
 the primary structural barrier.
