@@ -26,21 +26,27 @@ ax.axhspan(  0, 220, alpha=0.06, color="green")
 ax.axhspan(-400, 0,  alpha=0.06, color="#d73027")
 ax.axhline(0, color="black", lw=0.9, ls="--", alpha=0.4)
 
+# Per-point label positions: (dx, dy) offsets from data point
+LABEL_OFFSETS = {
+    "PriceBasis10bps":  ( 0.013, -28),   # below, to avoid overlap with PriceBasis25bps
+    "PriceBasis25bps":  (-0.07,  -20),   # left of point, above its own marker
+    "GrossArb":         ( 0.013,  10),
+    "Logistic":         ( 0.013,  10),
+    "LightGBM*":        (-0.07,   12),   # left so it doesn't run into GRU label
+    "GRU (seq)":        (-0.075,  10),   # left of cluster
+}
+
 for name, auroc, net, col, mrk in MODELS:
     ax.scatter(auroc, net, color=col, marker=mrk, s=80, zorder=5)
-    # per-point label nudges
-    dx, dy = 0.013, 8
-    if name == "PriceBasis10bps": dy = -24
-    if name == "LightGBM*":       dy =  12
-    if name == "GRU (seq)":       dx = -0.018; dy = 12
+    dx, dy = LABEL_OFFSETS.get(name, (0.013, 8))
     ax.annotate(name, (auroc, net), xytext=(auroc+dx, net+dy),
                 fontsize=7.5, color=col,
                 arrowprops=dict(arrowstyle="-", color=col, lw=0.5, alpha=0.5))
 
-# Quadrant text (data coords, well inside plot)
-ax.text(0.92, 140, "Accurate\n& profitable", ha="right", fontsize=8,
+# Quadrant text: moved away from data clusters
+ax.text(0.30, 155, "Accurate\n& profitable", ha="left", fontsize=8,
         color="green", alpha=0.8)
-ax.text(0.92, -360, "Accurate but\nunprofitable", ha="right", fontsize=8,
+ax.text(0.12, -300, "Accurate but\nunprofitable", ha="left", fontsize=8,
         color="#d73027", alpha=0.8)
 
 # Oracle reference line + label
