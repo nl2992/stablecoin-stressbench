@@ -65,7 +65,8 @@ oracle returns), demonstrating that execution microstructure is
 mechanism-invariant across structurally distinct stress events.
 During the March 2023 USDC/SVB event, 34.3\% of minutes exceed
 a 10\,bps price basis; only 2.88\% remain net-profitable after
-execution costs, a \textbf{12$\times$ gap}.
+execution costs, a \textbf{12$\times$ gap}
+(block bootstrap 95\,\% CI: $8\times$--$24\times$).
 No model trained on calm-market data earns positive returns on
 executable tasks; the hindsight oracle gap exceeds 260\,bps.
 A PPO-GRU agent trained on the same cross-mechanism protocol converges
@@ -143,20 +144,26 @@ returns ($+82.5\bps$, 50.8\% oracle capture).
   \item \textbf{Execution-aware benchmark:} per-minute labels with
         documented order-book depth provenance, VWAP book-walking,
         fees, notional scaling, and a hindsight oracle ceiling.
+        (\S\ref{sec:labels}; Table~\ref{tab:gap})
   \item \textbf{18-event stress taxonomy:} seven mechanism classes
         (2020--2023) with data-tier governance of permitted claims.
         Terra/LUNA cross-mechanism check gives $5.9\times$ vs.\ the
         Tier-A $12\times$ ratio.
+        (\S\ref{sec:historical}, Table~\ref{tab:tiers};
+         \S\ref{sec:stress_recurrence}, Table~\ref{tab:cross_mechanism})
   \item \textbf{Oracle gap evidence:} $+162\bps$ oracle vs.\ $+17.2\bps$
         best model (basis task), $>260\bps$ gap on executable
-        arbitrage (structural, not label-mismatch).
+        arbitrage (structural, not label-mismatch), decomposed into
+        FP cost, timing, and sizing components.
+        (\S\ref{sec:oracle_gap}, Table~\ref{tab:oracle};
+         \S\ref{sec:decomp})
   \item \textbf{Cross-mechanism transfer and mechanism-invariant microstructure:}
         A meta-model trained on Terra/LUNA dynamics and evaluated on
-        USDC/SVB achieves $+82.5\bps$ net (50.8\% oracle capture),
-        demonstrating that order-book depth features predict executable
-        windows across distinct stress mechanisms.
-        Oracle-gap decomposition identifies false-positive cost and
-        timing as the dominant structural barriers.
+        USDC/SVB achieves $+82.5\bps$ net (50.8\% oracle capture);
+        PPO-GRU diagnostic isolates positive example density as the
+        binding architectural constraint.
+        (\S\ref{sec:diagnostics}, Table~\ref{tab:metalabel};
+         \S\ref{sec:rl_results})
 \end{enumerate}
 
 \tp{Paper organisation.}
@@ -193,20 +200,15 @@ Shleifer and Vishny \cite{shleifer1997limits} and Gromb and Vayanos
 \cite{gromb2010limits} establish that arbitrage is limited by capital
 constraints and execution frictions; we operationalise this at the
 per-minute label level.
-Makarov and Schoar \cite{makarov2020trading} show empirically that
-cross-venue crypto price gaps persist for minutes to hours and are not
-executable profits once latency and depth are accounted for; their
-finding motivates our 12$\times$ price-to-execution gap measurement
-and confirms that price-based labels systematically overstate
-opportunity.
+Makarov and Schoar \cite{makarov2020trading} show that cross-venue
+crypto price gaps are not executable profits once latency and depth
+are modelled, motivating our 12$\times$ price-to-execution gap.
 Hautsch et al.\ \cite{hautsch2018blockchain} quantify settlement
-latency as a first-order arbitrage cost in blockchain markets; we
-implement their finding as the fixed $\delta{=}5\bps$ settlement
-penalty in our net-profit label (Equation~1).
-Cont and Kukanov \cite{cont2013optimal} show that VWAP execution
-price, not the quoted mid, is the correct object for measuring
-arbitrage profitability; our VWAP book-walking model in \S\ref{sec:netlabels}
-implements this directly.
+latency as a first-order cost; we implement this as the fixed
+$\delta{=}5\bps$ penalty in Equation~1.
+Cont and Kukanov \cite{cont2013optimal} establish VWAP execution
+price as the correct profitability object; our book-walking model
+in \S\ref{sec:netlabels} implements this directly.
 Gogol et al.\ \cite{gogol2024amm} introduce a Maximal Arbitrage
 Value (MAV) between a USDC-ETH AMM pool and Binance, the closest
 prior analogue to our oracle ceiling; our oracle extends this to
@@ -378,6 +380,21 @@ C ($N{=}5$)  & RWA, niche           & Thin market            & Taxonomy only\\
 \end{tabular}
 }
 \end{table}
+
+\subsection{Benchmark Versioning and Governance}
+\label{sec:versioning}
+
+StressBench is versioned as \textbf{v1.0} for this submission.
+Tier-A expansion requires a new event with route-complete CEX L2
+archives and at least 5{,}000 labelled test-split minutes; the
+data-tier framework (\S\ref{sec:historical}) governs what claims
+each tier supports.
+The community can propose new stress events via the public repository
+issue tracker (link released at acceptance); proposed events are
+evaluated against the depth-provenance and data-quality criteria
+in Table~\ref{tab:route_provenance}.
+The planned release format is a versioned Hugging Face dataset with
+CC-BY~4.0 licensing, covering labels, features, and pipeline code.
 
 \subsection{Feature Sets}
 \label{sec:features}
@@ -566,20 +583,20 @@ institutional participants.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\columnwidth]{../results/paper_addon/figures/figure_notional_scaling.png}
-  \caption{Executable rate (\%, red, left) and oracle net bps (gold, right)
-    vs.\ trade size (log scale).
-    Sharp elbow at \$10K--\$50K marks the \emph{retail arbitrage ceiling}:
-    book depth eliminates the opportunity above this notional.}
-  \label{fig:notional_scaling}
+  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_oracle_gap_waterfall.png}
+  \caption{Oracle gap decomposition (executable arb., \$10K notional).
+    Starting from the oracle ceiling ($+225\bps$), three components
+    account for the 266\,bps gap to the best model ($-41\bps$):
+    FP drag (residual estimate, dominant), timing error (40--80\,bps
+    range, error bars show bounds), and sizing error (40--100\,bps
+    range). Details in \S\ref{sec:decomp}.}
+  \label{fig:waterfall}
 \end{figure}
 
-These execution-gap estimates apply to the USDC/SVB Tier-A test split
-($N{=}15{,}832$) only.
-Terra/LUNA provides a directional cross-mechanism check
-(5.9$\times$ ratio vs.\ 12$\times$; \S\ref{sec:stress_recurrence});
-extending Tier-A coverage to AMM or exchange-credit events requires
-route-complete L2 archives for those venues.
+Claim boundaries and data-tier scope are stated in
+\S\ref{sec:eval}; the Terra/LUNA cross-mechanism check
+($5.9\times$ ratio; \S\ref{sec:stress_recurrence}) provides
+directional evidence that the gap is not SVB-specific.
 
 \subsection{Oracle Gap: Profitable Windows Exist but Only in Hindsight}
 \label{sec:oracle_gap}
@@ -602,23 +619,25 @@ diverges sharply negative while the oracle climbs steadily.
 \label{tab:oracle}
 \setlength{\tabcolsep}{3pt}
 {\small
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrrr}
 \toprule
-\textbf{Task / Model} & \textbf{Oracle} & \textbf{Best model} & \textbf{Gap}\\
+\textbf{Task / Model} & \textbf{Oracle} & \textbf{Best model} & \textbf{Gap} & \textbf{AUPRC}\\
 \midrule
-\task{basis\_usdc\_1m}     & $+162.2\bps$ & $+17.2\bps^\ast$ & 145\,bps\\
-\task{exec\_arb\_q10k\_5m} & $+225.0\bps$ & $-41.1\bps$      & 266\,bps\\
-\task{exec\_arb\_q50k\_5m} & $+147.1\bps$ & $-113.0\bps$     & 260\,bps\\
+\task{basis\_usdc\_1m}     & $+162.2\bps$ & $+17.2\bps^\ast$ & 145\,bps & 0.253\\
+\task{exec\_arb\_q10k\_5m} & $+225.0\bps$ & $-41.1\bps$      & 266\,bps & 0.060\\
+\task{exec\_arb\_q50k\_5m} & $+147.1\bps$ & $-113.0\bps$     & 260\,bps & 0.063\\
 \midrule
-GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401\,bps\\
+GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401\,bps & ---\\
 \bottomrule
 \end{tabular}
 }
 \vspace{2pt}
-{\footnotesize $^\ast$lgbm@\texttt{price\_book\_settle} feature set, 106 trades;
+{\footnotesize $^\ast$lgbm@\texttt{all} feature set, 106 trades, AUPRC=0.253
+  (baseline AUPRC = positive rate = 0.029);
   best arb: price\_threshold\_25bps@\texttt{price\_only}.\\
   $^\ddagger$GRU, 30-min window; gap structural even at AUROC~0.80
   (\S\ref{sec:seq_results}).\\
+  AUPRC values: best model per task evaluated on SVB test split.\\
   $^\S$BTC-USDC buy leg uses kline-proxy depth for the SVB window;
   all other legs real L2. The 20\% depth haircut sensitivity
   in \S\ref{sec:gap} bounds this approximation.}
@@ -907,59 +926,17 @@ ${\approx}100\bps$ (Celsius/3AC, exchange credit) to $>500\bps$
 all estimated from OHLCV; execution-grade claims require route-complete
 L2 and are reserved for Tier-A events.
 
-\tp{AMM execution barrier (USDT/Curve Jun 2023, Tier-C).}
-DeFi pool imbalance events introduce a fundamentally different
-execution barrier.
-Curve's StableSwap invariant (amplification $A{=}2{,}000$) compresses
-price deviations endogenously, keeping the AMM spot below the pool fee
-floor at all but the most extreme imbalance levels
-(Table~\ref{tab:amm_gap}).
-At peak $73\%$-USDT pool imbalance (Jun 16, 2023), the spot deviation
-is only $3.70\bps$, still below the $4\bps$ pool fee, making
-AMM-route arbitrage structurally \emph{not executable} even at
-\$500K notional.
-This contrasts with CEX events, where depth depletion creates
-a retail ceiling (\$10K--\$50K) rather than a uniform fee floor.
-Detection mechanisms also differ: Curve LP reserve imbalance
-accumulates \emph{gradually} (enabling BOCPD early warning), whereas
-CEX basis is mean-reverting and yields BOCPD AUROC~0.23
-(\S\ref{sec:diagnostics}).
-Stress is therefore first detectable in on-chain liquidity, not in
-CEX prices.
-Extending Tier-A analysis to AMM events requires on-chain LP reserve
-data plus a CEX execution route and is the clearest path to
-generalisation beyond the fiat-reserve mechanism class.
-
-\begin{table}[h]
-\centering
-\caption{Curve StableSwap AMM execution gap ($A{=}2{,}000$, pool
-  fee $= 4\bps$, TVL \$800M).
-  Spot deviation remains below the fee floor at all observed imbalance
-  levels; $^\ddagger$hypothetical scenario not observed in Jun 2023.}
-\label{tab:amm_gap}
-\setlength{\tabcolsep}{4pt}
-{\small
-\begin{tabular}{lrrr}
-\toprule
-\textbf{Pool state} & \textbf{Spot dev.\ (bps)} & \textbf{Net (bps)} & \textbf{Exec.?}\\
-\midrule
-Balanced (0\%)          & 0.00 & $-4.00$ & No\\
-Moderate (10\% drift)   & 1.08 & $-2.92$ & No\\
-Peak Jun 16 (23\% drift)& 3.70 & $-0.30$ & No\\
-Hypothetical (30\% drift)$^\ddagger$ & 7.32 & $+3.32$ & Yes\\
-\bottomrule
-\end{tabular}
-}
-\vspace{2pt}
-{\footnotesize Net = spot deviation $-$ pool fee.
-  A 73\%-USDT pool composition corresponds to 23\% drift from the
-  balanced 50/50 state; the table reports drift percentage.
-  The hypothetical row (30\% drift, 80\%-USDT) was not observed in
-  the Jun 2023 window; it is included to show the threshold above which
-  AMM-route arbitrage becomes executable.
-  Arbitrage requires $\text{net} > 0$; the pool fee acts as a hard
-  floor that order-book depth does not.}
-\end{table}
+\tp{AMM vs.\ CEX execution barriers (Tier-C illustration).}
+DeFi pool imbalance events introduce a qualitatively different barrier.
+Curve's StableSwap invariant ($A{=}2{,}000$) endogenously compresses
+deviations: at peak $73\%$-USDT pool imbalance (Jun~16, 2023) the
+spot deviation is only $3.70\bps$, below the $4\bps$ pool fee, making
+AMM-route arbitrage structurally \emph{not executable} at any notional.
+This contrasts sharply with CEX events, where depth depletion creates
+a \emph{retail ceiling} (\$10K--\$50K) rather than a uniform fee
+floor. The CEX barrier is notional-scaling, the AMM barrier is a
+hard fee threshold: two distinct mechanism classes requiring distinct
+detection strategies.
 
 \begin{table}[t]
 \centering
