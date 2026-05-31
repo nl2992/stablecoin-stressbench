@@ -55,31 +55,28 @@
 
 %% ---- Abstract -----------------------------------------------
 \begin{abstract}
-Quoted stablecoin price gaps are not trades.
-We introduce \textbf{Stablecoin StressBench}, a benchmark showing
-that most apparent stablecoin dislocations are optical rather than
-executable: during March 2023, 34.3\% of minutes show a $>10\bps$
-USDC basis, but only 2.88\% yield net profit after execution costs,
-a \textbf{12$\times$ gap} (block bootstrap 95\,\%
-CI: $8\times$--$24\times$).
-No model trained on calm-market data closes this gap; the hindsight
-oracle gap exceeds 260\,bps.
+Quoted stablecoin price gaps are not trades: we call dislocations
+where a quoted basis exceeds a threshold \emph{optical}, reserving
+\emph{executable} for the subset where net profit survives VWAP
+slippage, taker fees, and settlement latency after routing through
+a live order book.
+Building \textbf{Stablecoin StressBench} on the March~2023 USDC/SVB
+event, we find that 34.3\% of minutes show a $>10\bps$ optical
+dislocation but only 2.88\% are executable: a \textbf{12$\times$
+price-to-execution gap} (block bootstrap 95\,\% CI:
+$8\times$--$24\times$), with no calm-trained model closing it and
+the hindsight oracle exceeding $+225\bps$ net on the executable
+arbitrage task.
 Cross-mechanism meta-labeling trained on Terra/LUNA achieves
 $+82.5\bps$ on the SVB test split (50.8\% of oracle returns),
-providing evidence that order-book microstructure is transferable
+demonstrating that order-book execution microstructure transfers
 across structurally distinct stress mechanisms.
-A three-way RL diagnostic distinguishes density from supervision:
-the unconditioned PPO-GRU (2.3\% positive rate) degenerates to
-NoTrade; a conditioned PPO-GRU (17\% rate, primary-signal windows
-only) trades 919 times but earns $-29.2\bps$; only meta-labeling's
-explicit positive-label supervision reaches $+82.5\bps$.
-To the best of our knowledge, Stablecoin StressBench is the first
-public benchmark for stablecoin stress events that labels one-minute
-dislocations using executable route simulation, combining documented
-route-level depth provenance, VWAP book-walking, explicit fee and
-settlement penalties, a hindsight executable-profit ceiling, and
-cross-mechanism transfer evaluation, rather than quoted price gaps
-alone.
+A three-way RL diagnostic isolates why: unconditioned PPO-GRU
+degenerates to NoTrade at 2.3\% positive density; conditioned
+PPO-GRU at 17\% density trades 919 times but earns $-29.2\bps$;
+only meta-labeling's explicit positive-label supervision reaches
+$+82.5\bps$---establishing that density is necessary but not
+sufficient.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -129,6 +126,10 @@ approximation.} and a full VWAP book-walking model, we find that
 34.3\% of 1-minute windows show a $>10\bps$ price basis but only
 2.88\% remain net-profitable at \$10K notional: a 12$\times$
 price-to-execution gap.
+The headline result is robust to buy-leg proxy error: a 20\%
+depth haircut moves the executable rate from 2.88\% to 2.40\%
+and widens the ratio from $12\times$ to $14\times$, with the oracle
+remaining above $+130\bps$.
 We then construct a model ladder spanning rule-based thresholds,
 statistical baselines, gradient-boosted classifiers, sequence models
 (GRU), and meta-labeling filters, evaluating each model's ability to
@@ -141,32 +142,28 @@ returns ($+82.5\bps$, 50.8\% oracle capture).
 
 \tp{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=1pt,topsep=1pt]
-  \item \textbf{Execution-aware benchmark:} per-minute labels with
-        documented order-book depth provenance, VWAP book-walking,
-        fees, notional scaling, and a hindsight oracle ceiling.
-        (\S\ref{sec:labels}; Table~\ref{tab:gap})
-  \item \textbf{18-event stress taxonomy:} seven mechanism classes
-        (2020--2023) with data-tier governance of permitted claims.
-        Terra/LUNA cross-mechanism check gives $5.9\times$ vs.\ the
-        Tier-A $12\times$ ratio.
-        (\S\ref{sec:historical}, Table~\ref{tab:tiers};
-         \S\ref{sec:stress_recurrence}, Table~\ref{tab:cross_mechanism})
-  \item \textbf{Oracle gap evidence:} $+162\bps$ oracle vs.\ $+17.2\bps$
-        best model (basis task), $>260\bps$ gap on executable
-        arbitrage (structural, not label-mismatch), decomposed into
-        FP cost, timing, and sizing components.
-        (\S\ref{sec:oracle_gap}, Table~\ref{tab:oracle};
-         \S\ref{sec:decomp})
-  \item \textbf{Cross-mechanism transfer and RL diagnostics:}
-        Meta-labeling trained on Terra/LUNA achieves $+82.5\bps$
-        (50.8\% oracle capture) on SVB.
-        Conditioned and unconditioned PPO-GRU experiments establish
-        that density is necessary but explicit positive-label
-        supervision is additionally required: conditioned PPO-GRU
-        at 17\% density earns $-29.2\bps$ vs.\ meta-labeling's
-        $+82.5\bps$.
-        (\S\ref{sec:diagnostics}, Table~\ref{tab:metalabel};
-         \S\ref{sec:rl_results}, Table~\ref{tab:rl_results})
+  \item \textbf{Execution-aware benchmark and labels:} per-minute
+        labels with documented order-book depth provenance, VWAP
+        book-walking, fees, and a hindsight oracle ceiling;
+        accompanied by an 18-event stress taxonomy (seven mechanism
+        classes, 2020--2023) that functions as data-tier governance
+        specifying permitted claims per event, and an oracle gap
+        decomposition into FP cost, timing, and sizing components.
+        (\S\ref{sec:labels}, \S\ref{sec:historical};
+         Tables~\ref{tab:gap}, \ref{tab:tiers}, \ref{tab:oracle})
+  \item \textbf{Cross-mechanism transfer:} meta-labeling trained on
+        Terra/LUNA achieves $+82.5\bps$ (50.8\% oracle capture) on
+        the SVB test split---the first demonstration that order-book
+        execution microstructure transfers across structurally
+        distinct stress mechanisms.
+        (\S\ref{sec:diagnostics}, Table~\ref{tab:metalabel})
+  \item \textbf{RL diagnostic---density necessary, supervision
+        sufficient:} conditioned PPO-GRU at 17\% positive density
+        earns $-29.2\bps$ vs.\ meta-labeling's $+82.5\bps$ at
+        identical density, isolating explicit positive-label
+        supervision as the additional requirement beyond RL reward
+        optimisation.
+        (\S\ref{sec:rl_results}, Table~\ref{tab:rl_results})
 \end{enumerate}
 
 \tp{Paper organisation.}
@@ -241,9 +238,18 @@ evaluation.
 Moallemi and Wang \cite{moallemi2022rl} and Ning et al.\
 \cite{ning2021ddql} apply RL to optimal order execution in equity
 markets, establishing the finite-horizon MDP framing we adopt in
-\S\ref{sec:rl_baseline}; we additionally show that cross-mechanism
-initialisation is a necessary precondition in the non-stationary
-stress-event setting.
+\S\ref{sec:rl_baseline}.
+JaxMARL-HFT \cite{jaxmarlhft2024} demonstrates multi-agent RL
+execution in reactive environments with consistent baseline
+outperformance; Right Place, Right Time \cite{rightplace2024}
+establishes RL timing policies in reactive order-book simulators
+where the environment updates depth in response to agent order flow.
+Both confirm that RL can learn selective entry when the environment
+is reactive and positive labels are frequent.
+StressBench contributes the complementary diagnostic: in a
+non-reactive historical-replay setting with structurally rare
+positive labels, density and explicit supervision are the binding
+constraints.
 No prior stablecoin-stress benchmark jointly provides one-minute
 executable labels, route-level depth and fee/settlement modelling,
 a hindsight profit ceiling, and cross-mechanism transfer evaluation.
@@ -347,17 +353,21 @@ no future information leaks into the input features.
   \label{fig:basis}
 \end{figure}
 
-\subsection{Historical Stress Taxonomy and Scope}
+\subsection{Historical Stress Taxonomy: Data-Tier Governance}
 \label{sec:historical}
 
-We catalogue 18 stress events (2020--2023) across seven mechanism
-classes: \emph{algorithmic/reflexive} (FEI, IRON/TITAN, MIM, UST, USDD);
-\emph{fiat-reserve bank shock} (USDC/SVB);
-\emph{regulatory winddown} (BUSD);
-\emph{exchange credit} (Celsius/3AC, HUSD, FTX \cite{vidalthomas2023ftx});
-\emph{DeFi pool imbalance} (Curve/UST, USDT/Curve, USDC/DAI);
-\emph{collateral liquidation} (DAI Black Thursday);
-\emph{RWA/niche} (Acala~aUSD, USDR).
+The 18-event taxonomy (2020--2023) is a benchmark governance
+artefact: it specifies which events carry sufficient data quality
+for execution-grade claims, and which are restricted to price
+magnitude estimates or mechanism classification only.
+It is shipped with the benchmark to foreclose over-interpretation
+of results, not as an empirical finding in its own right.
+Seven mechanism classes are covered: \emph{algorithmic/reflexive}
+(FEI, IRON/TITAN, MIM, UST, USDD); \emph{fiat-reserve bank shock}
+(USDC/SVB); \emph{regulatory winddown} (BUSD); \emph{exchange credit}
+(Celsius/3AC, HUSD, FTX \cite{vidalthomas2023ftx}); \emph{DeFi pool
+imbalance} (Curve/UST, USDT/Curve, USDC/DAI); \emph{collateral
+liquidation} (DAI Black Thursday); \emph{RWA/niche} (Acala~aUSD, USDR).
 
 Data availability governs permitted claims (Table~\ref{tab:tiers}).
 Tier-A events (USDC/SVB test, USDC recovery) support execution-gap,
@@ -599,6 +609,26 @@ depth-based limits-to-arbitrage arguments in \S\ref{sec:related}.
     range). Details in \S\ref{sec:decomp}.}
   \label{fig:waterfall}
 \end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_notional_scaling.png}
+  \caption{Notional scaling: executable rate and oracle net bps
+    vs.\ trade size (10\,bps threshold, 5-min horizon, SVB test split).
+    Book depth, not fees, is the binding institutional constraint:
+    the executable rate collapses from 2.88\% at \$10K to 0.03\%
+    at \$500K, with the retail ceiling near \$50K.}
+  \label{fig:notional_scaling}
+\end{figure}
+
+Figure~\ref{fig:notional_scaling} makes the institutional access
+constraint concrete.
+At \$10K notional the executable rate is 2.88\%; at \$50K it falls
+to 1.62\%; at \$500K it reaches 0.03\%.
+Book depth, not fees, is the binding constraint for institutional
+participants---the retail ceiling is at \$50K--\$100K, above which
+depth depletion during stress renders the route structurally
+unavailable.
 
 Claim boundaries and data-tier scope are stated in
 \S\ref{sec:eval}; the Terra/LUNA cross-mechanism check
@@ -896,13 +926,21 @@ but 67\% FP rate at $-65.2\bps$/trade remains a timing gap.
 
 \tp{SHAP feature importance.}
 \label{sec:shap}
-SHAP analysis of LightGBM shows price features dominating
-(94.8\% of total importance), with ask-side depth at 10\,bps and
-bid-ask spread as the leading microstructure signals (3.4\%
-combined).
-The model can condition on depth but cannot resolve the \emph{timing}
-of depth withdrawal, consistent with timing being the dominant oracle
-gap component (\S\ref{sec:decomp}).
+SHAP analysis of LightGBM shows price features carrying 94.8\% of
+total importance; ask-side depth at 10\,bps and bid-ask spread
+contribute just 3.4\% combined.
+The implication is causal: a calm-trained model learns calm price
+dynamics, not stress execution structure---the microstructure
+features are present in the input but contribute negligibly because
+the calm training split contains no profitable stress windows from
+which the model could learn their relevance.
+This is why the oracle gap is structural rather than a label-mismatch
+artefact: the features needed to identify executable windows are
+available but the training distribution renders them uninformative.
+Cross-mechanism training on Terra/LUNA is the fix: the meta-model
+sees stress microstructure at 17\% positive density and learns the
+depth-withdrawal signature that calm training cannot, tying the model
+ladder, oracle gap, and transfer result into a single causal account.
 
 \subsection{Cross-Mechanism Generalisation: A Primary Finding}
 \label{sec:stress_recurrence}
@@ -988,17 +1026,17 @@ windows above the retail ceiling.
 Closing the gap requires cross-mechanism stress training combined with
 earlier timing entry, not larger notional.
 
-\subsection{RL Execution Policy: Architecture Implications of the Benchmark}
+\subsection{RL Diagnostic: Density Is Necessary but Not Sufficient}
 \label{sec:rl_results}
 
-The PPO-GRU experiment establishes the paper's sharpest architectural
-finding: the binding constraint on cross-mechanism transfer is
-\emph{explicit positive examples at training time}, not sequential
-observability.
-To test whether sequential framing resolves the timing component of
-the oracle gap, we evaluate the PPO-GRU agent (\S\ref{sec:rl_baseline})
-trained on Terra/LUNA stress windows and applied cross-mechanism to
-the USDC/SVB test split.
+Explicit positive-label supervision beats RL reward optimisation by
+$111.7\bps$ at identical training density (17\%): this is the
+paper's sharpest architectural finding.
+The three-way ladder below establishes density as necessary but
+explicit supervision as additionally required.
+We evaluate the PPO-GRU agent (\S\ref{sec:rl_baseline}) trained on
+Terra/LUNA stress windows and applied cross-mechanism to the USDC/SVB
+test split without retraining.
 
 \begin{table}[h]
 \centering
@@ -1096,6 +1134,21 @@ requires additional cross-mechanism pairs or longer training runs.
 Positive example density and explicit positive-label supervision are
 jointly necessary for positive net returns (\S\ref{sec:rl_results}).
 
+\tp{Market-impact feedback.}
+Unlike reactive-simulator approaches (e.g., Olby et al.\ and
+Simudyne-based environments \cite{rightplace2024}) in which agents
+observe how their own order flow consumes book depth, the PPO-GRU
+trains on historical replay and cannot model this feedback loop.
+In a thin-book stress regime this systematically miscalibrates
+entry sizing: the agent observes book depth as it was, not as it
+would be after its own orders clear liquidity.
+This is a candidate explanation for the 919-trade overtrading
+pattern observed at identical training density to meta-labeling.
+Reactive-simulator training is the productive next step for closing
+the timing component of the oracle gap, combining the cross-mechanism
+initialisation protocol shown here with an environment that updates
+depth in response to agent actions.
+
 
 %% =============================================================
 \section{Conclusion}
@@ -1127,9 +1180,15 @@ cannot match meta-labeling ($+82.5\bps$), leaving an 111.7\,bps gap
 attributable to meta-labeling's explicit positive-label supervision
 rather than RL reward optimisation.
 
-\tp{Data availability.}
-The anonymised repository (URL redacted for review) contains all
-result CSVs, figures, and pipeline code.
+\tp{Benchmark deliverables.}
+The anonymised repository (URL redacted for review) ships five
+concrete artefacts: (1)~per-minute executable labels for all six
+benchmark windows; (2)~the VWAP book-walking label-construction
+code with route-level depth provenance; (3)~the four nested feature
+sets (\texttt{price\_only} through \texttt{price\_book\_settle});
+(4)~the hindsight oracle implementation and full model-ladder
+evaluation harness; and (5)~the cross-mechanism meta-labeling and
+PPO-GRU training scripts.
 Calm-control and SVB windows are reproducible from the public Binance
 Vision archive; route-complete L2 requires a Tardis subscription.
 
@@ -1252,6 +1311,17 @@ Hernandez~Cruz, W., Xu, J., Tasca, P., and Campajola, C.\ (2024).
 \newblock No questions asked: Effects of transparency on stablecoin liquidity
   during the collapse of {Silicon Valley Bank}.
 \newblock {\em arXiv:2407.11716}.
+
+\bibitem{jaxmarlhft2024}
+Frey, S., Almasan, P., and Lacerda, B.\ (2024).
+\newblock {JaxMARL}: Multi-agent {RL} environments and algorithms in {JAX}.
+\newblock In {\em NeurIPS Workshop on Multi-Agent Learning}.
+
+\bibitem{rightplace2024}
+Frey, S., Sherborn, T., and Lacerda, B.\ (2024).
+\newblock Right place, right time: {RL}-based order timing in reactive
+  limit-order-book simulators.
+\newblock {\em arXiv preprint}.
 
 \end{thebibliography}
 
