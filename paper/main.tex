@@ -56,23 +56,21 @@
 %% ---- Abstract -----------------------------------------------
 \begin{abstract}
 Quoted stablecoin price gaps are not trades.
-We introduce \textbf{Stablecoin StressBench}, a reproducible benchmark
-that separates optical dislocations from executable arbitrage
-opportunities using per-minute order-book simulation.
+We introduce \textbf{Stablecoin StressBench}, a benchmark showing
+that most apparent stablecoin dislocations are optical rather than
+executable: during March 2023, 34.3\% of minutes show a $>10\bps$
+USDC basis, but only 2.88\% yield net profit after execution costs,
+a \textbf{12$\times$ gap} (block bootstrap 95\,\%
+CI: $8\times$--$24\times$).
+No model trained on calm-market data closes this gap; the hindsight
+oracle gap exceeds 260\,bps.
 Cross-mechanism meta-labeling trained on Terra/LUNA achieves
-$+82.5\bps$ on an out-of-distribution USDC/SVB test split (50.8\% of
-oracle returns), demonstrating that execution microstructure is
-mechanism-invariant across structurally distinct stress events.
-During the March 2023 USDC/SVB event, 34.3\% of minutes exceed
-a 10\,bps price basis; only 2.88\% remain net-profitable after
-execution costs, a \textbf{12$\times$ gap}
-(block bootstrap 95\,\% CI: $8\times$--$24\times$).
-No model trained on calm-market data earns positive returns on
-executable tasks; the hindsight oracle gap exceeds 260\,bps.
-A PPO-GRU agent trained on the same cross-mechanism protocol converges
-to NoTrade, establishing the paper's central architectural insight:
-the binding constraint is \emph{explicit positive examples at training
-time}, not sequential observability.
+$+82.5\bps$ on the SVB test split (50.8\% of oracle returns),
+providing evidence that order-book microstructure is transferable
+across structurally distinct stress mechanisms.
+A PPO-GRU agent trained on the same protocol converges to NoTrade,
+confirming that positive-example sparsity (2.3\% rate) is the key
+benchmark design challenge, not sequential observability.
 To the best of our knowledge, Stablecoin StressBench is the first
 public benchmark for stablecoin stress events that labels one-minute
 dislocations using executable route simulation, combining documented
@@ -157,11 +155,11 @@ returns ($+82.5\bps$, 50.8\% oracle capture).
         FP cost, timing, and sizing components.
         (\S\ref{sec:oracle_gap}, Table~\ref{tab:oracle};
          \S\ref{sec:decomp})
-  \item \textbf{Cross-mechanism transfer and mechanism-invariant microstructure:}
+  \item \textbf{Cross-mechanism transfer and execution transferability:}
         A meta-model trained on Terra/LUNA dynamics and evaluated on
         USDC/SVB achieves $+82.5\bps$ net (50.8\% oracle capture);
-        PPO-GRU diagnostic isolates positive example density as the
-        binding architectural constraint.
+        PPO-GRU diagnostic shows positive example density is the
+        key training-design constraint.
         (\S\ref{sec:diagnostics}, Table~\ref{tab:metalabel};
          \S\ref{sec:rl_results})
 \end{enumerate}
@@ -187,7 +185,7 @@ Uhlig \cite{uhlig2022luna} analyses the Terra/LUNA collapse, which
 we use as a cross-mechanism validation split: the algorithmic
 redemption spiral provides a structurally different stress trigger
 than the SVB bank shock, making it a clean out-of-distribution test
-for mechanism-invariant microstructure.
+for cross-mechanism transfer in execution microstructure.
 Griffin and Shams \cite{griffin2020tether} find that quoted prices
 can reflect non-fundamental demand, informing our decision to separate
 optical from executable dislocations.
@@ -473,8 +471,8 @@ ML classifiers test whether microstructure conditioning helps.
 The expected-net-profit regressor tests whether the gap is a
 label-mismatch artefact.
 Sequence models test whether temporal depth patterns are exploitable.
-Cross-mechanism meta-labeling tests whether stress microstructure is
-mechanism-invariant.
+Cross-mechanism meta-labeling tests whether stress microstructure
+transfers across mechanism classes.
 
 \tp{Economic anchors.} \texttt{NoTrade} ($0$ net bps) and
 \texttt{Oracle} (hindsight ceiling).
@@ -712,24 +710,23 @@ Oracle$^\dagger$ & ---  & $+162.2$ & 315  & --- & ---    & 100\%\\
 \end{table}
 
 \tp{Ranking accuracy does not imply positive returns.}
-Figure~\ref{fig:auroc_scatter} plots AUROC against net bps for every
-model: the high-AUROC quadrant (right side) is almost entirely below
-zero.
-\texttt{PriceBasis10bps} achieves AUROC~0.83 while losing $-270\bps$;
-LightGBM (AUROC~0.72) is the sole non-oracle point above zero.
-AUROC measures ranking quality. The economic floor is
-\texttt{NoTrade} at $0\bps$.
+At 2.88\% positives, precision-recall curves expose the imbalance
+problem directly (Figure~\ref{fig:pr_curves}).
+\texttt{PriceBasis10bps} achieves AP~0.55 and AUROC~0.83 while
+losing $-270\bps$; LightGBM achieves AP~0.25 and AUROC~0.72 as the
+sole non-oracle model above zero.
+High AP or AUROC is necessary but not sufficient for positive returns.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_auroc_scatter.png}
-  \caption{AUROC vs.\ net bps per trade for all models.
-    The right quadrant is dominated by models that rank windows correctly
-    but trade the wrong ones.
-    \texttt{PriceBasis10bps} (AUROC~0.83) loses $-270\bps$;
-    LightGBM (AUROC~0.72, navy) is the only non-oracle model above zero.
-    High ranking accuracy is necessary but not sufficient for profitability.}
-  \label{fig:auroc_scatter}
+  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_pr_curves.png}
+  \caption{Precision-recall curves (\task{basis\_usdc\_1m\_gt10bps},
+    SVB test split, 2.88\% positives).
+    The dashed line shows the random baseline (AP = positive rate).
+    PriceBasis rule achieves high recall at low precision (overtrades);
+    LightGBM is more selective but still loses money economically.
+    High AP does not imply positive net bps.}
+  \label{fig:pr_curves}
 \end{figure}
 
 \subsection{Sequence Models: Confirming the Structural Oracle Gap}
@@ -790,7 +787,7 @@ Cross-mechanism meta-labeling (\S\ref{sec:diagnostics}) bypasses
 this constraint by training on Terra/LUNA stress dynamics directly,
 achieving $+82.5\bps$ net.
 
-\subsection{Cross-Mechanism Transfer: Mechanism-Invariant Execution Microstructure}
+\subsection{Cross-Mechanism Transfer: Benchmark Generalisation Evidence}
 \label{sec:diagnostics}
 
 \tp{Meta-labeling result.}
@@ -813,10 +810,10 @@ final evaluation on the test split.
 With \texttt{price\_plus\_book} features the calibrated filter achieves
 $+82.5\bps$ net (397 trades, 50.8\% oracle capture) vs.\ zero with
 calm-control training.
-This is consistent with mechanism-invariant execution microstructure:
-the same order-book features that predict profitable windows during
-an algorithmic collapse (Terra/LUNA) also predict them during a
-fiat-reserve shock (SVB).
+This is consistent with execution microstructure that transfers
+across stress mechanisms: the same order-book features that predict
+profitable windows during an algorithmic collapse (Terra/LUNA) also
+predict them during a fiat-reserve shock (SVB).
 The meta-model's dominant features mirror the main SHAP ranking.
 Ask-side depth and bid-ask spread lead, consistent with the SHAP
 analysis below (\S\ref{sec:shap}), which identifies the same
@@ -824,7 +821,7 @@ microstructure signals.
 The intuition is that regardless of whether the stress trigger is an
 algorithmic redemption spiral or a bank reserve shock, the order book
 thins in the same way before the price fragments: depth withdrawal
-preceding basis widening is a mechanism-invariant precursor.
+preceding basis widening is a consistent cross-mechanism precursor.
 We are not aware of prior work demonstrating cross-mechanism transfer
 for execution-aware stablecoin models.
 
@@ -882,44 +879,40 @@ LightGBM's 33\% hit rate (vs.\ 6\% for the rule) shows that
 microstructure conditioning partially diagnoses mismatch,
 but 67\% FP rate at $-65.2\bps$/trade remains a timing gap.
 
-\subsection{SHAP Feature Importance}
+\tp{SHAP feature importance.}
 \label{sec:shap}
-
-Figure~\ref{fig:shap} shows SHAP values for LightGBM on the full
-feature set.
-Price-based features account for 94.8\% of total SHAP importance,
-dominated by the USDC and primary cross-quote basis values.
-Order-book and fragmentation features collectively contribute 3.4\%,
-with ask-side depth at the 10\,bps level and bid-ask spread as the
-leading microstructure signals.
-On-chain settlement proxies add only 1.8\%.
+SHAP analysis of LightGBM shows price features dominating
+(94.8\% of total importance), with ask-side depth at 10\,bps and
+bid-ask spread as the leading microstructure signals (3.4\%
+combined).
 The model can condition on depth but cannot resolve the \emph{timing}
-of depth withdrawal, consistent with the oracle-gap decomposition
-(\S\ref{sec:decomp}) identifying timing as the dominant structural
-barrier.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{../results/paper_addon/figures/figure_shap_importance.png}
-  \caption{SHAP feature importance (mean $|\text{SHAP}|$) for LightGBM.
-    Price features (navy, 94.8\%): USDC cross-quote basis and primary
-    basis dominate.
-    Book+fragmentation (red, 3.4\%): ask-side depth at 10\,bps
-    (mean $|\text{SHAP}|{=}0.021$, rank~5) and bid-ask spread (rank~6).
-    Settlement proxies (green, 1.8\%).}
-  \label{fig:shap}
-\end{figure}
+of depth withdrawal, consistent with timing being the dominant oracle
+gap component (\S\ref{sec:decomp}).
 
 \subsection{Cross-Mechanism Generalisation: A Primary Finding}
 \label{sec:stress_recurrence}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_svb_timeline.png}
+  \caption{SVB stress window (Mar~10--20, 2023).
+    Top: BTC/USDC price.
+    Middle: USDC cross-quote basis (bps); shaded regions mark positive
+    deviations.
+    Bottom: trade entry markers for Oracle (gold), cross-mechanism
+    meta-label (green), and PriceBasis rule (red).
+    The rule fires throughout; the oracle and meta-label fire selectively
+    during genuine stress windows.}
+  \label{fig:svb_timeline}
+\end{figure}
 
 The benchmark design principle generalises across stress mechanisms.
 The Terra/LUNA validation split ($N{=}11{,}526$, May~2022) uses
 kline-proxy depth (Tier-B) but replicates the core pattern: 13.5\%
 price-basis $>10\bps$, only 2.30\% executable, a 5.9$\times$ ratio
 vs.\ 12$\times$ for SVB. The oracle earns $+88\bps$ on Terra/LUNA vs.\
-$+225.0\bps$ on the SVB executable arbitrage task, confirming
-mechanism-invariant execution structure.
+$+225.0\bps$ on the SVB executable arbitrage task, consistent with
+cross-mechanism transferability of execution structure.
 Among broader Tier-B events, peak optical gaps range from
 ${\approx}100\bps$ (Celsius/3AC, exchange credit) to $>500\bps$
 (Curve/UST, DeFi pool imbalance) and $>800\bps$ (HUSD issuer failure),
@@ -980,7 +973,7 @@ windows above the retail ceiling.
 Closing the gap requires cross-mechanism stress training combined with
 earlier timing entry, not larger notional.
 
-\subsection{RL Execution Policy: Diagnosing the Binding Constraint}
+\subsection{RL Execution Policy: Architecture Implications of the Benchmark}
 \label{sec:rl_results}
 
 The PPO-GRU experiment establishes the paper's sharpest architectural
@@ -1036,9 +1029,10 @@ conditions on confirmed primary-signal windows (17.0\% positive rate),
 while the RL agent sees the full stream at 2.30\% where sparse reward
 degrades to near-zero signal.
 
-The PPO-GRU experiment thus serves as a diagnostic: by ruling out
-sequential observability, it isolates \emph{positive example density}
-as the binding architectural requirement.
+The PPO-GRU experiment thus serves as a benchmark diagnostic: by
+ruling out sequential observability, it isolates
+\emph{positive example density} as the key training-distribution
+constraint revealed by the benchmark.
 
 
 %% =============================================================
@@ -1076,15 +1070,16 @@ The oracle gap decomposition (\S\ref{sec:decomp}) identifies
 false-positive cost as the dominant quantifiable drag and timing as
 the primary structural barrier.
 
-The RL diagnostic (\S\ref{sec:rl_results}) provides the paper's
-sharpest theoretical contribution: \textbf{the binding architectural
-requirement is explicit positive examples at training time, not
+The RL diagnostic (\S\ref{sec:rl_results}) reveals a design
+implication of the benchmark itself: \textbf{positive example density
+is the binding constraint on learning from stress-event data, not
 sequential observability.}
 The PPO-GRU converges to NoTrade (AUROC~0.74) because the 2.3\%
 positive rate in Terra/LUNA is too sparse; meta-labeling succeeds at
 17\% by conditioning on confirmed primary-signal windows.
-Any approach trained on the full stream at 2.3\% density will fail;
-conditioned training at 17\% density provides a learnable signal.
+Any approach that trains on the full minute-by-minute stream at 2.3\%
+density cannot extract a learnable signal; conditioned training at
+17\% density can.
 
 The natural next step is a conditioned-subset RL agent (17\% positive
 rate, Terra/LUNA train, SVB test) targeting the 40--80\,bps timing
