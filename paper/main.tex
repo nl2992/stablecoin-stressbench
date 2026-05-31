@@ -152,59 +152,105 @@ The remainder of the paper measures each gap in turn, in
 \section{Related Work}
 \label{sec:related}
 
-Stablecoin StressBench sits at the intersection of three bodies of
-work.
+\subsection{Stablecoin Stress Events}
+\label{sec:rel_stress}
 
-Research on stablecoin stress events motivates the benchmark.
+Research on stablecoin stress events defines the empirical setting
+for the benchmark and supplies the out-of-distribution event we
+transfer from.
 Uhlig \cite{uhlig2022luna} analyses the Terra/LUNA algorithmic
-collapse, which we use as an out-of-distribution training split
-precisely because it is mechanistically different from the SVB bank
-shock.
-Griffin and Shams \cite{griffin2020tether} show that quoted prices
-can diverge from fundamentals, motivating our distinction between
-optical and executable dislocations.
+collapse, in which an algorithmic redemption mechanism created a
+death-spiral run on the UST stablecoin, ultimately destroying
+approximately \$40B in market capitalisation over three days.
+We use Terra/LUNA as our cross-mechanism training split precisely
+because its trigger is mechanistically different from the SVB bank
+shock: algorithmic reflexivity versus fiat-reserve withdrawal are
+distinct failure modes, so a model that transfers between them has
+learned execution structure rather than event-specific noise.
+Griffin and Shams \cite{griffin2020tether} document that quoted
+stablecoin prices can reflect non-fundamental demand, which motivates
+our distinction between optical dislocations (visible on price charts)
+and executable ones (profitable after order-book costs).
 Hernandez Cruz et al.\ \cite{hernandezcruz2024svb} study DEX
-liquidity during SVB, but stop short of execution-layer modelling.
+liquidity during the SVB collapse but stop short of modelling
+execution costs on centralised exchanges.
 None of this prior work provides per-minute executable labels or
-a hindsight oracle ceiling.
+a hindsight oracle ceiling against which model performance can be
+calibrated.
 
-The limits-to-arbitrage literature provides the economic framing
-that our labels operationalise.
+\subsection{Limits to Arbitrage and Crypto Fragmentation}
+\label{sec:rel_arb}
+
+The limits-to-arbitrage literature supplies the economic logic that
+our per-minute labels turn into direct measurements.
 Shleifer and Vishny \cite{shleifer1997limits} and Gromb and Vayanos
-\cite{gromb2010limits} establish that execution frictions bound
-arbitrage even when price gaps exist.
-Makarov and Schoar \cite{makarov2020trading} document that cross-venue
-crypto gaps vanish once depth and latency are modelled, the same
-mechanism behind our $12\times$ ratio.
+\cite{gromb2010limits} establish the theoretical foundation: even
+when a price gap is visible, capital constraints and execution
+frictions prevent arbitrageurs from closing it fully, so the gap can
+persist.
+Makarov and Schoar \cite{makarov2020trading} bring this argument to
+cryptocurrency, showing empirically that cross-venue price gaps
+disappear once order-book depth and settlement latency are accounted
+for.
+Our $12\times$ ratio is the same effect measured at the one-minute
+label level during a stress event.
 Hautsch et al.\ \cite{hautsch2018blockchain} quantify settlement
-latency as a first-order cost, which we implement as the $\delta{=}5\bps$
-penalty; Cont and Kukanov \cite{cont2013optimal} establish VWAP price
-as the correct profitability object.
+latency as a first-order execution cost on blockchain assets, which
+we implement as the fixed $\delta{=}5\bps$ penalty in our net-profit
+label (validated empirically in \S\ref{sec:limitations} using
+on-chain gas data).
+Cont and Kukanov \cite{cont2013optimal} establish that the correct
+object for measuring execution profitability is the VWAP price
+achieved by walking the limit-order book, not the quoted mid-price.
+Our book-walking model implements this directly.
 Gogol et al.\ \cite{gogol2024amm} measure a Maximal Arbitrage Value
-for AMM-to-CEX routes; our oracle extends this idea to stress events,
-route-level CEX simulation, and model evaluation.
-Where prior theoretical work characterises frictions, we measure them
-per-minute with empirical depth data.
+for AMM-to-CEX routes; our oracle extends this concept to
+stress-event dislocations on centralised exchanges and to
+model-evaluation benchmarking.
+Where prior theoretical work characterises the existence of execution
+frictions, we measure them at one-minute resolution with empirical
+order-book depth.
 
-Financial ML and benchmarks form the methodological context.
-L\'{o}pez de Prado \cite{lopezdeprado2018} introduces meta-labeling
-as a framework for filtering primary signals with a learned secondary
-classifier.
-We extend it to the cross-mechanism setting, training on Terra/LUNA
-and evaluating on SVB, which to our knowledge has not been done.
+\subsection{Financial Machine Learning and RL Execution}
+\label{sec:rel_ml}
+
+Our modelling choices build directly on the financial machine-learning
+and reinforcement-learning execution literatures, which we both adopt
+and extend.
+L\'{o}pez de Prado \cite{lopezdeprado2018} introduces meta-labeling,
+a two-stage framework in which a primary signal identifies candidate
+opportunities and a secondary classifier learns when those
+opportunities are genuine.
+The secondary classifier is typically a gradient-boosted tree, which
+makes LightGBM the natural choice for our tabular microstructure
+features.
+We extend meta-labeling to the cross-mechanism setting, training the
+secondary model on Terra/LUNA and evaluating on SVB, which to our
+knowledge has not been done before.
 Cintra and Holloway \cite{cintra2023bocpd} demonstrate cross-event
-transfer using AMM reserve depletion signals, but their signals are
-not CEX-applicable, no oracle evaluation is provided, and no
-execution-aware labels are constructed.
-On RL execution, Moallemi and Wang \cite{moallemi2022rl} and Ning
-et al.\ \cite{ning2021ddql} establish the finite-horizon MDP framing
-we adopt; Mohl et al.\ \cite{jaxmarlhft2024} show GPU-scale IPPO on
-400 million real orders; and Olby et al.\ \cite{rightplace2024} use
-a reactive Simudyne simulator to benchmark timing policies against an
-Almgren--Chriss frontier.
-These works show RL succeeds in reactive environments with frequent
-positive labels. Our diagnostic establishes the preconditions that
-must hold before reactive training can succeed.
+transfer of Bayesian Online Changepoint Detection
+\cite{adamsmackay2007bocpd} using AMM reserve depletion signals.
+We replicate their setup on centralised order-book data to test
+whether the result transfers; it does not, because CEX cross-quote
+basis is mean-reverting rather than gradually depleting, and we
+report the comparison directly.
+On reinforcement learning, Moallemi and Wang \cite{moallemi2022rl}
+and Ning et al.\ \cite{ning2021ddql} establish the finite-horizon MDP
+framing for optimal order execution that we adopt in
+\S\ref{sec:rl_baseline}.
+Mohl et al.\ \cite{jaxmarlhft2024} demonstrate that GPU-scale
+multi-agent RL is feasible on production limit-order-book data,
+training on approximately 400 million real orders for a joint
+execution and market-making task.
+Olby et al.\ \cite{rightplace2024} construct a reactive simulator
+that updates book depth in response to agent order flow, benchmarking
+RL timing policies against an Almgren--Chriss efficient frontier.
+Both of these works operate in environments where the agent's actions
+affect the order book in real time.
+Our diagnostic operates in the complementary setting of historical
+replay without market-impact feedback, and the contrast is what lets
+us isolate training supervision, rather than environment reactivity,
+as the binding constraint.
 
 
 %% =============================================================
@@ -464,29 +510,80 @@ information.
 \subsection{Model Ladder}
 \label{sec:stack}
 
-The ladder is constructed so that each rung tests a distinct
-hypothesis about the source of the oracle gap, with failure at each
-rung ruling out a candidate explanation.
-The economic anchors, \texttt{NoTrade} at $0\bps$ and the hindsight
-\texttt{Oracle}, bracket the achievable range.
-Price-threshold rules (\texttt{PriceBasis\{10,25\}bps},
-\texttt{GrossArbThreshold}) test whether simple signal filters suffice.
-Tabular classifiers (logistic regression, Lasso, Random Forest,
-XGBoost, LightGBM) are trained on four nested feature sets that
-progressively add microstructure, cross-venue fragmentation, and
-on-chain settlement signals; their failure tests whether richer
+Each rung of the ladder is chosen to test a specific hypothesis or
+to engage a specific prior result, not as a generic baseline sweep.
+
+The two anchors, \texttt{NoTrade} and the hindsight \texttt{Oracle},
+bracket the achievable range.
+\texttt{NoTrade} is the economic floor at zero net bps.
+The oracle is the hindsight ceiling, a hypothetical trader with
+foreknowledge of every minute's net profit who trades only on the
+2.88\% of profitable windows.
+Every learned model is interpreted as a fraction of the distance
+between these two extremes.
+
+The price-threshold rules (\texttt{PriceBasis10bps},
+\texttt{PriceBasis25bps}, \texttt{GrossArbThreshold}) reproduce the
+implicit labels used by prior price-based stablecoin-predictability
+work, which fires on quoted basis crossings without correcting for
+execution costs.
+Showing that these rules lose money is what establishes Gap 1
+against existing practice rather than against a strawman.
+
+The tabular classifiers pair gradient-boosted trees (LightGBM,
+XGBoost) with L1 and L2 linear models.
+Gradient boosting is the standard method for tabular microstructure
+features in finance and is the secondary-model choice in the
+meta-labeling framework of L\'{o}pez de Prado \cite{lopezdeprado2018},
+which makes it the natural workhorse for testing whether richer
 features close the gap.
-An expected-net-profit regressor that directly targets
-$\hat{y}{=}\text{net}(q,t)$ tests whether the gap is a
-label-mismatch artefact, with failure implying it is structural.
-A meta-labeling filter trains a secondary LightGBM model to learn
-$\Pr[\text{net}{>}c \mid |b_{\text{USDC}}|{>}10\bps]$, while GRU and
-MLP-Window sequence models trained on 30-minute sliding windows test
-whether temporal depth patterns are exploitable
-(\S\ref{sec:ladder}).
-The cross-mechanism meta-labeling variant is the same architecture
-but trained on Terra/LUNA rather than calm data, directly testing
-whether the training distribution is the binding constraint.
+The linear models are retained as interpretable references whose
+failure confirms the non-linearity of the signal.
+
+The four nested feature sets form a controlled ablation.
+Each set adds exactly one signal layer: microstructure (spread,
+depth, imbalance), then cross-venue fragmentation, then on-chain
+settlement.
+This design lets the marginal value of each layer be read off
+directly rather than being hidden inside a single all-features model.
+
+The expected-net-profit regressor is included to rule out a
+label-mismatch explanation.
+By regressing the economic target $\text{net}(q,t)$ directly rather
+than a classification proxy, a failure here means the gap is
+structural and not an artefact of how the labels were defined.
+
+The meta-labeling filter follows L\'{o}pez de Prado
+\cite{lopezdeprado2018} and is the method we extend.
+We keep the two-stage primary-and-secondary design and improve on it
+by training the secondary model cross-mechanism, on Terra/LUNA rather
+than on the test event.
+That is the novel step.
+
+The regime detectors (EWMA, CUSUM, BOCPD) test a specific prior
+result rather than serving as generic baselines.
+Cintra and Holloway \cite{cintra2023bocpd} detected the Terra depeg
+twelve hours early using BOCPD applied to AMM pool reserves, so we
+apply the same detector to centralised order-book data to test
+whether that result transfers to CEX prices.
+It does not, and we report why.
+
+The sequence models (GRU, MLP-Window) test whether the temporal
+signature of depth withdrawal is exploitable before a basis fires.
+The GRU is the standard recurrent architecture for order-book
+sequence tasks, which means its failure is informative rather than
+a tuning artefact: if a well-specified sequence model cannot close
+the gap, temporal patterns are not the binding constraint.
+
+The reinforcement-learning agent uses PPO with a GRU policy.
+We adopt the finite-horizon MDP framing of Moallemi and Wang
+\cite{moallemi2022rl} and Ning et al.\ \cite{ning2021ddql}, and we
+deliberately contrast our non-reactive historical-replay setting with
+the reactive-environment RL of Mohl et al.\ \cite{jaxmarlhft2024}
+and Olby et al.\ \cite{rightplace2024}.
+That contrast is what lets the diagnostic isolate supervision, rather
+than environment reactivity, as the binding constraint on cross-mechanism
+policy transfer.
 
 \subsection{RL Execution Policy Baseline}
 \label{sec:rl_baseline}
