@@ -412,10 +412,12 @@ Primary task: \task{basis\_usdc\_1m\_gt10bps}.
 Parameters: $c{=}10\bps$, taker fee 4\,bps/side, $\delta{=}5\bps$.
 Primary economic task: \task{executable\_arb\_q10000\_5m}.
 The oracle trades every minute where $\text{net}(q,t) > c$ in
-hindsight, setting the performance ceiling: a hypothetical trader
-with foreknowledge who enters only the 2.88\% of minutes that will be
-profitable and never the 97.12\% that will not, providing a ceiling no
-deployable model can exceed.
+hindsight, setting the performance ceiling.
+Concretely, it is a hypothetical trader with foreknowledge of every
+minute's net profit: it trades only on the 2.88\% of minutes that
+will be profitable after execution costs, never on the 97.12\% that
+will not, and therefore sets a ceiling that no deployable model, which
+must decide without future information, can exceed.
 
 
 %% =============================================================
@@ -495,12 +497,10 @@ the oracle's per-trade return that a model recovers.
 Secondary metrics are AUROC and AUPRC.
 \texttt{NoTrade} at $0\bps$ is the economic floor.
 
-Three quantitative boundaries govern result interpretation.
-First, the BTC-USDC buy leg uses kline-proxy depth for the SVB window.
-Second, oracle-gap results apply to the SVB test split
-($N{=}15{,}832$) only.
-Third, the cost parameters are $c{=}10\bps$, taker fee 4\,bps per
-side, and settlement $\delta{=}5\bps$.
+Three claim boundaries apply: (1) the BTC-USDC buy leg uses
+kline-proxy depth for the SVB window; (2) oracle-gap results apply to
+the SVB test split ($N{=}15{,}832$) only; (3) cost parameters are
+$c{=}10\bps$, 4\,bps taker fee per side, $\delta{=}5\bps$.
 
 
 %% =============================================================
@@ -953,22 +953,19 @@ Oracle bps          & $+260\bps$  & $+88\bps^\dagger$\\
 \label{sec:decomp}
 
 The 260\,bps gap on the executable arbitrage task decomposes into
-three components.
-Component~1 is derived directly from test-split results; components~2
-and~3 are estimates from the executable-rate sensitivity analysis.
-
-The first component is false-positive cost, the dominant quantifiable
-drag.
-For \texttt{PriceBasis10bps}, 581 false-positive trades at
-$-38.7\bps$ each produce $-22{,}484\bps$ of total losses, the
-largest identifiable drag for any threshold-based strategy.
-The second component is timing error, estimated at 40--80\,bps.
-Entering 1--2 minutes late shifts execution to a lower-depth regime,
-and the depth-withdrawal signature in the 30-minute pre-window is the
-signal a future model must capture earlier.
-The third component is sizing error, estimated at 40--100\,bps.
-The executable rate falls from 2.88\% at \$10K to 1.62\% at \$50K,
-pricing out 44\% of windows above the retail ceiling.
+three components (component~1 derived directly from test-split
+results; components~2--3 estimated from the executable-rate
+sensitivity analysis).
+First, false-positive cost: for \texttt{PriceBasis10bps}, 581 FP
+trades at $-38.7\bps$ each produce $-22{,}484\bps$ of total losses,
+the dominant quantifiable drag for any threshold-based strategy.
+Second, timing error (estimated 40--80\,bps): entering 1--2 minutes
+late shifts execution to a lower-depth regime, and the
+depth-withdrawal signature in the 30-minute pre-window is the signal
+a future model must capture earlier.
+Third, sizing error (estimated 40--100\,bps): the executable rate
+falls from 2.88\% at \$10K to 1.62\% at \$50K, pricing out 44\% of
+windows above the retail ceiling.
 Closing the gap requires cross-mechanism stress training combined with
 earlier timing entry, not larger notional.
 
