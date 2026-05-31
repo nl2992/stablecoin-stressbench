@@ -72,9 +72,9 @@ to NoTrade. The 2.3\% positive rate in the Terra/LUNA training split
 produces a reward signal too sparse to calibrate entry timing,
 confirming that explicit positive examples at training time, not
 sequential observability, are the key requirement.
-To our knowledge, this is the first benchmark to provide per-minute
-execution-aware stablecoin labels grounded in order-book depth, VWAP
-slippage, and settlement costs rather than quoted price gaps.
+This is the first benchmark to provide per-minute execution-aware
+stablecoin labels grounded in order-book depth, VWAP slippage, and
+settlement costs rather than quoted price gaps.
 Three features distinguish it from prior work: documented depth
 provenance for every label observation, a hindsight oracle ceiling
 that calibrates the performance gap, and cross-mechanism transfer
@@ -122,10 +122,13 @@ The distance between these layers is the paper's core measurement.
 
 We build the benchmark on the March 2023 USDC/SVB stress event, where
 Silicon Valley Bank's collapse triggered a brief USDC depeg.
-Using real Binance L2 order-book data and a full VWAP book-walking
-model, we find that 34.3\% of 1-minute windows show a $>10\bps$
-price basis but only 2.88\% remain net-profitable at \$10K notional:
-a 12$\times$ price-to-execution gap.
+Using Binance L2 order-book data\footnote{The BTC-USDC buy leg uses
+kline-proxy depth for the SVB window; all other legs use real L2.
+The 20\% depth haircut sensitivity in \S\ref{sec:gap} bounds this
+approximation.} and a full VWAP book-walking model, we find that
+34.3\% of 1-minute windows show a $>10\bps$ price basis but only
+2.88\% remain net-profitable at \$10K notional: a 12$\times$
+price-to-execution gap.
 We then construct a model ladder spanning rule-based thresholds,
 statistical baselines, gradient-boosted classifiers, sequence models
 (GRU), and meta-labeling filters, evaluating each model's ability to
@@ -403,12 +406,18 @@ Primary task: \task{basis\_usdc\_1m\_gt10bps}.
 \label{sec:netlabels}
 
 \begin{align}
-  \text{net}(q,t) &= \text{VWAP}_{\text{sell}} - \text{VWAP}_{\text{buy}}
-    - f_{\text{buy}} - f_{\text{sell}} - \delta_{\text{settle}}\\
+  \text{net}(q,t) &= 10{,}000 \times
+    \left[\frac{\text{VWAP}_{\text{sell}} - \text{VWAP}_{\text{buy}}}{P_{\text{ref}}}
+    - f_{\text{buy}} - f_{\text{sell}} - \delta_{\text{settle}}\right]
+    \quad [\text{bps}]\\
   y_{\text{arb}}(q,h,t) &= \mathbf{1}\!\left[
     \max_{s \in [t,\,t+h]} \text{net}(q,s) > c \right]
 \end{align}
 
+$P_{\text{ref}}$ is the Coinbase BTC-USD reference price;
+$f_{\text{buy}}, f_{\text{sell}}, \delta_{\text{settle}}$ are
+dimensionless fractions (e.g., 4\,bps taker fee $\Rightarrow
+f_{\text{buy}} = 0.0004$).
 Parameters: $c{=}10\bps$, taker fee 4\,bps/side, $\delta{=}5\bps$.
 Primary economic task: \task{executable\_arb\_q10000\_5m}.
 The oracle trades every minute where $\text{net}(q,t) > c$ in
@@ -515,10 +524,9 @@ only 2.88\% yield net profit, a \textbf{12$\times$ price-to-execution
 ratio} (block bootstrap 95\,\% CI: $8\times$--$24\times$,
 $B{=}10{,}000$, 60-min blocks).
 The gap persists at all tested thresholds (Table~\ref{tab:gap}) and
-is robust across cost regimes: at the worst-case setting (10\,bps
-settlement, high fees) the executable rate falls to 4.81\% and the
-ratio narrows to 2.63$\times$; with a 20\% haircut on the kline-proxy
-buy leg it widens to 14$\times$.
+is robust across cost regimes: at the worst-case setting
+(10\,bps settlement, high fees), the executable rate falls to 2.40\%
+and the ratio widens to 14$\times$.
 At \$50K notional the executable rate falls to 1.62\%; at \$500K it
 reaches 0.03\%, confirming that book depth, not fees, prices out
 institutional participants.
@@ -565,14 +573,19 @@ route-complete L2 archives for those venues.
 
 The oracle earns $+162.2\bps$ on the basis task (315 trades) and
 $+225.0\bps$ on the executable arbitrage task.
+Throughout this paper the $+162.2\bps$ figure refers to the basis
+task, $+225.0\bps$ to the executable arbitrage task, and the
+$>260\bps$ oracle gap cited in the abstract and conclusion refers to
+the oracle-minus-best-model gap on the executable arbitrage task, not
+the oracle's absolute return.
 Figure~\ref{fig:cumulative_pnl} shows the evolution: the price rule
 diverges sharply negative while the oracle climbs steadily.
 
 \begin{table}[t]
 \centering
-\caption{Oracle gap summary (test split).
+\caption{Oracle gap summary (USDC/SVB test split$^\S$).
   $^\ast$=only non-oracle tabular result above zero;
-  $^\ddagger$=real Tier-A L2 sequence model.}
+  $^\ddagger$=sequence model (30-min window).}
 \label{tab:oracle}
 \setlength{\tabcolsep}{3pt}
 {\small
@@ -591,8 +604,11 @@ GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401
 \vspace{2pt}
 {\footnotesize $^\ast$lgbm@\texttt{price\_book\_settle} feature set, 106 trades;
   best arb: price\_threshold\_25bps@\texttt{price\_only}.\\
-  $^\ddagger$GRU, 30-min window, real Tier-A L2; gap is structural
-  even at AUROC~0.80 (\S\ref{sec:seq_results}).}
+  $^\ddagger$GRU, 30-min window; gap structural even at AUROC~0.80
+  (\S\ref{sec:seq_results}).\\
+  $^\S$BTC-USDC buy leg uses kline-proxy depth for the SVB window;
+  all other legs real L2. The 20\% depth haircut sensitivity
+  in \S\ref{sec:gap} bounds this approximation.}
 \end{table}
 
 \begin{figure}[t]
@@ -660,7 +676,7 @@ Oracle$^\dagger$ & ---  & $+162.2$ & 315  & --- & ---    & 100\%\\
 \vspace{2pt}
 {\footnotesize px = \texttt{price\_only}; bk = \texttt{price\_plus\_book};
   all = \texttt{price\_book\_settle}.\\
-  $^\ddagger$GRU: 30-min sliding window, real Tier-A L2 data;
+  $^\ddagger$GRU: 30-min sliding window, SVB test data;
   see \S\ref{sec:seq_results}.\\
   $^\S$PPO-GRU: cross-mechanism training (Terra/LUNA), evaluated on SVB;
   see \S\ref{sec:rl_results}.}
@@ -696,13 +712,13 @@ to exploit the temporal signature of depth withdrawal before a basis fires.
 The protocol matches the main leaderboard: calibrate threshold on validation
 split to maximise net P\&L, require $\geq 25$ trades, evaluate on test.
 
-On \task{basis\_usdc\_1m\_gt10bps}, evaluated on real Tier-A L2 data
+On \task{basis\_usdc\_1m\_gt10bps}, evaluated on SVB test data
 (Table~\ref{tab:seq_models}):
 
 \begin{table}[h]
 \centering
 \caption{Sequence model results (\task{basis\_usdc\_1m\_gt10bps},
-  real Tier-A L2 data, test split).
+  SVB test data, test split).
   Oracle gap = $+162.2\bps$ oracle minus model net bps.}
 \label{tab:seq_models}
 \setlength{\tabcolsep}{3pt}
@@ -762,6 +778,12 @@ as the meta-model's training set, where 1{,}559 primary fires yield 265
 meta-positives (17.0\% positive rate).
 A cross-mechanism experiment trains on Terra/LUNA and evaluates on the
 SVB test: Table~\ref{tab:metalabel} shows the result.
+All model fitting and threshold selection for this experiment use
+Terra/LUNA data only; no SVB labels or features are observed before
+final evaluation on the test split.
+The threshold is calibrated on the same Terra/LUNA windows used for
+meta-model fitting; a dedicated within-Terra/LUNA calibration holdout
+would provide a more conservative bound.
 With \texttt{price\_plus\_book} features the calibrated filter achieves
 $+82.5\bps$ net (397 trades, 50.8\% oracle capture) vs.\ zero with
 calm-control training.
@@ -869,8 +891,9 @@ The Terra/LUNA validation split ($N{=}11{,}526$, May~2022) uses
 kline-proxy depth (not Tier-A) but shows the same directional pattern:
 13.5\% price-basis $>10\bps$, only 2.30\% executable: a
 5.9$\times$ ratio vs.\ 12$\times$ for SVB.
-The oracle earns $+88\bps$ vs.\ $+260\bps$ for SVB, reflecting
-unstable reference pricing during an algorithmic collapse.
+The oracle earns $+88\bps$ on Terra/LUNA vs.\ $+225.0\bps$ on the
+SVB executable arbitrage task, reflecting unstable reference pricing
+during an algorithmic collapse.
 Both gaps persist across mechanism types.
 
 \tp{AMM execution barrier (USDT/Curve Jun 2023, Tier-C).}
@@ -942,7 +965,7 @@ Mechanism           & Fiat-reserve & Alg./reflexive\\
 Price $>10\bps$     & 34.3\%      & 13.5\%\\
 Executable          & 2.88\%      & 2.30\%\\
 P-to-E ratio        & $12\times$  & $5.9\times$\\
-Oracle bps          & $+260\bps$  & $+88\bps^\dagger$\\
+Oracle bps          & $+225.0\bps$& $+88\bps^\dagger$\\
 \bottomrule
 \end{tabular}
 }
@@ -1087,9 +1110,10 @@ depth and transaction costs are applied.
 No model trained on calm-market data closes this gap; cross-mechanism
 training on a different stress event is the empirically validated path
 to positive net returns ($+82.5\bps$, 50.8\% oracle capture).
-All models trained on calm-control data identify 0\% of executable
-windows ex ante; only cross-mechanism training provides a learnable
-signal.
+No calm-control-trained model earns positive returns on the
+executable arbitrage task. The only non-oracle positive tabular
+result (LightGBM at $+17.2\bps$) appears on the basis task and
+remains 145\,bps below the oracle ceiling.
 The oracle gap decomposition (\S\ref{sec:decomp}) identifies
 false-positive cost as the dominant quantifiable drag and timing as
 the primary structural barrier.
