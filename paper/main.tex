@@ -1049,6 +1049,13 @@ meta-labeling ($+82.5\bps$, 111.7\,bps gap), indicating that
 \emph{explicit positive-label supervision} (which meta-labeling
 provides via the secondary classifier) outperforms RL reward
 optimisation at the same training density.
+The mechanism is qualitative, not merely quantitative: the
+meta-labeling secondary classifier receives direct binary supervision
+($y{=}1$ for profitable windows, $y{=}0$ otherwise), whereas the RL
+agent must infer the profitable subset through trial-and-error
+interaction with a reward signal that is negative on roughly 83\%
+of entries---the supervision is categorically cleaner, not just
+denser.
 The 919 trades at $-29.2\bps$ (3$\times$ the oracle's 315 trades)
 suggests the agent learned a coarse ``enter at primary fires'' policy
 rather than fine-grained timing discrimination within primary fires.
