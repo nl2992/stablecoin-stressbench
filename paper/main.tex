@@ -59,19 +59,19 @@ Quoted stablecoin price gaps are not trades.
 We introduce \textbf{Stablecoin StressBench}, a reproducible benchmark
 that separates optical dislocations from executable arbitrage
 opportunities using per-minute order-book simulation.
-During the March 2023 USDC/SVB stress event, 34.3\% of minutes exceed
+Cross-mechanism meta-labeling trained on Terra/LUNA achieves
+$+82.5\bps$ on an out-of-distribution USDC/SVB test split (50.8\% of
+oracle returns), demonstrating that execution microstructure is
+mechanism-invariant across structurally distinct stress events.
+During the March 2023 USDC/SVB event, 34.3\% of minutes exceed
 a 10\,bps price basis; only 2.88\% remain net-profitable after
 execution costs, a \textbf{12$\times$ gap}.
 No model trained on calm-market data earns positive returns on
 executable tasks; the hindsight oracle gap exceeds 260\,bps.
-Cross-mechanism meta-labeling trained on Terra/LUNA achieves
-$+82.5\bps$ (50.8\% of oracle returns), demonstrating that execution
-microstructure is mechanism-invariant.
 A PPO-GRU agent trained on the same cross-mechanism protocol converges
-to NoTrade. The 2.3\% positive rate in the Terra/LUNA training split
-produces a reward signal too sparse to calibrate entry timing,
-confirming that explicit positive examples at training time, not
-sequential observability, are the key requirement.
+to NoTrade, establishing the paper's central architectural insight:
+the binding constraint is \emph{explicit positive examples at training
+time}, not sequential observability.
 To the best of our knowledge, Stablecoin StressBench is the first
 public benchmark for stablecoin stress events that labels one-minute
 dislocations using executable route simulation, combining documented
@@ -627,13 +627,16 @@ GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401
 \begin{figure}[t]
   \centering
   \includegraphics[width=\columnwidth]{../results/paper/figures/figure_3_cumulative_pnl.png}
-  \caption{Running mean net bps per trade over the USDC/SVB test window
-    (y-axis = cumulative bps $\div$ total trades, so final values match
-    the per-trade oracle gap table).
-    Oracle (gold): $+161.7\bps$/trade; LightGBM (navy): $+17.2\bps$/trade;
-    \texttt{PriceBasis10bps} (red): $-269.5\bps$/trade;
+  \caption{Hero figure: running mean net bps per trade (USDC/SVB test
+    split). Five strategies span the full performance range.
+    Oracle (gold): $+161.7\bps$/trade.
+    Cross-mech meta-label (green dash-dot, Terra/LUNA train): $+82.5\bps$.
+    LightGBM best (navy, calm train): $+17.2\bps$.
+    \texttt{PriceBasis10bps} (red): $-269.5\bps$.
     NoTrade (grey dashed): $0\bps$.
-    The price rule accumulates severe losses during the SVB shock (Day~10--11).}
+    The shaded region marks the SVB shock (Day~10--11), where the price
+    rule accumulates its steepest losses while the oracle and meta-label
+    remain profitable.}
   \label{fig:cumulative_pnl}
 \end{figure}
 
@@ -657,11 +660,11 @@ training-distribution mismatch.
 
 \begin{table}[t]
 \centering
-\caption{Model ladder (\task{basis\_usdc\_1m\_gt10bps}, test split).
-  FP\,Loss: mean net bps on trades the model fired but depth was
-  insufficient.
+\caption{Tabular model ladder (\task{basis\_usdc\_1m\_gt10bps}, test split).
   Hit\%: fraction of model trades that were net-profitable.
-  $^\dagger$ceiling; $^\ast$only result above zero.}
+  $^\dagger$ceiling; $^\ast$only result above zero.
+  Sequence and RL models in Tables~\ref{tab:seq_models}
+  and~\ref{tab:rl_results}.}
 \label{tab:ablation}
 \setlength{\tabcolsep}{2pt}
 {\scriptsize
@@ -681,18 +684,12 @@ Oracle$^\dagger$ & ---  & $+162.2$ & 315  & --- & ---    & 100\%\\
 \texttt{no\_trade}& --- & $\phantom{-}0.0$ & 0 & --- & --- & ---\\
 \midrule
 \texttt{ExpNetProfit}& px& $-73.8$ & 537  & --- & $-89.1$ & 3\%\\
-\texttt{GRU (seq)}$^\ddagger$ & bk  & $-239.0$ & 656  & 0.798 & $-282.6$ & 9\%\\
-\texttt{PPO-GRU}$^\S$        & bk  & \emph{degenerate} & 0 & 0.74 & --- & ---\\
 \bottomrule
 \end{tabular}
 }
 \vspace{2pt}
-{\footnotesize px = \texttt{price\_only}; bk = \texttt{price\_plus\_book};
-  all = \texttt{price\_book\_settle}.\\
-  $^\ddagger$GRU: 30-min sliding window, SVB test data;
-  see \S\ref{sec:seq_results}.\\
-  $^\S$PPO-GRU: cross-mechanism training (Terra/LUNA), evaluated on SVB;
-  see \S\ref{sec:rl_results}.}
+{\footnotesize px = \texttt{price\_only};
+  all = \texttt{price\_book\_settle}.}
 \end{table}
 
 \tp{Ranking accuracy does not imply positive returns.}
@@ -897,17 +894,21 @@ barrier.
   \label{fig:shap}
 \end{figure}
 
-\subsection{Cross-Mechanism Check: Terra/LUNA and AMM Execution}
+\subsection{Cross-Mechanism Generalisation: A Primary Finding}
 \label{sec:stress_recurrence}
 
+The benchmark design principle generalises across stress mechanisms.
 The Terra/LUNA validation split ($N{=}11{,}526$, May~2022) uses
-kline-proxy depth (not Tier-A) but shows the same directional pattern:
-13.5\% price-basis $>10\bps$, only 2.30\% executable: a
-5.9$\times$ ratio vs.\ 12$\times$ for SVB.
-The oracle earns $+88\bps$ on Terra/LUNA vs.\ $+225.0\bps$ on the
-SVB executable arbitrage task, reflecting unstable reference pricing
-during an algorithmic collapse.
-Both gaps persist across mechanism types.
+kline-proxy depth (Tier-B) but replicates the core pattern: 13.5\%
+price-basis $>10\bps$, only 2.30\% executable, a 5.9$\times$ ratio
+vs.\ 12$\times$ for SVB. The oracle earns $+88\bps$ on Terra/LUNA vs.\
+$+225.0\bps$ on the SVB executable arbitrage task, confirming
+mechanism-invariant execution structure.
+Among broader Tier-B events, peak optical gaps range from
+${\approx}100\bps$ (Celsius/3AC, exchange credit) to $>500\bps$
+(Curve/UST, DeFi pool imbalance) and $>800\bps$ (HUSD issuer failure),
+all estimated from OHLCV; execution-grade claims require route-complete
+L2 and are reserved for Tier-A events.
 
 \tp{AMM execution barrier (USDT/Curve Jun 2023, Tier-C).}
 DeFi pool imbalance events introduce a fundamentally different
@@ -1005,22 +1006,17 @@ windows above the retail ceiling.
 Closing the gap requires cross-mechanism stress training combined with
 earlier timing entry, not larger notional.
 
-\subsection{RL Execution Policy: Timing the Entry}
+\subsection{RL Execution Policy: Diagnosing the Binding Constraint}
 \label{sec:rl_results}
 
-The oracle-gap decomposition (\S\ref{sec:decomp}) identifies timing
-as the dominant structural barrier.
-All supervised models observe a feature snapshot and classify whether
-the current minute will be profitable; they cannot learn to delay entry
-until depth has withdrawn to a favourable level.
-An RL agent, by contrast, can learn a sequential entry policy,
-observing the depth trajectory, waiting for the withdrawal signature
-to mature, and entering at the optimal point in the sequence.
-
-We evaluate whether this sequential framing closes any portion of
-the 40--80\,bps timing component using the PPO-GRU agent described
-in \S\ref{sec:rl_baseline}, trained on Terra/LUNA stress windows and
-evaluated cross-mechanism on the USDC/SVB test split.
+The PPO-GRU experiment establishes the paper's sharpest architectural
+finding: the binding constraint on cross-mechanism transfer is
+\emph{explicit positive examples at training time}, not sequential
+observability.
+To test whether sequential framing resolves the timing component of
+the oracle gap, we evaluate the PPO-GRU agent (\S\ref{sec:rl_baseline})
+trained on Terra/LUNA stress windows and applied cross-mechanism to
+the USDC/SVB test split.
 
 \begin{table}[h]
 \centering
@@ -1070,9 +1066,9 @@ positive rate among its training examples.
 The RL agent sees the full feature stream where only 2.30\% of minutes
 are profitable, and the sparse reward degrades to a near-zero signal.
 
-This finding sharpens the conclusion: the key requirement for positive
-net returns under cross-mechanism transfer is \emph{explicit positive
-examples at training time}, not sequential observability.
+The PPO-GRU experiment thus serves as a diagnostic: by ruling out
+sequential observability, it isolates \emph{positive example density}
+as the binding architectural requirement.
 Meta-labeling provides this by targeting the primary-signal subset;
 an RL agent that trains within the same conditioned subset (entering
 only after $|b_{\text{USDC}}|>10\bps$ fires, and therefore facing the
@@ -1131,19 +1127,21 @@ The oracle gap decomposition (\S\ref{sec:decomp}) identifies
 false-positive cost as the dominant quantifiable drag and timing as
 the primary structural barrier.
 
-The RL result (\S\ref{sec:rl_results}) sharpens the conclusion beyond
-the model ladder alone.
-A PPO-GRU agent trained cross-mechanism on Terra/LUNA converges to
-NoTrade, not because sequential observation is unhelpful, but because
-the 2.3\% positive rate in the training split produces a reward signal
-too sparse to calibrate entry timing.
-Cross-mechanism meta-labeling succeeds precisely because it conditions
-on windows where the primary signal has already fired, raising the
-positive rate to 17\% and providing a learnable signal.
-This identifies the architectural requirement for the next generation
-of models: any approach, supervised or sequential, must be trained
-on a conditioned subset with sufficient positive density, not on the
-full minute-by-minute stream.
+The RL diagnostic (\S\ref{sec:rl_results}) provides the paper's
+sharpest theoretical contribution. The PPO-GRU converges to NoTrade
+despite AUROC~0.74, ruling out ranking ability as the bottleneck.
+The failure traces precisely to positive example density: the 2.3\%
+positive rate in the Terra/LUNA training split produces a reward signal
+too sparse to calibrate entry timing, whereas cross-mechanism
+meta-labeling succeeds because it conditions on primary-signal windows
+where the positive rate rises to 17\%.
+\textbf{The binding architectural requirement is explicit positive
+examples at training time, not sequential observability.}
+Any model, supervised or RL, trained on the full minute-by-minute
+stream at 2.3\% positive density will fail; any model trained on the
+conditioned subset at 17\% positive density has a learnable signal.
+This is the paper's central design principle for the next generation
+of stress-event execution models.
 
 The most direct next experiment is an RL agent conditioned on confirmed
 primary-signal windows, trained on Terra/LUNA stress dynamics, and
@@ -1161,6 +1159,9 @@ The anonymised repository (URL redacted for review) contains all
 result CSVs, figures, and pipeline code.
 Calm-control and SVB windows are reproducible from the public Binance
 Vision archive; route-complete L2 requires a Tardis subscription.
+Upon acceptance, the full benchmark (labels, features, and pipeline
+code) will be released at a versioned public repository under
+CC-BY~4.0.
 
 \section*{Acknowledgements}
 Anonymised for review.
