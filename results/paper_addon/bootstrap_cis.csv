@@ -1,0 +1,4 @@
+model,n_trades,mean_bps,ci_lower_95,ci_upper_95
+lgbm_calm,5,-112.97,-112.97,-112.97
+meta_terra_luna,7,-43.34,-43.34,-43.34
+oracle_capture_pct,456,-16.68,-16.68,-16.68
