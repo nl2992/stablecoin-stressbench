@@ -501,8 +501,8 @@ Threshold calibration on validation split:
 $\theta^* = \arg\max_\theta \sum_{i:\hat{p}_i>\theta} \text{net}(q,t_i)$
 subject to $\geq 25$ trades.
 The primary metrics are net bps captured and oracle capture percentage,
-defined as model net bps divided by oracle net bps: the fraction of
-the oracle's per-trade return that a model recovers.
+defined as model net bps divided by oracle net bps (the fraction of
+the oracle's per-trade return that a model recovers).
 Secondary metrics are AUROC and AUPRC.
 \texttt{NoTrade} at $0\bps$ is the economic floor.
 
@@ -516,7 +516,7 @@ $c{=}10\bps$, 4\,bps taker fee per side, $\delta{=}5\bps$.
 \section{Results}
 \label{sec:results}
 
-\subsection{Price Gaps Are Common; Execution Is Rare}
+\subsection{Price Gaps Are Common, Execution Is Rare}
 \label{sec:gap}
 
 At 10\,bps, 34.3\% of test minutes exceed the max-basis threshold;
@@ -688,7 +688,7 @@ model: the high-AUROC quadrant (right side) is almost entirely below
 zero.
 \texttt{PriceBasis10bps} achieves AUROC~0.83 while losing $-270\bps$;
 LightGBM (AUROC~0.72) is the sole non-oracle point above zero.
-AUROC measures ranking quality; the economic floor is
+AUROC measures ranking quality. The economic floor is
 \texttt{NoTrade} at $0\bps$.
 
 \begin{figure}[t]
@@ -836,7 +836,7 @@ This last result contrasts with Cintra and Holloway
 \cite{cintra2023bocpd}, who found BOCPD detected the Terra depeg
 12~hours early from Curve pool reserves.
 The difference is the signal: AMM reserves reflect LP withdrawal, which
-accumulates gradually; CEX cross-quote basis is noisier and
+accumulates gradually, while CEX cross-quote basis is noisier and
 mean-reverting, making changepoint detection unreliable on CEX prices.
 
 \tp{False-positive structural diagnosis.}
@@ -850,7 +850,7 @@ FP trades are triggered by \emph{USDT} route dislocations (27.4\% of
 minutes) where the USDC route is not simultaneously profitable.
 The false-positive windows show \emph{higher} average bid depth
 ($72{,}805$ vs.\ $59{,}961$ BTC units) than true positives,
-ruling out thin books as the failure mechanism; the failure mode is
+ruling out thin books as the failure mechanism. The failure mode is
 route-direction mismatch.
 LightGBM's 33\% hit rate (vs.\ 6\% for the rule) shows that
 microstructure conditioning partially diagnoses mismatch,
@@ -1044,7 +1044,7 @@ The failure mechanism is distinct from the supervised GRU case.
 The policy \emph{can} rank windows (AUROC~0.74) but learns to never
 enter.
 The 2.30\% positive rate in the Terra/LUNA training split produces a
-reward signal too sparse to calibrate entry timing: the agent's
+reward signal too sparse to calibrate entry timing. The agent's
 expected reward from entering at any given minute is negative, so it
 optimises by abstaining.
 
@@ -1107,7 +1107,7 @@ microstructure is the binding constraint on stablecoin arbitrage,
 not price signal quality.
 A 34.3\% optical dislocation rate collapses to 2.88\% once order-book
 depth and transaction costs are applied.
-No model trained on calm-market data closes this gap; cross-mechanism
+No model trained on calm-market data closes this gap. Cross-mechanism
 training on a different stress event is the empirically validated path
 to positive net returns ($+82.5\bps$, 50.8\% oracle capture).
 No calm-control-trained model earns positive returns on the
