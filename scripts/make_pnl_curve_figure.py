@@ -33,10 +33,11 @@ OUT_ADDON = REPO / "results" / "paper_addon" / "figures" / "figure_16_cumulative
 # ---------------------------------------------------------------------------
 # Colors per spec
 # ---------------------------------------------------------------------------
-C_ORACLE = "#F2A900"      # gold
-C_LGBM   = "#003057"      # navy
-C_PRICE  = "#d73027"      # red
-C_NOTRADE = "#bababa"     # dashed grey
+C_ORACLE  = "#F2A900"      # gold
+C_LGBM    = "#003057"      # navy
+C_PRICE   = "#d73027"      # red
+C_NOTRADE = "#bababa"      # dashed grey
+C_META    = "#2ca02c"      # green (cross-mechanism meta-label)
 
 # ---------------------------------------------------------------------------
 # Read all_results.csv and extract key statistics
@@ -141,6 +142,11 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
             lgbm_bps    = float(best["net_bps_captured"])
             lgbm_trades = int(best["n_trades"])
 
+    # ---- Cross-mechanism meta-labeling (Paper Table 8) ----
+    # Trained on Terra/LUNA, evaluated on SVB; +82.5 bps, 397 trades
+    meta_bps    = 82.5
+    meta_trades = 397
+
     # Simulate time series then normalize to per-trade mean net bps.
     # Dividing cumulative sum by total n_trades scales each curve so it ends
     # at the model's mean net bps per trade — directly comparable to the oracle
@@ -162,6 +168,12 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
         cluster_around=[(SVB_START, SVB_END)],
         noise_scale=0.0,
     ) / max(lgbm_trades, 1)
+
+    meta_cum = simulate_pnl(
+        meta_trades, meta_bps, N_MINUTES, rng,
+        cluster_around=[(SVB_START, SVB_END)],
+        noise_scale=0.0,
+    ) / max(meta_trades, 1)
 
     # NoTrade: always 0
     notrade_cum = np.zeros(N_MINUTES)
@@ -195,19 +207,23 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
         transform=ax.get_xaxis_transform(),
     )
 
-    ax.plot(x, oracle_cum, color=C_ORACLE, lw=2.5, label="Oracle (upper bound)",
+    ax.plot(x, oracle_cum, color=C_ORACLE, lw=2.5, label="Oracle (hindsight ceiling)",
             zorder=5)
+    ax.plot(x, meta_cum,   color=C_META,   lw=2.0, ls="-.",
+            label=f"Cross-mech meta-label (Terra/LUNA train, {meta_trades} trades)",
+            zorder=4)
     ax.plot(x, lgbm_cum,   color=C_LGBM,   lw=1.8,
-            label=f"LightGBM (best, {lgbm_trades} trades)", zorder=4)
+            label=f"LightGBM best (calm train, {lgbm_trades} trades)", zorder=3)
     ax.plot(x, price_cum,  color=C_PRICE,   lw=1.8,
-            label="PriceBasis10bps (2,002 trades)", zorder=3)
+            label="PriceBasis10bps (2,002 trades)", zorder=2)
     ax.plot(x, notrade_cum, color=C_NOTRADE, lw=1.2, ls="--",
-            label="NoTrade (baseline)", zorder=2)
+            label="NoTrade (floor)", zorder=1)
 
     # Annotate final values (per-trade mean net bps)
     pad = N_MINUTES * 0.01
     for cum, color, label in [
         (oracle_cum, C_ORACLE, f"{oracle_cum[-1]:+.1f} bps/trade"),
+        (meta_cum,   C_META,   f"{meta_cum[-1]:+.1f} bps/trade"),
         (lgbm_cum,  C_LGBM,   f"{lgbm_cum[-1]:+.1f} bps/trade"),
         (price_cum, C_PRICE,  f"{price_cum[-1]:+.1f} bps/trade"),
     ]:
@@ -223,10 +239,10 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
     ax.set_xlabel("Test split (minutes, chronological)", fontsize=11)
     ax.set_ylabel("Running mean net bps per trade", fontsize=11)
     ax.set_title(
-        f"Cumulative P&L — SVB Test Split (USDC Basis, 1-min, >10 bps){title_suffix}",
-        fontsize=12,
+        f"Hero Figure: Running Mean Net bps — SVB Test Split (USDC Basis, 1-min){title_suffix}",
+        fontsize=11,
     )
-    ax.legend(fontsize=9, loc="lower left")
+    ax.legend(fontsize=8.5, loc="lower left")
     ax.grid(axis="y", alpha=0.25)
     ax.grid(axis="x", alpha=0.15)
 
