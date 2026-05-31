@@ -145,9 +145,10 @@ returns ($+82.5\bps$, 50.8\% oracle capture).
          Tables~\ref{tab:gap}, \ref{tab:tiers}, \ref{tab:oracle})
   \item \textbf{Cross-mechanism transfer:} meta-labeling trained on
         Terra/LUNA achieves $+82.5\bps$ (50.8\% oracle capture) on
-        the SVB test split---the first demonstration that order-book
-        execution microstructure transfers across structurally
-        distinct stress mechanisms.
+        the SVB test split---to our knowledge the first demonstration
+        that order-book execution microstructure transfers across
+        structurally distinct stress mechanisms, on the single
+        cross-mechanism pair available with route-complete test data.
         (\S\ref{sec:diagnostics}, Table~\ref{tab:metalabel})
   \item \textbf{RL diagnostic---density necessary, supervision
         sufficient:} conditioned PPO-GRU at 17\% positive density
@@ -220,17 +221,19 @@ Moallemi and Wang \cite{moallemi2022rl} and Ning et al.\
 \cite{ning2021ddql} apply RL to optimal order execution in equity
 markets, establishing the finite-horizon MDP framing we adopt in
 \S\ref{sec:rl_baseline}.
-JaxMARL-HFT \cite{jaxmarlhft2024} demonstrates multi-agent RL
-execution in reactive environments with consistent baseline
-outperformance; Right Place, Right Time \cite{rightplace2024}
-establishes RL timing policies in reactive order-book simulators
-where the environment updates depth in response to agent order flow.
-Both confirm that RL can learn selective entry when the environment
-is reactive and positive labels are frequent.
-StressBench contributes the complementary diagnostic: in a
-non-reactive historical-replay setting with structurally rare
-positive labels, density and explicit supervision are the binding
-constraints.
+Mohl et al.\ \cite{jaxmarlhft2024} train IPPO on roughly 400~million
+real limit-order-book orders for a two-agent execution-and-market-making
+setup, showing GPU-scale multi-agent RL is feasible on production LOB
+data.
+Olby et al.\ \cite{rightplace2024} build a reactive Simudyne simulator
+that decomposes slippage into market impact and execution risk,
+evaluating RL timing policies against an Almgren--Chr\'iss efficient
+frontier; their reactive environment is the closest prior analogue to
+the setting our RL diagnostic targets.
+StressBench contributes the complementary finding: in a non-reactive
+historical-replay setting with structurally rare positive labels,
+density and explicit positive-label supervision are the binding
+constraints---a pre-condition any reactive extension must satisfy.
 No prior stablecoin-stress benchmark jointly provides one-minute
 executable labels, route-level depth and fee/settlement modelling,
 a hindsight profit ceiling, and cross-mechanism transfer evaluation.
@@ -351,8 +354,8 @@ imbalance} (Curve/UST, USDT/Curve, USDC/DAI); \emph{collateral
 liquidation} (DAI Black Thursday); \emph{RWA/niche} (Acala~aUSD, USDR).
 
 Data availability governs permitted claims (Table~\ref{tab:tiers}).
-Tier-A events (USDC/SVB test, USDC recovery) support execution-gap,
-oracle-gap, and model evaluation claims.
+Tier-A events (USDC/SVB test) support execution-gap, oracle-gap,
+and model evaluation claims.
 Tier-B ($N{=}11$, OHLCV/pool data) support price magnitude estimates
 only.
 Tier-C ($N{=}5$, partial/DEX-only) support mechanism taxonomy only.
@@ -367,7 +370,7 @@ Tier-C ($N{=}5$, partial/DEX-only) support mechanism taxonomy only.
 \toprule
 \textbf{Tier} & \textbf{Mechanism} & \textbf{Key friction} & \textbf{Permitted claims}\\
 \midrule
-A ($N{=}2$)  & Fiat-reserve shock   & Depth withdrawal       & Exec.\ gap; oracle gap; P\&L\\
+A ($N{=}1$)  & Fiat-reserve shock   & Depth withdrawal       & Exec.\ gap; oracle gap; P\&L\\
 B ($N{=}11$) & Alg., exchange, DeFi & AMM slippage; venue seg.\ & Price magnitude (est.)\\
 C ($N{=}5$)  & RWA, niche           & Thin market            & Taxonomy only\\
 \bottomrule
@@ -639,7 +642,7 @@ GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401
   \includegraphics[width=\columnwidth]{../results/paper/figures/figure_3_cumulative_pnl.png}
   \caption{Hero figure: running mean net bps per trade (USDC/SVB test
     split). Five strategies span the full performance range.
-    Oracle (gold): $+161.7\bps$/trade.
+    Oracle (gold): $+162.2\bps$/trade.
     Cross-mech meta-label (green dash-dot, Terra/LUNA train): $+82.5\bps$.
     LightGBM best (navy, calm train): $+17.2\bps$.
     \texttt{PriceBasis10bps} (red): $-269.5\bps$.
@@ -862,7 +865,7 @@ sees stress microstructure at 17\% positive density and learns the
 depth-withdrawal signature that calm training cannot, tying the model
 ladder, oracle gap, and transfer result into a single causal account.
 
-\subsection{Cross-Mechanism Generalisation: A Primary Finding}
+\subsection{Terra/LUNA Replication: Pattern Generality}
 \label{sec:stress_recurrence}
 
 The benchmark design principle generalises across stress mechanisms.
@@ -1014,8 +1017,8 @@ Positive example density and explicit positive-label supervision are
 jointly necessary for positive net returns (\S\ref{sec:rl_results}).
 
 \tp{Market-impact feedback.}
-Unlike reactive-simulator approaches (e.g., Olby et al.\ and
-Simudyne-based environments \cite{rightplace2024}) in which agents
+Unlike reactive-simulator approaches such as Olby et al.\
+\cite{rightplace2024}, in which agents
 observe how their own order flow consumes book depth, the PPO-GRU
 trains on historical replay and cannot model this feedback loop.
 In a thin-book stress regime this systematically miscalibrates
@@ -1192,15 +1195,17 @@ Hernandez~Cruz, W., Xu, J., Tasca, P., and Campajola, C.\ (2024).
 \newblock {\em arXiv:2407.11716}.
 
 \bibitem{jaxmarlhft2024}
-Frey, S., Almasan, P., and Lacerda, B.\ (2024).
-\newblock {JaxMARL}: Multi-agent {RL} environments and algorithms in {JAX}.
-\newblock In {\em NeurIPS Workshop on Multi-Agent Learning}.
+Mohl, V., Frey, S., Leyland, R., Li, K., Nigmatulin, G., Cucuringu, M.,
+  Zohren, S., Foerster, J., and Calinescu, A.\ (2025).
+\newblock {JaxMARL-HFT}: {GPU}-accelerated large-scale multi-agent
+  reinforcement learning for high-frequency trading.
+\newblock In {\em ICAIF '25}. arXiv:2511.02136.
 
 \bibitem{rightplace2024}
-Frey, S., Sherborn, T., and Lacerda, B.\ (2024).
-\newblock Right place, right time: {RL}-based order timing in reactive
-  limit-order-book simulators.
-\newblock {\em arXiv preprint}.
+Olby, O., Bacalum, A., Baggott, R., and Stillman, N.\ (2025).
+\newblock Right place, right time: Market simulation-based {RL} for execution
+  optimisation.
+\newblock In {\em ICAIF '25}. arXiv:2510.22206.
 
 \end{thebibliography}
 
