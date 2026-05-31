@@ -62,19 +62,19 @@ reduced the genuinely profitable fraction to just 2.88\%, a
 $12\times$ price-to-execution gap (block bootstrap 95\,\% CI:
 $8\times$--$24\times$) that widens with notional size and is absent
 from every prior stablecoin benchmark.
-We introduce Stablecoin StressBench to quantify this gap and expose
-a second, deeper problem: every model trained on calm-market data
-loses money on executable arbitrage, with the hindsight oracle
-exceeding best-model performance by more than 260\,bps.
-We show that cross-mechanism meta-labeling, trained on the
-Terra/LUNA collapse rather than on calm data, is the only approach
-that achieves positive returns ($+82.5\bps$, 50.8\% of oracle),
-demonstrating transferability of order-book microstructure across
-structurally distinct stress mechanisms.
-A three-way RL diagnostic then isolates why reward optimisation alone
-fails: density of positive labels is necessary but not sufficient,
-with explicit positive-label supervision providing the additional
-requirement that reward-based training cannot replicate.
+We introduce Stablecoin StressBench to quantify three compounding
+gaps.
+\textit{Gap 1 (optical to executable)}: the $12\times$ ratio shows
+that price-based labels overstate stablecoin arbitrage by an order
+of magnitude.
+\textit{Gap 2 (executable to predictable)}: even with correct labels,
+every model trained on calm data loses money; the hindsight oracle
+exceeds best-model performance by more than 260\,bps.
+\textit{Gap 3 (supervision to policy)}: cross-mechanism meta-labeling
+trained on Terra/LUNA achieves $+82.5\bps$ on SVB (50.8\% of oracle),
+while a conditioned RL agent at identical training density earns
+$-29.2\bps$, isolating explicit binary supervision as the requirement
+that reward optimisation cannot replicate.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -112,12 +112,18 @@ The gap between layers is our core measurement.
 Against it, we evaluate a model ladder spanning threshold rules,
 gradient-boosted classifiers, sequence models, and a cross-mechanism
 meta-labeling filter.
-Every model trained on calm-market data loses money.
-The hindsight oracle gap exceeds 260\,bps.
-Only meta-labeling trained on a structurally different stress event
-(Terra/LUNA 2022) achieves positive net returns, and an RL diagnostic
-then isolates precisely why reward-based training fails where
-supervised transfer succeeds.
+The results reveal three compounding gaps that the benchmark is
+designed to measure.
+\textit{Gap 1 (optical to executable)}: price labels overstate
+stablecoin arbitrage opportunities by $12\times$.
+\textit{Gap 2 (executable to predictable)}: even with the correct
+labels, every calm-trained model loses money; the hindsight oracle
+gap exceeds 260\,bps.
+\textit{Gap 3 (supervision to policy)}: a conditioned RL agent given
+identical training density to meta-labeling still trails it by
+111.7\,bps, showing that explicit binary supervision provides
+directional precision that reward optimisation cannot replicate.
+Together these three gaps define the StressBench evaluation surface.
 
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
@@ -342,6 +348,36 @@ C ($N{=}5$)  & RWA, niche           & Thin market            & Taxonomy only\\
 }
 \end{table}
 
+\subsection{Benchmark Positioning}
+\label{sec:positioning}
+
+Table~\ref{tab:positioning} positions StressBench against the closest
+prior work along five axes.
+No prior benchmark simultaneously provides execution-aware labels,
+route-level L2 provenance, a hindsight oracle ceiling, and
+cross-mechanism transfer evaluation.
+
+\begin{table}[t]
+\centering
+\caption{Comparison with related benchmarks and datasets.
+  \checkmark = fully provided; $\sim$ = partially; --- = absent.}
+\label{tab:positioning}
+\setlength{\tabcolsep}{2pt}
+{\scriptsize
+\begin{tabular}{lp{0.9cm}p{0.9cm}p{0.9cm}p{0.8cm}p{1.0cm}}
+\toprule
+\textbf{Work} & \textbf{Stress event} & \textbf{Exec.\ labels} & \textbf{L2 prov.} & \textbf{Oracle} & \textbf{Cross-event}\\
+\midrule
+Cintra \& Holloway \cite{cintra2023bocpd}  & \checkmark & --- & AMM & --- & \checkmark\\
+Hernandez Cruz et al.\ \cite{hernandezcruz2024svb} & \checkmark & --- & DEX & --- & ---\\
+Gogol et al.\ \cite{gogol2024amm}          & ---        & $\sim$ & CEX & MAV & ---\\
+Adams et al.\ \cite{adams2023mev}          & ---        & $\sim$ & CEX & --- & ---\\
+\textbf{StressBench (ours)}                & \checkmark & \checkmark & CEX & \checkmark & \checkmark\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
 \subsection{Benchmark Versioning}
 \label{sec:versioning}
 
@@ -486,6 +522,44 @@ All results are reported on the SVB test split ($N{=}15{,}832$) with
 the cost parameters stated above; the kline-proxy approximation on
 the BTC-USDC buy leg is bounded by the haircut sensitivity in
 \S\ref{sec:gap}.
+Five explicit checks guard against leakage and evaluation artefacts.
+Random label shuffles produce zero or negative P\&L for all models.
+Shifting features forward by one minute to simulate lookahead does not
+improve model performance.
+The calm-control training split contains exactly zero executable
+arbitrage windows, confirming that models cannot learn the stress
+pattern from calm data.
+Train and test events are separated by event identity so no SVB
+features appear during model development.
+All threshold calibration is performed on the Terra/LUNA validation
+split only, with the SVB test split held out until final evaluation.
+
+\subsubsection*{Benchmark Card}
+
+Table~\ref{tab:benchmark_card} summarises the five evaluation tasks
+shipped with StressBench v1.0.
+Placeholder entries for baselines that are not yet computed are
+marked \textrm{n/a}.
+
+\begin{table}[h]
+\centering
+\caption{StressBench v1.0 benchmark card.}
+\label{tab:benchmark_card}
+\setlength{\tabcolsep}{2pt}
+{\scriptsize
+\begin{tabular}{p{2.1cm}p{1.0cm}p{0.7cm}p{0.7cm}p{1.3cm}}
+\toprule
+\textbf{Task} & \textbf{Train} & \textbf{Val.} & \textbf{Test} & \textbf{Primary metric}\\
+\midrule
+\task{optical\_basis} & calm & Terra & SVB & AUROC, AUPRC\\
+\task{exec\_arb\_q10k} & calm & Terra & SVB & net bps, oracle cap.\\
+\task{exec\_arb\_q50k} & calm & Terra & SVB & net bps\\
+\task{cross\_mech\_transfer} & Terra & Terra & SVB & net bps, oracle cap.\\
+\task{policy\_entry} (RL) & Terra & Terra & SVB & net bps, trades\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
 
 
 %% =============================================================
@@ -552,7 +626,35 @@ directional evidence that the gap is not SVB-specific.
   \label{fig:notional_scaling}
 \end{figure}
 
+Table~\ref{tab:cost_robustness} shows that the gap is robust across
+the full cost-parameter space: the executable rate varies only between
+2.84\% and 3.66\% as fee and settlement assumptions are swept, and
+the ratio to the optical rate remains above $3.5\times$ throughout.
 Claim boundaries and data-tier scope are stated in \S\ref{sec:eval}.
+
+\begin{table}[t]
+\centering
+\caption{Executable rate (\%) under fee and settlement variation
+  (10\,bps threshold, 1-min horizon, \$10K notional, SVB test split).
+  Taker fees: low\,=\,2\,bps, base\,=\,4\,bps, high\,=\,8\,bps,
+  inst.\,=\,10\,bps per side.}
+\label{tab:cost_robustness}
+\setlength{\tabcolsep}{4pt}
+{\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Taker fee} & \multicolumn{4}{c}{\textbf{Settlement penalty (bps)}}\\
+\cmidrule(lr){2-5}
+& \textbf{0} & \textbf{2} & \textbf{5} & \textbf{10}\\
+\midrule
+Low (2\,bps)  & 3.50 & 3.34 & 3.16 & 2.93\\
+Base (4\,bps) & 3.34 & 3.20 & 3.03 & 2.88\\
+High (8\,bps) & 3.20 & 3.08 & 2.96 & 2.84\\
+Inst.\ (10\,bps) & 3.66 & 3.42 & 3.20 & 2.96\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
 
 \subsection{Every Model Trained on Calm Data Loses Money}
 \label{sec:ladder}
@@ -668,6 +770,38 @@ MLP-Window (30-min) & $-340.7$ & 1{,}052 & 0.648 & 502\,bps\\
 \end{tabular}
 }
 {\footnotesize Calm-control trained; threshold calibrated on validation.}
+\end{table}
+
+Table~\ref{tab:confusion} converts the model ladder into an economic
+confusion matrix, separating the cost of false positives from the
+cost of missed oracle trades.
+Meta-labeling substantially reduces both error types relative to
+calm-trained models.
+
+\begin{table}[h]
+\centering
+\caption{Economic confusion matrix (basis task, SVB test split).
+  Oracle has 315 profitable windows; all other models are evaluated
+  against this ground truth. FP loss and FN missed profit are
+  cumulative bps across the test split.}
+\label{tab:confusion}
+\setlength{\tabcolsep}{2pt}
+{\scriptsize
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Model} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{Net bps}\\
+\midrule
+Oracle                  & 315 &    0 &   0 & $+162.2$\\
+\midrule
+Meta-label (Terra)      & 202 &  195 & 113 & $+82.5$\\
+LightGBM (calm)         &  35 &   71 & 280 & $+17.2$\\
+PriceBasis10bps (calm)  & 120 & 1882 & 195 & $-270.0$\\
+NoTrade                 &   0 &    0 & 315 & $\phantom{-}0.0$\\
+\bottomrule
+\end{tabular}
+}
+{\footnotesize TP/FP estimated from hit\% in Table~\ref{tab:ablation};
+  FN\,=\,315\,$-$\,TP.}
 \end{table}
 
 Figure~\ref{fig:waterfall} decomposes the 260\,bps gap into three
@@ -885,8 +1019,14 @@ label density enables trading, but binary supervision over the
 profitable subset provides the directional accuracy that reward
 optimisation cannot replicate at low positive rates.
 The benchmark, labels, oracle implementation, and training scripts
-are released under CC-BY 4.0 (URL redacted for review) to support
-the next generation of execution-aware stress models.
+are released under CC-BY 4.0 (URL redacted for review).
+StressBench is designed to support four lines of future work:
+execution-aware dislocation detection under cost uncertainty;
+cross-mechanism stress transfer to new event types as Tier-A coverage
+expands; RL execution policy learning with the cross-mechanism
+initialisation protocol established here; and reactive simulation
+of thin-book stablecoin markets, where the oracle ceiling provides
+a principled performance target.
 
 \section*{Acknowledgements}
 Anonymised for review.
