@@ -61,7 +61,7 @@ that separates optical dislocations from executable arbitrage
 opportunities using per-minute order-book simulation.
 During the March 2023 USDC/SVB stress event, 34.3\% of minutes exceed
 a 10\,bps price basis; only 2.88\% remain net-profitable after
-execution costs --- a \textbf{12$\times$ gap}.
+execution costs: a \textbf{12$\times$ gap}.
 No model trained on calm-market data earns positive returns on
 executable tasks; the hindsight oracle gap exceeds 260\,bps.
 Cross-mechanism meta-labeling trained on Terra/LUNA achieves
@@ -70,8 +70,8 @@ microstructure is mechanism-invariant.
 A PPO-GRU agent trained on the same cross-mechanism protocol converges
 to NoTrade: the 2.3\% positive rate in the Terra/LUNA training split
 produces a reward signal too sparse to calibrate entry timing,
-confirming that explicit positive examples at training time --- not
-sequential observability --- are the key requirement.
+confirming that explicit positive examples at training time, not
+sequential observability, are the key requirement.
 To our knowledge, this is the first benchmark to provide
 execution-aware stablecoin labels with route-depth provenance,
 a hindsight oracle ceiling, and cross-mechanism transfer evaluation.
@@ -437,10 +437,9 @@ $a_t \in \{\text{enter},\text{wait}\}$, and receives reward
 $r_t = \text{net}(q,t)$ if entering (positive for profitable windows,
 negative otherwise) or $r_t = 0$ if waiting.
 The state $s_t$ is the 30-minute look-back window of
-\texttt{price\_plus\_book} features --- the smallest feature set
-delivering the dominant SHAP lift over price-only signals
-(\S\ref{sec:shap}) --- available in real time without settlement-latency
-dependency.
+\texttt{price\_plus\_book} features (the smallest feature set delivering
+the dominant SHAP lift over price-only signals, \S\ref{sec:shap}),
+available in real time without settlement-latency dependency.
 We train a PPO agent with a GRU policy network (one hidden layer,
 64 units, 30-step look-back) using the cross-mechanism protocol:
 training on Terra/LUNA stress windows only, evaluation on the USDC/SVB
@@ -950,32 +949,29 @@ evaluated cross-mechanism on the USDC/SVB test split.
 
 \begin{table}[h]
 \centering
-\caption{RL execution policy vs.\ supervised baselines
-  (\task{basis\_usdc\_1m\_gt10bps}, SVB test split).
-  Supervised GRU and MLP-Window trained on calm-control;
-  PPO-GRU trained cross-mechanism on Terra/LUNA.}
+\caption{RL policy vs.\ supervised baselines
+  (\task{basis\_usdc\_1m\_gt10bps}, SVB test split).}
 \label{tab:rl_results}
 \setlength{\tabcolsep}{3pt}
-{\small
-\begin{tabular}{lrrr}
+{\scriptsize
+\begin{tabular}{lrr}
 \toprule
-\textbf{Model} & \textbf{Training} & \textbf{Net\,bps} & \textbf{Trades}\\
+\textbf{Model (training)} & \textbf{Net\,bps} & \textbf{Trades}\\
 \midrule
-Oracle (ceiling)            & hindsight         & $+162.2$ & 315\\
+Oracle (hindsight ceiling)          & $+162.2$ & 315\\
 \midrule
-Meta-labeling               & Terra/LUNA (cross) & $+82.5$  & 397\\
-PPO-GRU$^\dagger$ (AUROC~0.74) & Terra/LUNA (cross) & \emph{degenerate} & 0\\
+Meta-labeling (Terra/LUNA$^\ast$)   & $+82.5$  & 397\\
+PPO-GRU (Terra/LUNA$^\ast$)         & \emph{degenerate} & 0\\
 \midrule
-GRU supervised              & calm-control       & $-239.0$ & 656\\
-MLP-Window supervised       & calm-control       & $-340.7$ & 1{,}052\\
+GRU supervised (calm-ctrl)          & $-239.0$ & 656\\
+MLP-Window supervised (calm-ctrl)   & $-340.7$ & 1{,}052\\
 \bottomrule
 \end{tabular}
 }
 \vspace{2pt}
-{\footnotesize $^\dagger$PPO-GRU: 64-unit GRU, 30-step look-back,
-  \texttt{price\_plus\_book} features, $N{=}80$ epochs, evaluated on SVB
-  without retraining.
-  Degenerate = NoTrade (0 entries), confirmed across two training runs.}
+{\footnotesize $^\ast$Cross-mechanism: trained on Terra/LUNA, evaluated
+  on SVB without retraining.
+  PPO-GRU: AUROC~0.74; degenerate = NoTrade confirmed across two runs.}
 \end{table}
 
 The PPO-GRU converges to a degenerate NoTrade policy: it makes zero
@@ -984,7 +980,7 @@ feature distribution.
 The failure mechanism is distinct from the supervised GRU case.
 The policy \emph{can} rank windows (AUROC~0.74) but learns to never
 enter, because the 2.30\% positive rate in the Terra/LUNA training
-split provides a reward signal too sparse to calibrate entry timing ---
+split provides a reward signal too sparse to calibrate entry timing:
 the agent's expected reward from entering at any given minute is
 negative, so it optimises by abstaining.
 
@@ -1001,9 +997,9 @@ This finding sharpens the conclusion: the key requirement for positive
 net returns under cross-mechanism transfer is \emph{explicit positive
 examples at training time}, not sequential observability.
 Meta-labeling provides this by targeting the primary-signal subset;
-an RL agent that trains within the same conditioned subset --- entering
+an RL agent that trains within the same conditioned subset (entering
 only after $|b_{\text{USDC}}|>10\bps$ fires, and therefore facing the
-same 17\% positive rate as the meta-model --- is the natural next
+same 17\% positive rate as the meta-model) is the natural next
 experiment.
 Such an agent would test whether sequential timing within confirmed
 stress windows can recover the remaining 49.2\% of oracle returns that
@@ -1031,8 +1027,8 @@ The RL result (\S\ref{sec:rl_results}) clarifies the constraint: the
 binding requirement for positive net returns is not sequential action
 selection but the density of positive examples in the training
 distribution.
-An RL agent conditioned on confirmed primary-signal windows --- where
-the positive rate rises from 2.3\% to 17\% --- is the most direct
+An RL agent conditioned on confirmed primary-signal windows (where
+the positive rate rises from 2.3\% to 17\%) is the most direct
 next experiment.
 This preserves the cross-mechanism protocol while providing a reward
 signal dense enough to calibrate entry timing.
@@ -1067,7 +1063,7 @@ Cross-mechanism meta-labeling succeeds precisely because it conditions
 on windows where the primary signal has already fired, raising the
 positive rate to 17\% and providing a learnable signal.
 This identifies the architectural requirement for the next generation
-of models: any approach --- supervised or sequential --- must be trained
+of models: any approach, supervised or sequential, must be trained
 on a conditioned subset with sufficient positive density, not on the
 full minute-by-minute stream.
 
