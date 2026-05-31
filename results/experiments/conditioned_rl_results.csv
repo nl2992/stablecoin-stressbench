@@ -1,0 +1,2 @@
+experiment,n_trades,net_bps,auroc,oracle_capture_pct
+conditioned_ppo_gru,919,-29.24,0.868,-18.03

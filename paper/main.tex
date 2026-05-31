@@ -1009,8 +1009,9 @@ the USDC/SVB test split.
 \midrule
 Oracle (hindsight ceiling)          & $+162.2$ & 315\\
 \midrule
-Meta-labeling (Terra/LUNA$^\ast$)   & $+82.5$  & 397\\
-PPO-GRU (Terra/LUNA$^\ast$)         & \emph{degenerate} & 0\\
+Meta-labeling (Terra/LUNA$^\ast$)         & $+82.5$  & 397\\
+PPO-GRU unconditioned (Terra/LUNA$^\ast$) & \emph{degenerate} & 0\\
+PPO-GRU conditioned$^\dagger$ (Terra/LUNA$^\ast$) & $-29.2$ & 919\\
 \midrule
 GRU supervised (calm-ctrl)          & $-239.0$ & 656\\
 MLP-Window supervised (calm-ctrl)   & $-340.7$ & 1{,}052\\
@@ -1020,30 +1021,33 @@ MLP-Window supervised (calm-ctrl)   & $-340.7$ & 1{,}052\\
 \vspace{2pt}
 {\footnotesize $^\ast$Cross-mechanism: trained on Terra/LUNA, evaluated
   on SVB without retraining.
-  PPO-GRU: AUROC~0.74; degenerate = NoTrade confirmed across two runs.}
+  Unconditioned PPO-GRU: AUROC~0.74; degenerate = NoTrade confirmed.\\
+  $^\dagger$Conditioned: trained only on primary-signal windows
+  ($|b_{\text{USDC}}|{>}10\bps$, 17\% positive rate);
+  AUROC~0.87; 919 trades shows density matters, but $-29.2\bps$
+  confirms sequential timing alone does not close the gap to
+  meta-labeling.}
 \end{table}
 
-The PPO-GRU converges to a degenerate NoTrade policy: it makes zero
-entries on the SVB test split despite achieving AUROC~0.74 on the test
-feature distribution (the AUROC reflects entry-probability scores, not
-trades; the calibrated threshold is never crossed).
-The failure mechanism is distinct from the supervised GRU case.
-The policy \emph{can} rank windows (AUROC~0.74) but learns to never
-enter.
-The 2.30\% positive rate in the Terra/LUNA training split produces a
-reward signal too sparse to calibrate entry timing. The agent's
-expected reward from entering at any given minute is negative, so it
-optimises by abstaining.
+The unconditioned PPO-GRU converges to degenerate NoTrade: it makes
+zero entries despite AUROC~0.74.
+The 2.30\% positive rate in the full Terra/LUNA stream produces a
+reward signal too sparse to calibrate entry timing; the agent's
+expected reward from entering is negative, so it abstains.
 
-The contrast with meta-labeling is architectural: the meta-model
-conditions on confirmed primary-signal windows (17.0\% positive rate),
-while the RL agent sees the full stream at 2.30\% where sparse reward
-degrades to near-zero signal.
-
-The PPO-GRU experiment thus serves as a benchmark diagnostic: by
-ruling out sequential observability, it isolates
-\emph{positive example density} as the key training-distribution
-constraint revealed by the benchmark.
+A conditioned PPO-GRU, trained only on primary-signal windows
+($|b_{\text{USDC}}|{>}10\bps$, mirroring the meta-label training
+distribution at 17\% positive rate), \emph{does} trade:
+919 entries, AUROC~0.87, net $-29.2\bps$ (Table~\ref{tab:rl_results}).
+This rules out training sparsity as the sole failure mode.
+The conditioned RL agent avoids degenerate NoTrade but cannot match
+meta-labeling ($+82.5\bps$, 111.7\,bps gap), indicating that
+\emph{explicit positive-label supervision} (which meta-labeling
+provides via the secondary classifier) outperforms RL reward
+optimisation at the same training density.
+The PPO-GRU experiments jointly serve as a benchmark diagnostic:
+density is necessary but not sufficient; explicit supervision of the
+positive subset is what meta-labeling adds.
 
 
 %% =============================================================
@@ -1081,20 +1085,16 @@ The oracle gap decomposition (\S\ref{sec:decomp}) identifies
 false-positive cost as the dominant quantifiable drag and timing as
 the primary structural barrier.
 
-The RL diagnostic (\S\ref{sec:rl_results}) reveals a design
-implication of the benchmark itself: \textbf{positive example density
-is the binding constraint on learning from stress-event data, not
-sequential observability.}
-The PPO-GRU converges to NoTrade (AUROC~0.74) because the 2.3\%
-positive rate in Terra/LUNA is too sparse; meta-labeling succeeds at
-17\% by conditioning on confirmed primary-signal windows.
-Any approach that trains on the full minute-by-minute stream at 2.3\%
-density cannot extract a learnable signal; conditioned training at
-17\% density can.
-
-The natural next step is a conditioned-subset RL agent (17\% positive
-rate, Terra/LUNA train, SVB test) targeting the 40--80\,bps timing
-component that meta-labeling cannot access.
+The RL experiments (\S\ref{sec:rl_results}) sharpen the benchmark
+implication: \textbf{positive example density is necessary but not
+sufficient; explicit supervision of the positive subset is the
+additional requirement.}
+The unconditioned PPO-GRU degenerates (2.3\% density too sparse).
+The conditioned PPO-GRU trained on the same 17\% primary-signal
+windows as the meta-label does trade ($-29.2\bps$, 919 trades) but
+cannot match meta-labeling ($+82.5\bps$), leaving an 111.7\,bps gap
+attributable to meta-labeling's explicit positive-label supervision
+rather than RL reward optimisation.
 
 \tp{Data availability.}
 The anonymised repository (URL redacted for review) contains all
