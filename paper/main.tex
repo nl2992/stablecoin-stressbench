@@ -72,14 +72,13 @@ to NoTrade. The 2.3\% positive rate in the Terra/LUNA training split
 produces a reward signal too sparse to calibrate entry timing,
 confirming that explicit positive examples at training time, not
 sequential observability, are the key requirement.
-This is the first benchmark to provide per-minute execution-aware
-stablecoin labels grounded in order-book depth, VWAP slippage, and
-settlement costs rather than quoted price gaps.
-Three features distinguish it from prior work: documented depth
-provenance for every label observation, a hindsight oracle ceiling
-that calibrates the performance gap, and cross-mechanism transfer
-evaluation demonstrating that execution microstructure is
-mechanism-invariant across structurally different stress events.
+To the best of our knowledge, Stablecoin StressBench is the first
+public benchmark for stablecoin stress events that labels one-minute
+dislocations using executable route simulation, combining documented
+route-level depth provenance, VWAP book-walking, explicit fee and
+settlement penalties, a hindsight executable-profit ceiling, and
+cross-mechanism transfer evaluation, rather than quoted price gaps
+alone.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -185,6 +184,9 @@ for mechanism-invariant microstructure.
 Griffin and Shams \cite{griffin2020tether} find that quoted prices
 can reflect non-fundamental demand, informing our decision to separate
 optical from executable dislocations.
+Hernandez Cruz et al.\ \cite{hernandezcruz2024svb} study USDC-USDT
+DEX liquidity during the SVB collapse, motivating our execution-layer
+analysis.
 
 \tp{Limits to arbitrage and crypto fragmentation.}
 Shleifer and Vishny \cite{shleifer1997limits} and Gromb and Vayanos
@@ -205,6 +207,11 @@ Cont and Kukanov \cite{cont2013optimal} show that VWAP execution
 price, not the quoted mid, is the correct object for measuring
 arbitrage profitability; our VWAP book-walking model in \S\ref{sec:netlabels}
 implements this directly.
+Gogol et al.\ \cite{gogol2024amm} introduce a Maximal Arbitrage
+Value (MAV) between a USDC-ETH AMM pool and Binance, the closest
+prior analogue to our oracle ceiling; our oracle extends this to
+route-level CEX simulation, stress-event dislocations, and
+model-evaluation benchmarking.
 
 \tp{Financial ML and benchmarks.}
 L\'{o}pez de Prado \cite{lopezdeprado2018} introduces meta-labeling
@@ -222,19 +229,25 @@ from Curve AMM pool reserves.
 We test BOCPD as a stress-regime pre-filter and find AUROC~0.23 on
 CEX cross-quote data: AMM reserves accumulate gradually, but CEX basis
 is mean-reverting, explaining why their result does not transfer.
+Cintra and Holloway also demonstrate cross-event transfer (2022 UST
+training, March 2023 USDC depeg), but via AMM reserve depletion
+signals rather than order-book execution features, with no oracle
+evaluation.
 Moallemi and Wang \cite{moallemi2022rl} and Ning et al.\
 \cite{ning2021ddql} apply RL to optimal order execution in equity
 markets, establishing the finite-horizon MDP framing we adopt in
 \S\ref{sec:rl_baseline}; we additionally show that cross-mechanism
 initialisation is a necessary precondition in the non-stationary
 stress-event setting.
-To our knowledge, this is the first benchmark to provide per-minute
-execution-aware stablecoin labels grounded in order-book depth, VWAP
-slippage, and settlement costs rather than quoted price gaps.
-Three features distinguish it from prior work: documented depth
-provenance for every label observation, a hindsight oracle ceiling
-calibrating the performance gap, and cross-mechanism transfer
-evaluation across structurally different stress mechanisms.
+No prior stablecoin-stress benchmark jointly provides one-minute
+executable labels, route-level depth and fee/settlement modelling,
+a hindsight profit ceiling, and cross-mechanism transfer evaluation.
+Gogol et al.\ \cite{gogol2024amm} bound AMM arbitrage without
+benchmark labels; Cintra and Holloway \cite{cintra2023bocpd} transfer
+AMM depletion signals, not executable microstructure; Adams et al.\
+\cite{adams2023mev} measure slippage without oracle evaluation; and
+Wu and Liu \cite{wu2026spillovers} study spillovers, not execution
+simulation. Stablecoin StressBench is the first to combine all five.
 
 
 %% =============================================================
@@ -1155,7 +1168,7 @@ Anonymised for review.
 %% =============================================================
 \bibliographystyle{ACM-Reference-Format}
 \scriptsize
-\begin{thebibliography}{17}
+\begin{thebibliography}{21}
 
 \bibitem{uhlig2022luna}
 Uhlig, H.\ (2022).
@@ -1244,6 +1257,30 @@ Moallemi, C.~C. and Wang, M.\ (2022).
 Ning, B., Lin, F.~H.~T., and Jaimungal, S.\ (2021).
 \newblock Double deep Q-learning for optimal execution.
 \newblock {\em Applied Mathematical Finance}, 28(4):361--380.
+
+\bibitem{gogol2024amm}
+Gogol, K., Messias, J., Miori, D., Tessone, C., and Livshits, B.\ (2024).
+\newblock Quantifying arbitrage in automated market makers: An empirical study
+  of {Ethereum} {ZK} rollups.
+\newblock In {\em MARBLE 2024}.
+
+\bibitem{adams2023mev}
+Adams, A., Chan, B.~Y., Markovich, S., and Wan, X.\ (2023).
+\newblock Don't let {MEV} slip: The costs of swapping on the {Uniswap}
+  protocol.
+\newblock {\em arXiv:2309.13648}.
+
+\bibitem{wu2026spillovers}
+Wu, W. and Liu, C.\ (2026).
+\newblock Stability anchors and risk amplifiers: Tail spillovers across
+  stablecoin designs.
+\newblock {\em arXiv:2602.18820}.
+
+\bibitem{hernandezcruz2024svb}
+Hernandez~Cruz, W., Xu, J., Tasca, P., and Campajola, C.\ (2024).
+\newblock No questions asked: Effects of transparency on stablecoin liquidity
+  during the collapse of {Silicon Valley Bank}.
+\newblock {\em arXiv:2407.11716}.
 
 \end{thebibliography}
 
