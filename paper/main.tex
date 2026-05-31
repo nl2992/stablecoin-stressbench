@@ -55,8 +55,9 @@
 %% ---- Abstract -----------------------------------------------
 \begin{abstract}
 During the March 2023 USDC depeg, 34.3\% of one-minute windows
-showed a cross-venue price basis above 10\,bps, yet 97\% of those
-apparent arbitrage opportunities were illusory.
+showed a cross-venue price basis above 10\,bps, yet only one in
+twelve of those apparent arbitrage opportunities survived execution
+costs.
 VWAP slippage, order-book depth depletion, and settlement latency
 reduced the genuinely profitable fraction to just 2.88\%, a
 $12\times$ price-to-execution gap (block bootstrap 95\,\% CI:
@@ -89,7 +90,7 @@ that reward optimisation cannot replicate.
 When Silicon Valley Bank collapsed in March 2023, USDC briefly
 depegged and cross-venue price gaps appeared profitable on every
 chart.
-Ninety-seven percent of those apparent opportunities were illusory.
+Only one in twelve of those apparent arbitrage opportunities survived execution costs.
 VWAP slippage consumed the spread as orders cleared depth, taker fees
 eroded the margin, and CEX-to-CEX settlement latency turned a
 profitable window into a loss before the transfer confirmed.
@@ -131,7 +132,8 @@ Together these three gaps define the StressBench evaluation surface.
         route-level depth provenance, VWAP book-walking, an 18-event
         stress taxonomy for data governance, and a hindsight oracle
         ceiling. (\S\ref{sec:benchmark}--\ref{sec:models})
-  \item The first evidence of order-book execution microstructure
+  \item The first evidence, on the single cross-mechanism pair with
+        route-complete test data, of order-book execution microstructure
         transfer across structurally distinct stress mechanisms:
         meta-labeling trained on Terra/LUNA achieves $+82.5\bps$
         (50.8\% oracle capture) on the SVB test split, while every
@@ -198,7 +200,7 @@ et al.\ \cite{ning2021ddql} establish the finite-horizon MDP framing
 we adopt; Mohl et al.\ \cite{jaxmarlhft2024} show GPU-scale IPPO on
 400 million real orders; and Olby et al.\ \cite{rightplace2024} use
 a reactive Simudyne simulator to benchmark timing policies against an
-Almgren--Chr\'iss frontier.
+Almgren--Chriss frontier.
 These works show RL succeeds in reactive environments with frequent
 positive labels. Our diagnostic establishes the preconditions that
 must hold before reactive training can succeed.
@@ -538,8 +540,6 @@ split only, with the SVB test split held out until final evaluation.
 
 Table~\ref{tab:benchmark_card} summarises the five evaluation tasks
 shipped with StressBench v1.0.
-Placeholder entries for baselines that are not yet computed are
-marked \textrm{n/a}.
 
 \begin{table}[h]
 \centering
@@ -571,7 +571,7 @@ marked \textrm{n/a}.
 
 At a 10\,bps threshold, 34.3\% of test minutes show a price
 dislocation while only 2.88\% remain net-profitable after execution
-costs, a $12\times$ price-to-execution ratio (block bootstrap 95\,%
+costs, a $12\times$ price-to-execution ratio (block bootstrap 95\,\%
 CI: $8\times$--$24\times$, $B{=}10{,}000$, 60-min blocks).
 This ratio is not a threshold artefact: it persists and widens across
 all tested basis levels (Table~\ref{tab:gap}), and is robust to
@@ -722,8 +722,8 @@ GRU and MLP-Window sequence models, trained on 30-minute microstructure
 windows to exploit depth-withdrawal signatures, confirm this conclusion.
 The GRU achieves AUROC~0.80 yet earns $-239\bps$, and the MLP-Window
 $-341\bps$ (Table~\ref{tab:seq_models}). High ranking accuracy does
-not translate to positive returns when 97\% of windows are false
-positives and the training split contains zero positive stress examples.
+not translate to positive returns when 97\% of \emph{all} test
+windows are non-executable and the training split contains zero positive stress examples.
 
 \begin{table}[t]
 \centering
@@ -793,22 +793,29 @@ calm-trained models.
 \midrule
 Oracle                  & 315 &    0 &   0 & $+162.2$\\
 \midrule
-Meta-label (Terra)      & 202 &  195 & 113 & $+82.5$\\
-LightGBM (calm)         &  35 &   71 & 280 & $+17.2$\\
-PriceBasis10bps (calm)  & 120 & 1882 & 195 & $-270.0$\\
-NoTrade                 &   0 &    0 & 315 & $\phantom{-}0.0$\\
+Meta-label (Terra)$^\dagger$  & $\sim$202 & $\sim$195 & $\sim$113 & $+82.5$\\
+LightGBM (calm)               &  35 &   71 & 280 & $+17.2$\\
+PriceBasis10bps (calm)        & 118 & 1851 & 197 & $-270.0$\\
+NoTrade                       &   0 &    0 & 315 & $\phantom{-}0.0$\\
 \bottomrule
 \end{tabular}
 }
-{\footnotesize TP/FP estimated from hit\% in Table~\ref{tab:ablation};
-  FN\,=\,315\,$-$\,TP.}
+{\footnotesize TP\,=\,trades\,$\times$\,Hit\% from Table~\ref{tab:ablation};
+  FN\,=\,315\,$-$\,TP.
+  $^\dagger$Meta-label TP/FP are approximate: Hit\% is not in
+  Table~\ref{tab:ablation}; the $\sim$202 TP estimate uses oracle-capture
+  rate (50.8\%) as a proxy for hit rate, which overstates TP if
+  profitable trades earn less than oracle bps per trade.}
 \end{table}
 
 Figure~\ref{fig:waterfall} decomposes the 260\,bps gap into three
 measurable components. False-positive cost is the dominant and
-directly quantifiable drag: for \texttt{PriceBasis10bps}, 581
-false-positive trades at $-38.7\bps$ each account for most of the
-total loss. The remaining gap splits into timing error (estimated
+directly quantifiable drag: \texttt{PriceBasis10bps} produces
+1,969 trades of which 1,851 are false positives.
+Of those, 581 are attributable specifically to route-direction
+mismatch (USDT dislocations triggering on the max-abs basis when
+the USDC route is not simultaneously profitable) at $-38.7\bps$
+each; the remainder reflects imprecise timing. The remaining gap splits into timing error (estimated
 40--80\,bps), arising from entering 1--2 minutes late in a declining
 depth regime, and sizing error (40--100\,bps), since depth depletion
 reduces the profitable fraction from 2.88\% at \$10K to 1.62\% at
