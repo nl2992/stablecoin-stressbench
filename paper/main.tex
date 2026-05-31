@@ -63,9 +63,11 @@ executable tasks; the hindsight oracle gap exceeds 260\,bps.
 Cross-mechanism meta-labeling trained on Terra/LUNA achieves
 $+82.5\bps$ (50.8\% of oracle returns), demonstrating that execution
 microstructure is mechanism-invariant.
-A PPO-GRU agent trained on the same protocol converges to NoTrade,
-confirming that the key requirement is explicit positive examples at
-training time, not sequential observability.
+A PPO-GRU agent trained on the same cross-mechanism protocol converges
+to NoTrade: the 2.3\% positive rate in the Terra/LUNA training split
+produces a reward signal too sparse to calibrate entry timing,
+confirming that explicit positive examples at training time --- not
+sequential observability --- are the key requirement.
 To our knowledge, this is the first benchmark to provide
 execution-aware stablecoin labels with route-depth provenance,
 a hindsight oracle ceiling, and cross-mechanism transfer evaluation.
@@ -474,7 +476,10 @@ only 2.88\% yield net profit, a \textbf{12$\times$ price-to-execution
 ratio} (block bootstrap 95\,\% CI: $8\times$--$24\times$,
 $B{=}10{,}000$, 60-min blocks).
 The gap persists at all tested thresholds (Table~\ref{tab:gap}) and
-across all cost regimes (Table~\ref{tab:robustness}).
+is robust across cost regimes: at the worst-case setting (10\,bps
+settlement, high fees) the executable rate falls to 4.81\% and the
+ratio narrows to 2.63$\times$; with a 20\% haircut on the kline-proxy
+buy leg it widens to 14$\times$.
 
 \begin{table}[t]
 \centering
@@ -496,13 +501,8 @@ across all cost regimes (Table~\ref{tab:robustness}).
 }
 \end{table}
 
-\vspace{2pt}
-{\footnotesize The gap is robust across cost regimes: at the worst-case
-setting (10\,bps settlement, high fees) the executable rate falls to
-4.81\% and the ratio narrows to 2.63$\times$; with a 20\% haircut on
-the kline-proxy buy leg it widens to 14$\times$.
-At \$50K: 1.62\% exec.\ rate; \$500K: 0.03\%.
-Full robustness tables are available in the repository.}
+{\footnotesize At \$50K: 1.62\% exec.\ rate; \$500K: 0.03\%.
+Full robustness tables are in the repository.}
 
 \begin{figure}[t]
   \centering
@@ -996,9 +996,13 @@ This finding sharpens the conclusion: the key requirement for positive
 net returns under cross-mechanism transfer is \emph{explicit positive
 examples at training time}, not sequential observability.
 Meta-labeling provides this by targeting the primary-signal subset;
-an RL agent that trains within the same conditioned subset (entering
-only after $|b_{\text{USDC}}|>10\bps$ fires) would face the same
-17\% positive rate and is the natural next experiment.
+an RL agent that trains within the same conditioned subset --- entering
+only after $|b_{\text{USDC}}|>10\bps$ fires, and therefore facing the
+same 17\% positive rate as the meta-model --- is the natural next
+experiment.
+Such an agent would test whether sequential timing within confirmed
+stress windows can recover the remaining 49.2\% of oracle returns that
+cross-mechanism meta-labeling leaves on the table.
 
 
 %% =============================================================
@@ -1016,15 +1020,17 @@ Binance Vision archive.
 
 \tp{Model scope.}
 The model ladder covers tabular classifiers, an expected-net-profit
-regressor, regime detectors, and sequence models.
-RL-based execution policies are the most natural extension: the
-oracle-gap decomposition (\S\ref{sec:decomp}) identifies timing as
-the dominant structural barrier, and an RL agent trained on
-cross-mechanism stress data with the net-bps reward function has a
-fully specified environment in which to address it.
-The MDP framing --- state space, reward function, and difficulty
-ceiling --- is already defined by the benchmark; the RL experiment
-is the direct next step.
+regressor, regime detectors, sequence models, and a cross-mechanism
+PPO-GRU execution policy.
+The RL result (\S\ref{sec:rl_results}) clarifies the constraint: the
+binding requirement for positive net returns is not sequential action
+selection but the density of positive examples in the training
+distribution.
+An RL agent conditioned on confirmed primary-signal windows --- where
+the positive rate rises from 2.3\% to 17\% --- is the most direct
+next experiment.
+This preserves the cross-mechanism protocol while providing a reward
+signal dense enough to calibrate entry timing.
 
 
 %% =============================================================
@@ -1046,19 +1052,30 @@ The oracle gap decomposition (\S\ref{sec:decomp}) identifies
 false-positive cost as the dominant quantifiable drag and timing as
 the primary structural barrier.
 
-The most direct next experiment is an RL-based execution policy
-trained on cross-mechanism stress data.
-The oracle-gap decomposition identifies timing as the dominant
-structural barrier: the question is not whether a window will be
-executable, but when to enter relative to the depth-withdrawal
-sequence.
-This is a sequential decision problem, not a classification one ---
-the correct action at minute $t$ depends on the trajectory of depth
-and basis over the preceding window, not only the current snapshot.
-An RL agent that observes the four-level microstructure state,
-receives the net-bps label as a reward signal, and trains on Terra/LUNA
-stress dynamics before evaluation on SVB has a fully specified
-environment in the benchmark; the difficulty ceiling is the oracle gap.
+The RL result (\S\ref{sec:rl_results}) sharpens the conclusion beyond
+the model ladder alone.
+A PPO-GRU agent trained cross-mechanism on Terra/LUNA converges to
+NoTrade, not because sequential observation is unhelpful, but because
+the 2.3\% positive rate in the training split produces a reward signal
+too sparse to calibrate entry timing.
+Cross-mechanism meta-labeling succeeds precisely because it conditions
+on windows where the primary signal has already fired, raising the
+positive rate to 17\% and providing a learnable signal.
+This identifies the architectural requirement for the next generation
+of models: any approach --- supervised or sequential --- must be trained
+on a conditioned subset with sufficient positive density, not on the
+full minute-by-minute stream.
+
+The most direct next experiment is an RL agent conditioned on confirmed
+primary-signal windows, trained on Terra/LUNA stress dynamics, and
+evaluated cross-mechanism on SVB.
+Such an agent faces the same 17\% positive rate as the meta-model, but
+can additionally learn to time entry within the confirmed window,
+targeting the 40--80\,bps timing component of the oracle gap that
+meta-labeling cannot access.
+The benchmark provides the fully specified environment: state space
+(\texttt{price\_plus\_book} features), reward function (net-bps label),
+and difficulty ceiling (oracle gap, \S\ref{sec:decomp}).
 
 \tp{Data availability.}
 The anonymised repository (URL redacted for review) contains all
