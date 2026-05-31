@@ -791,9 +791,6 @@ SVB test: Table~\ref{tab:metalabel} shows the result.
 All model fitting and threshold selection for this experiment use
 Terra/LUNA data only; no SVB labels or features are observed before
 final evaluation on the test split.
-The threshold is calibrated on the same Terra/LUNA windows used for
-meta-model fitting; a dedicated within-Terra/LUNA calibration holdout
-would provide a more conservative bound.
 With \texttt{price\_plus\_book} features the calibrated filter achieves
 $+82.5\bps$ net (397 trades, 50.8\% oracle capture) vs.\ zero with
 calm-control training.
@@ -1057,26 +1054,14 @@ reward signal too sparse to calibrate entry timing. The agent's
 expected reward from entering at any given minute is negative, so it
 optimises by abstaining.
 
-The contrast with cross-mechanism meta-labeling is architectural, not
-incidental.
-The meta-model achieves $+82.5\bps$ from the same Terra/LUNA training
-split because it is conditioned on windows where the primary signal
-has already fired ($|b_{\text{USDC}}|>10\bps$), yielding a 17.0\%
-positive rate among its training examples.
-The RL agent sees the full feature stream where only 2.30\% of minutes
-are profitable, and the sparse reward degrades to a near-zero signal.
+The contrast with meta-labeling is architectural: the meta-model
+conditions on confirmed primary-signal windows (17.0\% positive rate),
+while the RL agent sees the full stream at 2.30\% where sparse reward
+degrades to near-zero signal.
 
 The PPO-GRU experiment thus serves as a diagnostic: by ruling out
 sequential observability, it isolates \emph{positive example density}
 as the binding architectural requirement.
-Meta-labeling provides this by targeting the primary-signal subset;
-an RL agent that trains within the same conditioned subset (entering
-only after $|b_{\text{USDC}}|>10\bps$ fires, and therefore facing the
-same 17\% positive rate as the meta-model) is the natural next
-experiment.
-Such an agent would test whether sequential timing within confirmed
-stress windows can recover the remaining 49.2\% of oracle returns that
-cross-mechanism meta-labeling leaves on the table.
 
 
 %% =============================================================
@@ -1088,23 +1073,11 @@ The BTC-USDC buy leg uses kline-proxy depth for the SVB window; the
 20\% haircut sensitivity confirms robustness.
 Extending Tier-A coverage to AMM or exchange-credit events requires
 route-complete L2 archives for those venues.
-The anonymised repository (URL redacted for review) provides the full
-pipeline; calm-control and SVB windows are reproducible from the public
-Binance Vision archive.
 
 \tp{Model scope.}
-The model ladder covers tabular classifiers, an expected-net-profit
-regressor, regime detectors, sequence models, and a cross-mechanism
-PPO-GRU execution policy.
-The RL result (\S\ref{sec:rl_results}) clarifies the constraint: the
-binding requirement for positive net returns is not sequential action
-selection but the density of positive examples in the training
-distribution.
-An RL agent conditioned on confirmed primary-signal windows, where
-the positive rate rises from 2.3\% to 17\%, is the most direct
-next experiment.
-This preserves the cross-mechanism protocol while providing a reward
-signal dense enough to calibrate entry timing.
+The model ladder covers tabular classifiers, sequence models, and a
+cross-mechanism PPO-GRU; positive example density in the training
+distribution is the binding constraint (\S\ref{sec:rl_results}).
 
 
 %% =============================================================
@@ -1119,49 +1092,32 @@ depth and transaction costs are applied.
 No model trained on calm-market data closes this gap. Cross-mechanism
 training on a different stress event is the empirically validated path
 to positive net returns ($+82.5\bps$, 50.8\% oracle capture).
-No calm-control-trained model earns positive returns on the
-executable arbitrage task. The only non-oracle positive tabular
-result (LightGBM at $+17.2\bps$) appears on the basis task and
-remains 145\,bps below the oracle ceiling.
+No calm-control-trained model earns positive returns on the executable
+arbitrage task; LightGBM ($+17.2\bps$, basis task only) is the sole
+non-oracle positive result, 145\,bps below the oracle ceiling.
 The oracle gap decomposition (\S\ref{sec:decomp}) identifies
 false-positive cost as the dominant quantifiable drag and timing as
 the primary structural barrier.
 
 The RL diagnostic (\S\ref{sec:rl_results}) provides the paper's
-sharpest theoretical contribution. The PPO-GRU converges to NoTrade
-despite AUROC~0.74, ruling out ranking ability as the bottleneck.
-The failure traces precisely to positive example density: the 2.3\%
-positive rate in the Terra/LUNA training split produces a reward signal
-too sparse to calibrate entry timing, whereas cross-mechanism
-meta-labeling succeeds because it conditions on primary-signal windows
-where the positive rate rises to 17\%.
-\textbf{The binding architectural requirement is explicit positive
-examples at training time, not sequential observability.}
-Any model, supervised or RL, trained on the full minute-by-minute
-stream at 2.3\% positive density will fail; any model trained on the
-conditioned subset at 17\% positive density has a learnable signal.
-This is the paper's central design principle for the next generation
-of stress-event execution models.
+sharpest theoretical contribution: \textbf{the binding architectural
+requirement is explicit positive examples at training time, not
+sequential observability.}
+The PPO-GRU converges to NoTrade (AUROC~0.74) because the 2.3\%
+positive rate in Terra/LUNA is too sparse; meta-labeling succeeds at
+17\% by conditioning on confirmed primary-signal windows.
+Any approach trained on the full stream at 2.3\% density will fail;
+conditioned training at 17\% density provides a learnable signal.
 
-The most direct next experiment is an RL agent conditioned on confirmed
-primary-signal windows, trained on Terra/LUNA stress dynamics, and
-evaluated cross-mechanism on SVB.
-Such an agent faces the same 17\% positive rate as the meta-model, but
-can additionally learn to time entry within the confirmed window,
-targeting the 40--80\,bps timing component of the oracle gap that
-meta-labeling cannot access.
-The benchmark provides the fully specified environment: state space
-(\texttt{price\_plus\_book} features), reward function (net-bps label),
-and difficulty ceiling (oracle gap, \S\ref{sec:decomp}).
+The natural next step is a conditioned-subset RL agent (17\% positive
+rate, Terra/LUNA train, SVB test) targeting the 40--80\,bps timing
+component that meta-labeling cannot access.
 
 \tp{Data availability.}
 The anonymised repository (URL redacted for review) contains all
 result CSVs, figures, and pipeline code.
 Calm-control and SVB windows are reproducible from the public Binance
 Vision archive; route-complete L2 requires a Tardis subscription.
-Upon acceptance, the full benchmark (labels, features, and pipeline
-code) will be released at a versioned public repository under
-CC-BY~4.0.
 
 \section*{Acknowledgements}
 Anonymised for review.
