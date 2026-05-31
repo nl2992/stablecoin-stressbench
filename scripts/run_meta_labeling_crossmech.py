@@ -40,12 +40,12 @@ _BASIS_COL = "cross_quote_basis_usdc_bps"
 
 # Split properties (from paper / experiments_addon results)
 _TERRA_TOTAL = 11_526
-_TERRA_PRICE_RATE = 0.135     # 13.5% primary fires in Terra/LUNA
-_TERRA_EXEC_RATE = 0.0230     # 2.30% executable
+_TERRA_PRICE_RATE = 0.135  # 13.5% primary fires in Terra/LUNA
+_TERRA_EXEC_RATE = 0.0230  # 2.30% executable
 
 _SVB_TOTAL = 15_832
-_SVB_PRICE_RATE = 0.125       # 12.5% primary fires in SVB
-_SVB_EXEC_RATE = 0.0288       # 2.88% executable
+_SVB_PRICE_RATE = 0.125  # 12.5% primary fires in SVB
+_SVB_EXEC_RATE = 0.0288  # 2.88% executable
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,6 +62,7 @@ def parse_args() -> argparse.Namespace:
 # Synthetic data generation (used when real dataset.parquet is not available)
 # ---------------------------------------------------------------------------
 
+
 def _generate_terra_synthetic(rng: np.random.Generator) -> dict:
     """Simulate Terra/LUNA validation split microstructure.
 
@@ -73,8 +74,8 @@ def _generate_terra_synthetic(rng: np.random.Generator) -> dict:
         (algorithmic collapse pattern: early depth withdrawal)
     """
     n = _TERRA_TOTAL
-    n_primary = int(n * _TERRA_PRICE_RATE)        # ~1,556
-    n_exec = int(n * _TERRA_EXEC_RATE)             # ~265
+    n_primary = int(n * _TERRA_PRICE_RATE)  # ~1,556
+    n_exec = int(n * _TERRA_EXEC_RATE)  # ~265
 
     # basis: primary fires have |basis| ~ Gamma(3,20) shifted above 10
     basis_fire = 10.0 + rng.gamma(3, 20, size=n_primary)
@@ -88,9 +89,9 @@ def _generate_terra_synthetic(rng: np.random.Generator) -> dict:
 
     # Book features: depth_bid, depth_ask, spread, imbalance
     # Terra collapse: depth progressively withdrawn (lower depth in fires)
-    depth_bid = rng.lognormal(10.8, 0.5, size=n)   # baseline
+    depth_bid = rng.lognormal(10.8, 0.5, size=n)  # baseline
     depth_ask = rng.lognormal(10.7, 0.5, size=n)
-    spread = rng.lognormal(2.0, 0.4, size=n)        # spread in bps
+    spread = rng.lognormal(2.0, 0.4, size=n)  # spread in bps
     imbalance = rng.uniform(-0.5, 0.5, size=n)
 
     # Primary fires: slightly reduced depth (early depth withdrawal signal)
@@ -100,7 +101,7 @@ def _generate_terra_synthetic(rng: np.random.Generator) -> dict:
     spread[primary_mask] *= 2.0
 
     # Net profit: executable windows are a subset of primary fires
-    net_profit = np.full(n, -15.0)   # default: not profitable
+    net_profit = np.full(n, -15.0)  # default: not profitable
     fire_idxs = np.where(primary_mask)[0]
     # Among primary fires, ~17% are profitable (depth deep enough for execution)
     n_profitable_fires = min(n_exec, len(fire_idxs))
@@ -108,7 +109,9 @@ def _generate_terra_synthetic(rng: np.random.Generator) -> dict:
     net_profit[profitable_fire_idxs] = rng.uniform(15.0, 120.0, size=n_profitable_fires)
 
     # Meta-label: 1 where primary fires AND net_profit > 0
-    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(np.int8)
+    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(
+        np.int8
+    )
 
     return {
         "basis": basis,
@@ -135,16 +138,16 @@ def _generate_svb_synthetic(rng: np.random.Generator) -> dict:
       - FP depth is HIGHER than TP depth (route mismatch, not thin books)
     """
     n = _SVB_TOTAL
-    n_primary = int(n * _SVB_PRICE_RATE)     # ~1,979
-    n_exec = int(n * _SVB_EXEC_RATE)          # ~456
+    n_primary = int(n * _SVB_PRICE_RATE)  # ~1,979
+    n_exec = int(n * _SVB_EXEC_RATE)  # ~456
 
     # TP fires: large basis, deep books
     n_tp = n_exec
-    basis_tp = -(300.0 + rng.gamma(2, 50, size=n_tp))   # large USDC discount
+    basis_tp = -(300.0 + rng.gamma(2, 50, size=n_tp))  # large USDC discount
 
     # FP fires: near-zero USDC basis, but USDT route dislocation
     n_fp = n_primary - n_tp
-    basis_fp = rng.normal(0, 2.0, size=max(n_fp, 0))   # USDC basis ≈ 0 in FP
+    basis_fp = rng.normal(0, 2.0, size=max(n_fp, 0))  # USDC basis ≈ 0 in FP
 
     # Remaining: non-primary
     n_nofire = n - n_primary
@@ -199,19 +202,22 @@ def _generate_svb_synthetic(rng: np.random.Generator) -> dict:
 # Feature matrix builder
 # ---------------------------------------------------------------------------
 
+
 def _make_feature_matrix(data: dict, feature_set: str) -> np.ndarray:
     """Build feature matrix for a given feature set name."""
     basis = data["basis"].reshape(-1, 1)
     if feature_set == "price_only":
         return basis
     elif feature_set == "price_plus_book":
-        return np.column_stack([
-            data["basis"],
-            data["depth_bid"],
-            data["depth_ask"],
-            data["spread"],
-            data["imbalance"],
-        ])
+        return np.column_stack(
+            [
+                data["basis"],
+                data["depth_bid"],
+                data["depth_ask"],
+                data["spread"],
+                data["imbalance"],
+            ]
+        )
     else:
         raise ValueError(f"Unknown feature set: {feature_set}")
 
@@ -220,8 +226,10 @@ def _make_feature_matrix(data: dict, feature_set: str) -> np.ndarray:
 # Calibration and evaluation
 # ---------------------------------------------------------------------------
 
-def _calibrate_threshold(proba: np.ndarray, net_profit: np.ndarray,
-                         min_trades: int = 25) -> float:
+
+def _calibrate_threshold(
+    proba: np.ndarray, net_profit: np.ndarray, min_trades: int = 25
+) -> float:
     best_t = 0.5
     best_total = -np.inf
     for t in np.linspace(0.05, 0.95, 60):
@@ -259,6 +267,7 @@ def _economic_metrics(signal: np.ndarray, net_profit: np.ndarray) -> dict:
 # ---------------------------------------------------------------------------
 # Cross-mechanism experiment
 # ---------------------------------------------------------------------------
+
 
 def run_crossmech(rng: np.random.Generator, feature_set: str) -> dict:
     """Run one (feature_set) combination of cross-mechanism meta-labeling."""
@@ -306,8 +315,19 @@ def run_crossmech(rng: np.random.Generator, feature_set: str) -> dict:
 
     logger.info(
         "  theta=0.5: n_trades=%d net_bps=%.1f  | calibrated theta=%.2f: n_trades=%d net_bps=%.1f",
-        econ_05["n_trades"], econ_05["net_bps"] if not math.isnan(econ_05.get("net_bps", float("nan"))) else float("nan"),
-        theta_cal, econ_cal["n_trades"], econ_cal["net_bps"] if not math.isnan(econ_cal.get("net_bps", float("nan"))) else float("nan"),
+        econ_05["n_trades"],
+        (
+            econ_05["net_bps"]
+            if not math.isnan(econ_05.get("net_bps", float("nan")))
+            else float("nan")
+        ),
+        theta_cal,
+        econ_cal["n_trades"],
+        (
+            econ_cal["net_bps"]
+            if not math.isnan(econ_cal.get("net_bps", float("nan")))
+            else float("nan")
+        ),
     )
 
     return {
@@ -329,11 +349,7 @@ def run_crossmech(rng: np.random.Generator, feature_set: str) -> dict:
         "test_net_bps_calibrated": econ_cal["net_bps"],
         "test_hit_rate_calibrated": econ_cal["hit_rate"],
         "oracle_capture_pct": econ_cal["oracle_capture_pct"],
-        "note": (
-            "synthetic_fallback"
-            if True
-            else "real_data"
-        ),
+        "note": ("synthetic_fallback" if True else "real_data"),
     }
 
 
@@ -367,9 +383,21 @@ def main() -> None:
         logger.info(
             "  calibrated: n=%d  net=%.1f bps  hit=%.1f%%  oracle_capture=%.1f%%",
             row["test_n_trades_calibrated"],
-            row["test_net_bps_calibrated"] if not math.isnan(row["test_net_bps_calibrated"]) else float("nan"),
-            100.0 * row["test_hit_rate_calibrated"] if not math.isnan(row.get("test_hit_rate_calibrated", float("nan"))) else float("nan"),
-            100.0 * row["oracle_capture_pct"] if not math.isnan(row.get("oracle_capture_pct", float("nan"))) else float("nan"),
+            (
+                row["test_net_bps_calibrated"]
+                if not math.isnan(row["test_net_bps_calibrated"])
+                else float("nan")
+            ),
+            (
+                100.0 * row["test_hit_rate_calibrated"]
+                if not math.isnan(row.get("test_hit_rate_calibrated", float("nan")))
+                else float("nan")
+            ),
+            (
+                100.0 * row["oracle_capture_pct"]
+                if not math.isnan(row.get("oracle_capture_pct", float("nan")))
+                else float("nan")
+            ),
         )
 
     out_path = out_dir / "meta_labeling_crossmech_results.csv"
@@ -390,7 +418,8 @@ def main() -> None:
             f"cal_trades={row['test_n_trades_calibrated']}  "
             f"net={row['test_net_bps_calibrated']:.1f} bps  "
             f"oracle_capture={100*row['oracle_capture_pct']:.1f}%"
-            if not math.isnan(row.get("oracle_capture_pct", float("nan"))) else ""
+            if not math.isnan(row.get("oracle_capture_pct", float("nan")))
+            else ""
         )
 
 

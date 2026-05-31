@@ -70,22 +70,21 @@ _SETTLE_COLS: list[str] = [
     "dex_net_flow_1m",
 ]
 
-_ALL_FEATURE_COLS: list[str] = (
-    _PRICE_COLS + _BOOK_COLS + _FRAG_COLS + _SETTLE_COLS
-)
+_ALL_FEATURE_COLS: list[str] = _PRICE_COLS + _BOOK_COLS + _FRAG_COLS + _SETTLE_COLS
 
 TARGET_COL = "label_basis_usdc_1m_gt10bps"
 
 # Category colours for the figures
 _CAT_COLORS: dict[str, str] = {
-    "price": "#2166ac",   # navy blue
-    "book": "#d73027",    # red
+    "price": "#2166ac",  # navy blue
+    "book": "#d73027",  # red
     "settle": "#1a9641",  # green
 }
 
 # ---------------------------------------------------------------------------
 # Helper: map a feature name to its category colour
 # ---------------------------------------------------------------------------
+
 
 def _feature_color(name: str) -> str:
     if name in _PRICE_COLS or name in _FRAG_COLS:
@@ -113,6 +112,7 @@ def _feature_category(name: str) -> str:
 # ---------------------------------------------------------------------------
 # Synthetic data generator
 # ---------------------------------------------------------------------------
+
 
 def _generate_synthetic_data(n_total: int = 12_000, seed: int = 42) -> "pl.DataFrame":
     """Generate a realistic synthetic dataset matching the expected schema."""
@@ -206,6 +206,7 @@ def _generate_synthetic_data(n_total: int = 12_000, seed: int = 42) -> "pl.DataF
 # Data loading
 # ---------------------------------------------------------------------------
 
+
 def load_data(data_dir: Path) -> "pl.DataFrame":
     import polars as pl
 
@@ -226,6 +227,7 @@ def load_data(data_dir: Path) -> "pl.DataFrame":
 # Feature selection (graceful missing-column handling)
 # ---------------------------------------------------------------------------
 
+
 def resolve_features(df: "pl.DataFrame", desired: list[str]) -> list[str]:
     available = set(df.columns)
     present = [c for c in desired if c in available]
@@ -239,6 +241,7 @@ def resolve_features(df: "pl.DataFrame", desired: list[str]) -> list[str]:
 # ---------------------------------------------------------------------------
 # Training
 # ---------------------------------------------------------------------------
+
 
 def train_lgbm(
     X_train: np.ndarray,
@@ -283,6 +286,7 @@ def train_lgbm(
 # SHAP computation
 # ---------------------------------------------------------------------------
 
+
 def compute_shap(
     model: "lgb.LGBMClassifier",
     X_test: np.ndarray,
@@ -311,14 +315,15 @@ def compute_shap(
 # Figure 1: Top-10 SHAP bar chart
 # ---------------------------------------------------------------------------
 
+
 def plot_shap_bar(
     mean_abs: np.ndarray,
     feature_names: list[str],
     output_path: Path,
     top_n: int = 10,
 ) -> None:
-    import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
 
     # Sort descending
     order = np.argsort(mean_abs)[::-1]
@@ -330,7 +335,7 @@ def plot_shap_bar(
     fig, ax = plt.subplots(figsize=(7, 4))
 
     bars = ax.barh(
-        range(top_n - 1, -1, -1),   # top feature at top
+        range(top_n - 1, -1, -1),  # top feature at top
         top_vals,
         color=top_colors,
         edgecolor="white",
@@ -359,7 +364,7 @@ def plot_shap_bar(
     # Legend
     legend_patches = [
         mpatches.Patch(color=_CAT_COLORS["price"], label="Price / basis"),
-        mpatches.Patch(color=_CAT_COLORS["book"],  label="Book / frag."),
+        mpatches.Patch(color=_CAT_COLORS["book"], label="Book / frag."),
         mpatches.Patch(color=_CAT_COLORS["settle"], label="On-chain / settle"),
     ]
     ax.legend(
@@ -380,6 +385,7 @@ def plot_shap_bar(
 # ---------------------------------------------------------------------------
 # Figure 2: SHAP beeswarm / dot summary plot
 # ---------------------------------------------------------------------------
+
 
 def plot_shap_summary(
     shap_values: np.ndarray,
@@ -426,6 +432,7 @@ def plot_shap_summary(
 # CSV output
 # ---------------------------------------------------------------------------
 
+
 def write_csv(
     mean_abs: np.ndarray,
     feature_names: list[str],
@@ -456,6 +463,7 @@ def write_csv(
 # ---------------------------------------------------------------------------
 # Key-finding printer
 # ---------------------------------------------------------------------------
+
 
 def print_key_findings(
     mean_abs: np.ndarray,
@@ -488,9 +496,13 @@ def print_key_findings(
         )
 
     # Highest-ranked pure book/frag feature
-    book_feats = [(n, v, r) for r, (n, v, c) in enumerate(
-        zip(ranked_names, ranked_vals, ranked_cats), start=1
-    ) if c == "book / frag"]
+    book_feats = [
+        (n, v, r)
+        for r, (n, v, c) in enumerate(
+            zip(ranked_names, ranked_vals, ranked_cats), start=1
+        )
+        if c == "book / frag"
+    ]
     if book_feats:
         top_book = book_feats[0]
         print(
@@ -499,9 +511,13 @@ def print_key_findings(
         )
 
     # Highest-ranked settle feature
-    settle_feats = [(n, v, r) for r, (n, v, c) in enumerate(
-        zip(ranked_names, ranked_vals, ranked_cats), start=1
-    ) if c == "settle"]
+    settle_feats = [
+        (n, v, r)
+        for r, (n, v, c) in enumerate(
+            zip(ranked_names, ranked_vals, ranked_cats), start=1
+        )
+        if c == "settle"
+    ]
     if settle_feats:
         top_settle = settle_feats[0]
         print(
@@ -524,15 +540,13 @@ def print_key_findings(
         )
         print("  microstructure signals are informative beyond raw basis alone.")
     else:
-        print(
-            f"  Book/frag features add only modest marginal lift ({book_share:.0%});"
-        )
+        print(f"  Book/frag features add only modest marginal lift ({book_share:.0%});")
         print("  microstructure adds limited signal on top of price-only features.")
     if settle_share < 0.10:
+        print(f"  On-chain/settle features contribute least ({settle_share:.0%}),")
         print(
-            f"  On-chain/settle features contribute least ({settle_share:.0%}),"
+            "  suggesting settlement proxies have weak predictive power at 1-min horizon."
         )
-        print("  suggesting settlement proxies have weak predictive power at 1-min horizon.")
     print("=" * 65 + "\n")
 
 
@@ -540,31 +554,32 @@ def print_key_findings(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _pretty_name(col: str) -> str:
     """Human-readable short label for a feature column name."""
     _MAP = {
-        "cross_quote_basis_usdc_bps":   "Basis USDC (bps)",
-        "cross_quote_basis_usdt_bps":   "Basis USDT (bps)",
+        "cross_quote_basis_usdc_bps": "Basis USDC (bps)",
+        "cross_quote_basis_usdt_bps": "Basis USDT (bps)",
         "cross_quote_basis_maxabs_bps": "Basis max-abs (bps)",
-        "cross_quote_basis_primary_bps":"Basis primary (bps)",
-        "deviation_from_1_usd_bps":     "Deviation from $1 (bps)",
-        "spread_bps_mean":              "Spread mean (bps)",
-        "depth_bid_10bp_mean":          "Bid depth 10 bp ($)",
-        "depth_ask_10bp_mean":          "Ask depth 10 bp ($)",
-        "imbalance_1bp_mean":           "Order imbalance 1 bp",
-        "data_quality_score_min":       "Data quality score",
-        "trade_count_1m_total":         "Trade count (1 min)",
-        "trade_volume_1m_total":        "Trade volume (1 min)",
-        "num_active_venues_mean":       "Active venues",
-        "mid_dispersion_bps_mean":      "Mid dispersion (bps)",
-        "max_minus_min_bps_mean":       "Max−min spread (bps)",
-        "transfer_count_1m":            "Transfer count (on-chain)",
-        "transfer_volume_1m":           "Transfer volume (on-chain)",
-        "large_transfer_count_1m":      "Large transfers (on-chain)",
-        "gas_proxy":                    "Gas proxy",
-        "block_lag_proxy":              "Block lag proxy",
-        "dex_swap_volume_1m":           "DEX swap volume",
-        "dex_net_flow_1m":              "DEX net flow",
+        "cross_quote_basis_primary_bps": "Basis primary (bps)",
+        "deviation_from_1_usd_bps": "Deviation from $1 (bps)",
+        "spread_bps_mean": "Spread mean (bps)",
+        "depth_bid_10bp_mean": "Bid depth 10 bp ($)",
+        "depth_ask_10bp_mean": "Ask depth 10 bp ($)",
+        "imbalance_1bp_mean": "Order imbalance 1 bp",
+        "data_quality_score_min": "Data quality score",
+        "trade_count_1m_total": "Trade count (1 min)",
+        "trade_volume_1m_total": "Trade volume (1 min)",
+        "num_active_venues_mean": "Active venues",
+        "mid_dispersion_bps_mean": "Mid dispersion (bps)",
+        "max_minus_min_bps_mean": "Max−min spread (bps)",
+        "transfer_count_1m": "Transfer count (on-chain)",
+        "transfer_volume_1m": "Transfer volume (on-chain)",
+        "large_transfer_count_1m": "Large transfers (on-chain)",
+        "gas_proxy": "Gas proxy",
+        "block_lag_proxy": "Block lag proxy",
+        "dex_swap_volume_1m": "DEX swap volume",
+        "dex_net_flow_1m": "DEX net flow",
     }
     return _MAP.get(col, col)
 
@@ -572,6 +587,7 @@ def _pretty_name(col: str) -> str:
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
@@ -594,6 +610,7 @@ def parse_args() -> argparse.Namespace:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     args = parse_args()
     figures_dir = args.output_dir / "figures"
@@ -613,8 +630,8 @@ def main() -> None:
 
     # 3. Split data ---------------------------------------------------------
     train_df = df.filter(df["split"] == "train")
-    val_df   = df.filter(df["split"] == "val")
-    test_df  = df.filter(df["split"] == "test")
+    val_df = df.filter(df["split"] == "val")
+    test_df = df.filter(df["split"] == "test")
 
     print(
         f"[split] train={train_df.shape[0]:,}  "
@@ -624,10 +641,10 @@ def main() -> None:
 
     X_train = train_df.select(feature_cols).to_numpy().astype(np.float32)
     y_train = train_df[TARGET_COL].to_numpy().astype(int)
-    X_val   = val_df.select(feature_cols).to_numpy().astype(np.float32)
-    y_val   = val_df[TARGET_COL].to_numpy().astype(int)
-    X_test  = test_df.select(feature_cols).to_numpy().astype(np.float32)
-    y_test  = test_df[TARGET_COL].to_numpy().astype(int)
+    X_val = val_df.select(feature_cols).to_numpy().astype(np.float32)
+    y_val = val_df[TARGET_COL].to_numpy().astype(int)
+    X_test = test_df.select(feature_cols).to_numpy().astype(np.float32)
+    y_test = test_df[TARGET_COL].to_numpy().astype(int)
 
     print(
         f"[label] train prevalence: {y_train.mean():.1%}  "
@@ -640,6 +657,7 @@ def main() -> None:
     # Quick test-set AUC
     try:
         from sklearn.metrics import roc_auc_score
+
         proba = model.predict_proba(X_test)[:, 1]
         auc = roc_auc_score(y_test, proba)
         print(f"[eval]  Test ROC-AUC = {auc:.4f}")

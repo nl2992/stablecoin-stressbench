@@ -20,12 +20,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-
 
 # ---------------------------------------------------------------------------
 # Hardcoded values from table_5_false_positive_diagnosis.csv
@@ -44,7 +44,7 @@ def load_fp_data(csv_path: Path) -> dict[str, dict]:
             "n": 1421,
             "avg_basis_usdc": -344.0859,
             "avg_depth_bid": 59_961.0678,
-            "avg_net_profit": -35.1513,   # net_profit_bps_q10000
+            "avg_net_profit": -35.1513,  # net_profit_bps_q10000
         },
         "FP": {
             "n": 581,
@@ -160,7 +160,9 @@ def make_profile_chart(groups: dict[str, dict], out_path: Path) -> None:
     # ------------------------------------------------------------------
     ax1 = axes[0]
     vals1 = [abs(groups[g]["avg_basis_usdc"]) for g in group_keys]
-    bars1 = ax1.bar(x, vals1, width=bar_width, color=colors, edgecolor="white", linewidth=0.6)
+    bars1 = ax1.bar(
+        x, vals1, width=bar_width, color=colors, edgecolor="white", linewidth=0.6
+    )
     ax1.set_title("Basis Magnitude\n|avg basis_usdc| (bps)", fontsize=8)
     ax1.set_xticks(x)
     ax1.set_xticklabels(group_labels, fontsize=7)
@@ -177,7 +179,9 @@ def make_profile_chart(groups: dict[str, dict], out_path: Path) -> None:
             bar.get_x() + bar.get_width() / 2,
             bar.get_height() + max(vals1) * 0.015,
             f"{v:.0f}",
-            ha="center", va="bottom", fontsize=6.5,
+            ha="center",
+            va="bottom",
+            fontsize=6.5,
         )
 
     # ------------------------------------------------------------------
@@ -185,7 +189,9 @@ def make_profile_chart(groups: dict[str, dict], out_path: Path) -> None:
     # ------------------------------------------------------------------
     ax2 = axes[1]
     vals2 = [groups[g]["avg_depth_bid"] / 1_000 for g in group_keys]
-    bars2 = ax2.bar(x, vals2, width=bar_width, color=colors, edgecolor="white", linewidth=0.6)
+    bars2 = ax2.bar(
+        x, vals2, width=bar_width, color=colors, edgecolor="white", linewidth=0.6
+    )
     ax2.set_title("Avg Bid Depth\nat 10 bp ($k)", fontsize=8)
     ax2.set_xticks(x)
     ax2.set_xticklabels(group_labels, fontsize=7)
@@ -205,7 +211,9 @@ def make_profile_chart(groups: dict[str, dict], out_path: Path) -> None:
             bar.get_x() + bar.get_width() / 2,
             bar.get_height() + (y2_max - y2_min) * 0.01,
             f"{v:.0f}k",
-            ha="center", va="bottom", fontsize=6.5,
+            ha="center",
+            va="bottom",
+            fontsize=6.5,
         )
 
     # ------------------------------------------------------------------
@@ -214,11 +222,10 @@ def make_profile_chart(groups: dict[str, dict], out_path: Path) -> None:
     ax3 = axes[2]
     vals3 = [groups[g]["avg_net_profit"] for g in group_keys]
     # Use diverging colour: negative=red-tinted, positive=green-tinted
-    bar_colors3 = [
-        "#c00000" if v < 0 else "#1a9641"
-        for v in vals3
-    ]
-    bars3 = ax3.bar(x, vals3, width=bar_width, color=bar_colors3, edgecolor="white", linewidth=0.6)
+    bar_colors3 = ["#c00000" if v < 0 else "#1a9641" for v in vals3]
+    bars3 = ax3.bar(
+        x, vals3, width=bar_width, color=bar_colors3, edgecolor="white", linewidth=0.6
+    )
     ax3.axhline(0, color="black", linewidth=0.6, linestyle="-")
     ax3.set_title("Avg Net Profit\n(bps, $10K notional)", fontsize=8)
     ax3.set_xticks(x)
@@ -236,13 +243,16 @@ def make_profile_chart(groups: dict[str, dict], out_path: Path) -> None:
             bar.get_x() + bar.get_width() / 2,
             v + offset,
             f"{v:.1f}",
-            ha="center", va="bottom" if v >= 0 else "top", fontsize=6.5,
+            ha="center",
+            va="bottom" if v >= 0 else "top",
+            fontsize=6.5,
         )
 
     # ------------------------------------------------------------------
     # Legend
     # ------------------------------------------------------------------
     from matplotlib.patches import Patch
+
     legend_handles = [
         Patch(color=palette["TP"], label="TP — True Positive"),
         Patch(color=palette["FP"], label="FP — False Positive"),

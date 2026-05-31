@@ -170,7 +170,9 @@ def _generate_synthetic_data() -> pl.DataFrame:
 
     # Inject spikes to drive positive labels at ~2.88% test rate
     spike_mask = rng.uniform(size=N_TOTAL) < 0.03
-    basis_usdc[spike_mask] += rng.choice([-1, 1], size=spike_mask.sum()) * rng.uniform(15, 80, size=spike_mask.sum())
+    basis_usdc[spike_mask] += rng.choice([-1, 1], size=spike_mask.sum()) * rng.uniform(
+        15, 80, size=spike_mask.sum()
+    )
 
     basis_usdt = basis_usdc * 0.6 + rng.normal(0, 4, N_TOTAL)
     basis_maxabs = np.maximum(np.abs(basis_usdc), np.abs(basis_usdt))
@@ -205,8 +207,8 @@ def _generate_synthetic_data() -> pl.DataFrame:
     # net_profit_bps_q10000: positive when label is 1, negative when 0
     net_profit_q10000 = np.where(
         label_arb == 1,
-        rng.normal(45, 60, N_TOTAL),    # positive: mean ~45 bps
-        rng.normal(-35, 25, N_TOTAL),   # negative: mean ~-35 bps
+        rng.normal(45, 60, N_TOTAL),  # positive: mean ~45 bps
+        rng.normal(-35, 25, N_TOTAL),  # negative: mean ~-35 bps
     )
     # net_profit_bps_q50000 (used for basis_usdc task)
     net_profit_q50000 = np.where(
@@ -216,26 +218,24 @@ def _generate_synthetic_data() -> pl.DataFrame:
     )
 
     # --- Split column ---
-    split = (
-        ["train"] * N_TRAIN
-        + ["validation"] * N_VAL
-        + ["test"] * N_TEST
-    )
+    split = ["train"] * N_TRAIN + ["validation"] * N_VAL + ["test"] * N_TEST
 
-    df = pl.DataFrame({
-        "spread_bps_mean": spread,
-        "depth_bid_10bp_mean": depth_bid,
-        "depth_ask_10bp_mean": depth_ask,
-        "imbalance_1bp_mean": imbalance,
-        "cross_quote_basis_usdc_bps": basis_usdc,
-        "cross_quote_basis_usdt_bps": basis_usdt,
-        "cross_quote_basis_maxabs_bps": basis_maxabs,
-        "label_basis_usdc_1m_gt10bps": label_basis_usdc,
-        "label_arb_q10000_5m_gt0bps": label_arb,
-        "net_profit_bps_q10000": net_profit_q10000,
-        "net_profit_bps_q50000": net_profit_q50000,
-        "split": split,
-    })
+    df = pl.DataFrame(
+        {
+            "spread_bps_mean": spread,
+            "depth_bid_10bp_mean": depth_bid,
+            "depth_ask_10bp_mean": depth_ask,
+            "imbalance_1bp_mean": imbalance,
+            "cross_quote_basis_usdc_bps": basis_usdc,
+            "cross_quote_basis_usdt_bps": basis_usdt,
+            "cross_quote_basis_maxabs_bps": basis_maxabs,
+            "label_basis_usdc_1m_gt10bps": label_basis_usdc,
+            "label_arb_q10000_5m_gt0bps": label_arb,
+            "net_profit_bps_q10000": net_profit_q10000,
+            "net_profit_bps_q50000": net_profit_q50000,
+            "split": split,
+        }
+    )
 
     # Log label rates per split
     for sp in ("train", "validation", "test"):
@@ -244,7 +244,10 @@ def _generate_synthetic_data() -> pl.DataFrame:
         rate_arb = float(sub["label_arb_q10000_5m_gt0bps"].mean())
         logger.info(
             "  Synthetic %s: n=%d  basis_usdc=%.2f%%  arb=%.2f%%",
-            sp, sub.height, rate_usdc * 100, rate_arb * 100,
+            sp,
+            sub.height,
+            rate_usdc * 100,
+            rate_arb * 100,
         )
 
     return df
@@ -338,7 +341,8 @@ def extract_split(
         y_net = np.where(np.isnan(y_net_raw), -999.0, y_net_raw)
     else:
         logger.warning(
-            "net_profit_col '%s' not found; economic metrics will be zero.", net_profit_col
+            "net_profit_col '%s' not found; economic metrics will be zero.",
+            net_profit_col,
         )
         y_net = np.zeros(len(y), dtype=np.float64)
 
@@ -408,7 +412,9 @@ class NumpyGRUCell:
     Parameters are initialised with Xavier/Glorot uniform initialisation.
     """
 
-    def __init__(self, input_size: int, hidden_size: int, rng: np.random.Generator) -> None:
+    def __init__(
+        self, input_size: int, hidden_size: int, rng: np.random.Generator
+    ) -> None:
         self.input_size = input_size
         self.hidden_size = hidden_size
 
@@ -438,9 +444,15 @@ class NumpyGRUCell:
     @property
     def _params(self) -> list[np.ndarray]:
         return [
-            self.W_z, self.U_z, self.b_z,
-            self.W_r, self.U_r, self.b_r,
-            self.W_h, self.U_h, self.b_h,
+            self.W_z,
+            self.U_z,
+            self.b_z,
+            self.W_r,
+            self.U_r,
+            self.b_r,
+            self.W_h,
+            self.U_h,
+            self.b_h,
         ]
 
     @staticmethod
@@ -460,7 +472,7 @@ class NumpyGRUCell:
         h = np.zeros((batch, self.hidden_size), dtype=np.float32)
 
         for t in range(T):
-            x = x_seq[:, t, :]                                    # (batch, d)
+            x = x_seq[:, t, :]  # (batch, d)
             z = self._sigmoid(x @ self.W_z.T + h @ self.U_z.T + self.b_z)
             r = self._sigmoid(x @ self.W_r.T + h @ self.U_r.T + self.b_r)
             h_tilde = np.tanh(x @ self.W_h.T + (r * h) @ self.U_h.T + self.b_h)
@@ -505,7 +517,9 @@ class NumpyGRUClassifier:
 
     def _cross_entropy(self, y_hat: np.ndarray, y: np.ndarray) -> float:
         eps = 1e-7
-        return float(-np.mean(y * np.log(y_hat + eps) + (1 - y) * np.log(1 - y_hat + eps)))
+        return float(
+            -np.mean(y * np.log(y_hat + eps) + (1 - y) * np.log(1 - y_hat + eps))
+        )
 
     def _normalize(self, X_win: np.ndarray, fit: bool = False) -> np.ndarray:
         """Standardise each feature across the entire dataset (not per-window)."""
@@ -549,9 +563,9 @@ class NumpyGRUClassifier:
         Returns:
             y_hat: (batch,) sigmoid output
         """
-        h_final = self._gru.forward_sequence(X_win)          # (batch, hidden)
-        logit = h_final @ self._W_out.T + self._b_out        # (batch, 1)
-        return self._sigmoid(logit.squeeze(-1))               # (batch,)
+        h_final = self._gru.forward_sequence(X_win)  # (batch, hidden)
+        logit = h_final @ self._W_out.T + self._b_out  # (batch, 1)
+        return self._sigmoid(logit.squeeze(-1))  # (batch,)
 
     def _backward_and_update(
         self,
@@ -602,12 +616,12 @@ class NumpyGRUClassifier:
 
         # --- Output layer gradients ---
         # d_loss/d_logit = (y_hat - y) * sample_weight / batch
-        d_logit = (y_hat - y) * sample_weight / batch       # (batch,)
-        dW_out = d_logit[:, None].T @ h_T                   # (1, hidden)
+        d_logit = (y_hat - y) * sample_weight / batch  # (batch,)
+        dW_out = d_logit[:, None].T @ h_T  # (1, hidden)
         db_out = np.array([d_logit.sum()], dtype=np.float32)
 
         # Gradient w.r.t. final hidden state
-        d_hT = d_logit[:, None] * self._W_out               # (batch, hidden)
+        d_hT = d_logit[:, None] * self._W_out  # (batch, hidden)
 
         # --- One-step TBPTT through the last GRU step (t = T-1) ---
         t = T - 1
@@ -618,7 +632,7 @@ class NumpyGRUClassifier:
         ht = ht_states[:, t, :]
 
         # d_hT / d_ht_tilde
-        d_ht = d_hT * z * (1.0 - ht ** 2)                  # tanh backprop
+        d_ht = d_hT * z * (1.0 - ht**2)  # tanh backprop
 
         # d_hT / d_z
         d_z = d_hT * (ht - hprev) * z * (1.0 - z)
@@ -649,9 +663,9 @@ class NumpyGRUClassifier:
         t_adam = self._adam_t
         for i, (p, g) in enumerate(zip(self._all_params(), grads)):
             self._m[i] = beta1 * self._m[i] + (1 - beta1) * g
-            self._v[i] = beta2 * self._v[i] + (1 - beta2) * g ** 2
-            m_hat = self._m[i] / (1 - beta1 ** t_adam)
-            v_hat = self._v[i] / (1 - beta2 ** t_adam)
+            self._v[i] = beta2 * self._v[i] + (1 - beta2) * g**2
+            m_hat = self._m[i] / (1 - beta1**t_adam)
+            v_hat = self._v[i] / (1 - beta2**t_adam)
             p -= self.lr * m_hat / (np.sqrt(v_hat) + eps_adam)
 
         return loss
@@ -674,7 +688,9 @@ class NumpyGRUClassifier:
             sample_weight: Per-sample weights for class-imbalance correction.
         """
         N, T, F = X_win.shape
-        logger.info("GRU fit: %d windows, T=%d, F=%d, hidden=%d", N, T, F, self.hidden_size)
+        logger.info(
+            "GRU fit: %d windows, T=%d, F=%d, hidden=%d", N, T, F, self.hidden_size
+        )
 
         X_norm = self._normalize(X_win, fit=True)
         y = y.astype(np.float32)
@@ -789,7 +805,10 @@ class MLPWindowClassifier:
         N, T, F = X_win.shape
         logger.info(
             "MLPWindow fit: %d windows, T=%d, F=%d, hidden=%s",
-            N, T, F, self.hidden_layer_sizes,
+            N,
+            T,
+            F,
+            self.hidden_layer_sizes,
         )
         Xflat = self._flatten(X_win, fit=True)
 
@@ -901,7 +920,13 @@ def compute_ml_metrics(
     bal_acc = float(balanced_accuracy_score(y_true, y_pred))
     brier = float(brier_score_loss(y_true, np.clip(y_proba, 0, 1)))
 
-    return {"auroc": auroc, "auprc": auprc, "f1": f1, "balanced_accuracy": bal_acc, "brier_score": brier}
+    return {
+        "auroc": auroc,
+        "auprc": auprc,
+        "f1": f1,
+        "balanced_accuracy": bal_acc,
+        "brier_score": brier,
+    }
 
 
 def compute_economic_metrics(
@@ -960,13 +985,28 @@ def compute_economic_metrics(
 # ---------------------------------------------------------------------------
 
 _RESULT_FIELDS = [
-    "task", "feature_set", "model",
-    "n_train", "n_val", "n_test",
-    "validation_threshold", "validation_net_bps", "validation_n_trades",
+    "task",
+    "feature_set",
+    "model",
+    "n_train",
+    "n_val",
+    "n_test",
+    "validation_threshold",
+    "validation_net_bps",
+    "validation_n_trades",
     "validation_objective",
-    "auroc", "auprc", "f1", "balanced_accuracy", "brier_score",
-    "net_bps_captured", "hit_rate_above_cost", "false_positive_cost",
-    "n_trades", "final_pnl_usd", "max_drawdown_usd", "sharpe_ratio",
+    "auroc",
+    "auprc",
+    "f1",
+    "balanced_accuracy",
+    "brier_score",
+    "net_bps_captured",
+    "hit_rate_above_cost",
+    "false_positive_cost",
+    "n_trades",
+    "final_pnl_usd",
+    "max_drawdown_usd",
+    "sharpe_ratio",
 ]
 
 
@@ -992,7 +1032,9 @@ def flatten_result(
         "n_val": n_val,
         "n_test": n_test,
         "validation_threshold": round(val_threshold, 4),
-        "validation_net_bps": round(val_net_bps, 2) if not np.isnan(val_net_bps) else "",
+        "validation_net_bps": (
+            round(val_net_bps, 2) if not np.isnan(val_net_bps) else ""
+        ),
         "validation_n_trades": val_n_trades,
         "validation_objective": "total_pnl_min25trades",
         "auroc": ml.get("auroc", ""),
@@ -1105,7 +1147,8 @@ def run_temporal_experiment(
         available = [c for c in df.columns if c.startswith("label_")]
         logger.error(
             "Label column '%s' not found. Available label columns: %s",
-            label_col, available,
+            label_col,
+            available,
         )
         return None
 
@@ -1113,15 +1156,27 @@ def run_temporal_experiment(
     # 1. Load splits
     # ------------------------------------------------------------------
     logger.info("Loading splits for task=%s label=%s", task_name, label_col)
-    X_train, y_train, _ = extract_split(df, "train", label_col, feature_cols, net_profit_col)
-    X_val, y_val, y_net_val = extract_split(df, "validation", label_col, feature_cols, net_profit_col)
-    X_test, y_test, y_net_test = extract_split(df, "test", label_col, feature_cols, net_profit_col)
+    X_train, y_train, _ = extract_split(
+        df, "train", label_col, feature_cols, net_profit_col
+    )
+    X_val, y_val, y_net_val = extract_split(
+        df, "validation", label_col, feature_cols, net_profit_col
+    )
+    X_test, y_test, y_net_test = extract_split(
+        df, "test", label_col, feature_cols, net_profit_col
+    )
 
-    for split_name, X_s, y_s in [("train", X_train, y_train), ("val", X_val, y_val), ("test", X_test, y_test)]:
+    for split_name, X_s, y_s in [
+        ("train", X_train, y_train),
+        ("val", X_val, y_val),
+        ("test", X_test, y_test),
+    ]:
         pos_rate = float(y_s.mean()) if len(y_s) > 0 else 0.0
         logger.info(
             "  %s: %d samples, %.2f%% positive",
-            split_name, len(y_s), pos_rate * 100,
+            split_name,
+            len(y_s),
+            pos_rate * 100,
         )
 
     if len(X_train) == 0:
@@ -1132,13 +1187,19 @@ def run_temporal_experiment(
     # 2. Build sliding windows
     # ------------------------------------------------------------------
     logger.info("Building windows (look_back=%d) ...", look_back)
-    X_train_w, y_train_w, _ = build_windows(X_train, y_train, np.zeros(len(y_train)), look_back)
+    X_train_w, y_train_w, _ = build_windows(
+        X_train, y_train, np.zeros(len(y_train)), look_back
+    )
     X_val_w, y_val_w, y_net_val_w = build_windows(X_val, y_val, y_net_val, look_back)
-    X_test_w, y_test_w, y_net_test_w = build_windows(X_test, y_test, y_net_test, look_back)
+    X_test_w, y_test_w, y_net_test_w = build_windows(
+        X_test, y_test, y_net_test, look_back
+    )
 
     logger.info(
         "  Train windows: %d  Val windows: %d  Test windows: %d",
-        len(X_train_w), len(X_val_w), len(X_test_w),
+        len(X_train_w),
+        len(X_val_w),
+        len(X_test_w),
     )
 
     if len(X_train_w) == 0:
@@ -1174,7 +1235,9 @@ def run_temporal_experiment(
             )
             logger.info(
                 "  Val threshold: %.2f  val_net_bps=%.1f  val_n_trades=%d",
-                val_threshold, val_net_bps_cal, val_n_trades_cal,
+                val_threshold,
+                val_net_bps_cal,
+                val_n_trades_cal,
             )
         except Exception as exc:
             logger.warning("Threshold calibration failed: %s", exc)
@@ -1213,7 +1276,9 @@ def run_temporal_experiment(
     )
 
     # Oracle gap report
-    report_oracle_gap(f"{model_name}_L{look_back}", task_name, econ_metrics.get("net_bps_captured"))
+    report_oracle_gap(
+        f"{model_name}_L{look_back}", task_name, econ_metrics.get("net_bps_captured")
+    )
 
     return row
 
@@ -1226,7 +1291,7 @@ def run_temporal_experiment(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Train LSTM/Transformer sequence models on order-book microstructure "
-                    "features to predict executable arbitrage windows.",
+        "features to predict executable arbitrage windows.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -1382,26 +1447,39 @@ def main() -> None:
         print("\n" + "=" * 70)
         print("TEMPORAL MODEL RESULTS SUMMARY")
         print("=" * 70)
-        header = f"{'Model':<22} {'Task':<35} {'AUROC':>7} {'NetBps':>8} {'N_Trades':>9}"
+        header = (
+            f"{'Model':<22} {'Task':<35} {'AUROC':>7} {'NetBps':>8} {'N_Trades':>9}"
+        )
         print(header)
         print("-" * len(header))
         for row in all_rows:
             auroc = row.get("auroc", "")
             net_bps = row.get("net_bps_captured", "")
-            auroc_s = f"{auroc:.3f}" if isinstance(auroc, float) and not np.isnan(auroc) else str(auroc)
-            net_bps_s = f"{net_bps:.1f}" if isinstance(net_bps, float) and not np.isnan(net_bps) else str(net_bps)
+            auroc_s = (
+                f"{auroc:.3f}"
+                if isinstance(auroc, float) and not np.isnan(auroc)
+                else str(auroc)
+            )
+            net_bps_s = (
+                f"{net_bps:.1f}"
+                if isinstance(net_bps, float) and not np.isnan(net_bps)
+                else str(net_bps)
+            )
             print(
                 f"{row['model']:<22} {row['task']:<35} {auroc_s:>7} {net_bps_s:>8} {row.get('n_trades', ''):>9}"
             )
         print("=" * 70)
-        print(f"\nOracle benchmark (basis_usdc_1m_gt10bps): {ORACLE_NET_BPS:.2f} net bps")
+        print(
+            f"\nOracle benchmark (basis_usdc_1m_gt10bps): {ORACLE_NET_BPS:.2f} net bps"
+        )
         print(f"Results written to: {output_dir / 'temporal_model_results.csv'}")
     else:
         logger.warning("No results produced. Check errors above.")
 
     logger.info(
         "Done. %d experiments succeeded, %d failed. %s",
-        n_success, n_fail,
+        n_success,
+        n_fail,
         datetime.now(timezone.utc).isoformat(),
     )
 

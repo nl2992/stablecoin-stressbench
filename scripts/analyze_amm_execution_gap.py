@@ -44,6 +44,7 @@ logger = get_logger(__name__)
 # Curve StableSwap math
 # ---------------------------------------------------------------------------
 
+
 def _curve_get_D(x: float, y: float, A: float) -> float:
     """Compute the invariant D for a 2-asset Curve pool via Newton's method."""
     S = x + y
@@ -86,7 +87,7 @@ def curve_spot_deviation_bps(reserve_x: float, reserve_y: float, A: float) -> fl
     Returns deviation in bps: (|dy/dx| - 1) * 10000
     """
     D = _curve_get_D(reserve_x, reserve_y, A)
-    D_P = D ** 3 / (4.0 * reserve_x * reserve_y)
+    D_P = D**3 / (4.0 * reserve_x * reserve_y)
     Ann = 4.0 * A
     # Correct implicit differentiation (D is invariant, not reserve):
     dydx_abs = (Ann + D_P / reserve_x) / (Ann + D_P / reserve_y)
@@ -131,7 +132,7 @@ def curve_price_impact(
     # Positive spot_dev_bps means x is scarce → we gain more y than expected
     # We buy dx of x (give y, receive x):
     dx = trade_size_usd
-    x_new = reserve_x + dx          # we add dx of x to pool (selling x for y)
+    x_new = reserve_x + dx  # we add dx of x to pool (selling x for y)
     if x_new <= 0 or reserve_x <= 0 or reserve_y <= 0:
         return {
             "spot_price_bps": spot_dev_bps,
@@ -199,9 +200,9 @@ def curve_price_impact(
 _CURVE_JUNE_2023 = {
     "name": "USDT/Curve Jun 2023",
     "mechanism": "DeFi pool imbalance",
-    "A": 2000,                      # Curve 3pool amplification
-    "pool_tvl_usd": 800_000_000,    # ~$800M TVL
-    "fee_bps": 4.0,                 # 0.04% pool fee
+    "A": 2000,  # Curve 3pool amplification
+    "pool_tvl_usd": 800_000_000,  # ~$800M TVL
+    "fee_bps": 4.0,  # 0.04% pool fee
     # Scenarios: (usdc_frac, usdt_frac, description)
     # x=USDC (scarce during event), y=USDT (abundant — LPs withdrew USDC)
     "imbalance_scenarios": [
@@ -217,9 +218,9 @@ _CURVE_JUNE_2023 = {
 # CEX order-book comparison: USDC/SVB Mar 2023 (from paper results)
 _CEX_SVB_BENCHMARKS = [
     # (notional_usd, exec_rate_pct, avg_net_bps, description)
-    (10_000,    2.88,  15.0,  "$10K notional (paper headline)"),
-    (50_000,    1.62,  12.0,  "$50K notional"),
-    (500_000,   0.03,   5.0,  "$500K notional"),
+    (10_000, 2.88, 15.0, "$10K notional (paper headline)"),
+    (50_000, 1.62, 12.0, "$50K notional"),
+    (500_000, 0.03, 5.0, "$500K notional"),
 ]
 
 
@@ -238,40 +239,45 @@ def analyze_amm_vs_cex(output_dir: Path, fmt: str = "png") -> None:
     notional_sizes = [1_000, 5_000, 10_000, 25_000, 50_000, 100_000, 250_000, 500_000]
 
     for usdc_frac, usdt_frac, scenario_label in curve_cfg["imbalance_scenarios"]:
-        reserve_x = pool_tvl * usdc_frac   # USDC reserve
-        reserve_y = pool_tvl * usdt_frac   # USDT reserve
+        reserve_x = pool_tvl * usdc_frac  # USDC reserve
+        reserve_y = pool_tvl * usdt_frac  # USDT reserve
         spot_dev = curve_spot_deviation_bps(reserve_x, reserve_y, A)
 
         for notional in notional_sizes:
             result = curve_price_impact(reserve_x, reserve_y, A, notional, fee_bps)
-            rows.append({
-                "event": curve_cfg["name"],
-                "mechanism": "DeFi pool imbalance",
-                "scenario": scenario_label,
-                "usdc_frac": usdc_frac,
-                "usdt_frac": usdt_frac,
-                "pool_tvl_m_usd": pool_tvl / 1e6,
-                "A": A,
-                "fee_bps": fee_bps,
-                "notional_usd": notional,
-                "amm_spot_dev_bps": round(spot_dev, 3),
-                "price_impact_bps": result["price_impact_bps"],
-                "total_cost_bps": result["total_execution_cost_bps"],
-                "net_profit_bps": result["net_profit_bps"],
-                "is_executable": result["is_executable"],
-                "note": (
-                    f"AMM compresses spot to {spot_dev:.2f} bps vs fee {fee_bps} bps"
-                ),
-            })
+            rows.append(
+                {
+                    "event": curve_cfg["name"],
+                    "mechanism": "DeFi pool imbalance",
+                    "scenario": scenario_label,
+                    "usdc_frac": usdc_frac,
+                    "usdt_frac": usdt_frac,
+                    "pool_tvl_m_usd": pool_tvl / 1e6,
+                    "A": A,
+                    "fee_bps": fee_bps,
+                    "notional_usd": notional,
+                    "amm_spot_dev_bps": round(spot_dev, 3),
+                    "price_impact_bps": result["price_impact_bps"],
+                    "total_cost_bps": result["total_execution_cost_bps"],
+                    "net_profit_bps": result["net_profit_bps"],
+                    "is_executable": result["is_executable"],
+                    "note": (
+                        f"AMM compresses spot to {spot_dev:.2f} bps vs fee {fee_bps} bps"
+                    ),
+                }
+            )
 
         # Log summary for this scenario at $10K and $100K
         r10 = curve_price_impact(reserve_x, reserve_y, A, 10_000, fee_bps)
         r100 = curve_price_impact(reserve_x, reserve_y, A, 100_000, fee_bps)
         logger.info(
             "  [%s] spot=%.2f bps  $10K: net=%.2f exec=%s  $100K: net=%.2f exec=%s",
-            scenario_label, spot_dev,
-            r10["net_profit_bps"], r10["is_executable"],
-            r100["net_profit_bps"], r100["is_executable"],
+            scenario_label,
+            spot_dev,
+            r10["net_profit_bps"],
+            r10["is_executable"],
+            r100["net_profit_bps"],
+            r100["is_executable"],
         )
 
     # Write CSV
@@ -305,58 +311,68 @@ def _write_crossmech_summary(rows: list[dict], output_dir: Path, cfg: dict) -> N
     summary = []
 
     # --- CEX events (from paper results) ---
-    summary.append({
-        "mechanism": "Fiat-reserve shock (CEX order book)",
-        "event": "USDC/SVB Mar 2023",
-        "data_tier": "A",
-        "notional_usd": 10_000,
-        "typical_spot_dev_bps": 100.0,
-        "exec_rate_pct": 2.88,
-        "price_to_exec_ratio": round(34.3 / 2.88, 1),
-        "oracle_net_bps": 162.2,
-        "exec_barrier": "order-book depth withdrawal (deposit run drains Binance liquidity)",
-        "detection_method": "basis threshold or ML (BOCPD: AUROC 0.23, fails)",
-        "note": "paper Tier-A headline result",
-    })
-    summary.append({
-        "mechanism": "Algorithmic/reflexive (CEX order book)",
-        "event": "Terra/LUNA May 2022 (val split)",
-        "data_tier": "B (kline-proxy)",
-        "notional_usd": 10_000,
-        "typical_spot_dev_bps": 50.0,
-        "exec_rate_pct": 2.30,
-        "price_to_exec_ratio": round(13.5 / 2.30, 1),
-        "oracle_net_bps": 88.0,
-        "exec_barrier": "unstable reference pricing (algorithmic collapse)",
-        "detection_method": "cross-mechanism meta-labeling; BOCPD AUROC ~0.3",
-        "note": "cross-mechanism directional check",
-    })
+    summary.append(
+        {
+            "mechanism": "Fiat-reserve shock (CEX order book)",
+            "event": "USDC/SVB Mar 2023",
+            "data_tier": "A",
+            "notional_usd": 10_000,
+            "typical_spot_dev_bps": 100.0,
+            "exec_rate_pct": 2.88,
+            "price_to_exec_ratio": round(34.3 / 2.88, 1),
+            "oracle_net_bps": 162.2,
+            "exec_barrier": "order-book depth withdrawal (deposit run drains Binance liquidity)",
+            "detection_method": "basis threshold or ML (BOCPD: AUROC 0.23, fails)",
+            "note": "paper Tier-A headline result",
+        }
+    )
+    summary.append(
+        {
+            "mechanism": "Algorithmic/reflexive (CEX order book)",
+            "event": "Terra/LUNA May 2022 (val split)",
+            "data_tier": "B (kline-proxy)",
+            "notional_usd": 10_000,
+            "typical_spot_dev_bps": 50.0,
+            "exec_rate_pct": 2.30,
+            "price_to_exec_ratio": round(13.5 / 2.30, 1),
+            "oracle_net_bps": 88.0,
+            "exec_barrier": "unstable reference pricing (algorithmic collapse)",
+            "detection_method": "cross-mechanism meta-labeling; BOCPD AUROC ~0.3",
+            "note": "cross-mechanism directional check",
+        }
+    )
 
     # --- AMM events (Curve simulation) ---
-    for usdc_frac, usdt_frac, scenario_label in cfg["imbalance_scenarios"][1:]:  # skip balanced
+    for usdc_frac, usdt_frac, scenario_label in cfg["imbalance_scenarios"][
+        1:
+    ]:  # skip balanced
         reserve_x = cfg["pool_tvl_usd"] * usdc_frac
         reserve_y = cfg["pool_tvl_usd"] * usdt_frac
         spot_dev = curve_spot_deviation_bps(reserve_x, reserve_y, cfg["A"])
         r = curve_price_impact(reserve_x, reserve_y, cfg["A"], 10_000, cfg["fee_bps"])
 
-        summary.append({
-            "mechanism": "DeFi pool imbalance (Curve AMM)",
-            "event": f"USDT/Curve Jun 2023 — {scenario_label}",
-            "data_tier": "C (StableSwap simulation, A=2000)",
-            "notional_usd": 10_000,
-            "typical_spot_dev_bps": round(spot_dev, 2),
-            "exec_rate_pct": 100.0 if r["is_executable"] else 0.0,
-            "price_to_exec_ratio": (
-                "∞ (not exec.)" if not r["is_executable"] else round(spot_dev / max(r["net_profit_bps"], 0.01), 1)
-            ),
-            "oracle_net_bps": round(r["net_profit_bps"], 2),
-            "exec_barrier": (
-                f"AMM fee ({cfg['fee_bps']} bps) > pool spot deviation ({spot_dev:.2f} bps); "
-                "high-A invariant compresses prices even at severe imbalance"
-            ),
-            "detection_method": "BOCPD on LP reserve imbalance (gradual signal; works unlike CEX basis)",
-            "note": f"A={cfg['A']}, TVL=${cfg['pool_tvl_usd']/1e6:.0f}M",
-        })
+        summary.append(
+            {
+                "mechanism": "DeFi pool imbalance (Curve AMM)",
+                "event": f"USDT/Curve Jun 2023 — {scenario_label}",
+                "data_tier": "C (StableSwap simulation, A=2000)",
+                "notional_usd": 10_000,
+                "typical_spot_dev_bps": round(spot_dev, 2),
+                "exec_rate_pct": 100.0 if r["is_executable"] else 0.0,
+                "price_to_exec_ratio": (
+                    "∞ (not exec.)"
+                    if not r["is_executable"]
+                    else round(spot_dev / max(r["net_profit_bps"], 0.01), 1)
+                ),
+                "oracle_net_bps": round(r["net_profit_bps"], 2),
+                "exec_barrier": (
+                    f"AMM fee ({cfg['fee_bps']} bps) > pool spot deviation ({spot_dev:.2f} bps); "
+                    "high-A invariant compresses prices even at severe imbalance"
+                ),
+                "detection_method": "BOCPD on LP reserve imbalance (gradual signal; works unlike CEX basis)",
+                "note": f"A={cfg['A']}, TVL=${cfg['pool_tvl_usd']/1e6:.0f}M",
+            }
+        )
 
     out_csv = output_dir / "table_crossmech_summary.csv"
     with open(out_csv, "w", newline="") as fh:
@@ -366,9 +382,7 @@ def _write_crossmech_summary(rows: list[dict], output_dir: Path, cfg: dict) -> N
     logger.info("Wrote cross-mechanism summary: %s", out_csv)
 
 
-def _plot_amm_vs_cex(
-    rows: list[dict], output_dir: Path, fmt: str, cfg: dict
-) -> None:
+def _plot_amm_vs_cex(rows: list[dict], output_dir: Path, fmt: str, cfg: dict) -> None:
     """Generate AMM vs CEX execution gap comparison figure.
 
     Left panel: AMM pool spot deviation vs imbalance level.
@@ -381,6 +395,7 @@ def _plot_amm_vs_cex(
     """
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
@@ -406,12 +421,15 @@ def _plot_amm_vs_cex(
         alpha=0.85,
         label="AMM spot deviation (bps)",
     )
-    ax1.axhline(cfg["fee_bps"], color="#d73027", ls="--", lw=1.5,
-                label=f"Pool fee ({cfg['fee_bps']} bps)")
-    ax1.set_xticks(range(len(scenarios)))
-    ax1.set_xticklabels(
-        [s[2].replace(" ", "\n") for s in scenarios], fontsize=7
+    ax1.axhline(
+        cfg["fee_bps"],
+        color="#d73027",
+        ls="--",
+        lw=1.5,
+        label=f"Pool fee ({cfg['fee_bps']} bps)",
     )
+    ax1.set_xticks(range(len(scenarios)))
+    ax1.set_xticklabels([s[2].replace(" ", "\n") for s in scenarios], fontsize=7)
     ax1.set_ylabel("Spot price deviation (bps)")
     ax1.set_title(
         f"Curve AMM Spot Deviation vs Pool Imbalance\n"
@@ -444,7 +462,9 @@ def _plot_amm_vs_cex(
     amm_notionals_k = [1, 5, 10, 25, 50, 100, 250, 500]
     amm_net_bps = []
     for n_k in amm_notionals_k:
-        r = curve_price_impact(reserve_x, reserve_y, cfg["A"], n_k * 1000, cfg["fee_bps"])
+        r = curve_price_impact(
+            reserve_x, reserve_y, cfg["A"], n_k * 1000, cfg["fee_bps"]
+        )
         amm_net_bps.append(r["net_profit_bps"])
 
     ax2.plot(

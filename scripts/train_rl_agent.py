@@ -16,6 +16,7 @@ Usage:
     python scripts/train_rl_agent.py --data-dir data/gold
     python scripts/train_rl_agent.py --data-dir data/gold --verbose
 """
+
 from __future__ import annotations
 
 import argparse
@@ -57,19 +58,20 @@ NET_PROFIT_COL = "net_profit_bps_q10000"
 ORACLE_NET_BPS = 162.2
 
 LOOK_BACK = 30
-EPISODE_LEN = 240   # 4-hour episodes
+EPISODE_LEN = 240  # 4-hour episodes
 HIDDEN_SIZE = 64
 N_EPOCHS = 80
 EPISODE_BATCH = 32  # episodes per training batch
 LR = 3e-3
 GAMMA = 0.99
-EPSILON = 0.10      # exploration rate (decays to 0.02)
+EPSILON = 0.10  # exploration rate (decays to 0.02)
 MIN_TRADES = 25
 
 
 # ---------------------------------------------------------------------------
 # Synthetic data fallback (mirrors train_temporal_model.py)
 # ---------------------------------------------------------------------------
+
 
 def _generate_synthetic_data() -> pl.DataFrame:
     N_TRAIN, N_VAL, N_TEST = 28_776, 11_526, 15_832
@@ -80,7 +82,9 @@ def _generate_synthetic_data() -> pl.DataFrame:
     basis_usdc -= basis_usdc.mean()
     basis_usdc = np.clip(basis_usdc, -500, 500)
     spike_mask = rng.uniform(size=N) < 0.03
-    basis_usdc[spike_mask] += rng.choice([-1, 1], size=spike_mask.sum()) * rng.uniform(15, 80, spike_mask.sum())
+    basis_usdc[spike_mask] += rng.choice([-1, 1], size=spike_mask.sum()) * rng.uniform(
+        15, 80, spike_mask.sum()
+    )
     basis_usdt = basis_usdc * 0.6 + rng.normal(0, 4, N)
     basis_maxabs = np.maximum(np.abs(basis_usdc), np.abs(basis_usdt))
     spread = np.abs(rng.normal(2.5, 1.5, N)) + 0.5
@@ -88,24 +92,31 @@ def _generate_synthetic_data() -> pl.DataFrame:
     depth_ask = np.abs(rng.normal(63_000, 19_000, N))
     imbalance = np.clip(rng.normal(0, 0.3, N), -1, 1)
 
-    log_odds = 0.18 * basis_usdc - 0.04 * spread + 0.02 * imbalance * 10 + rng.normal(0, 1.1, N)
+    log_odds = (
+        0.18 * basis_usdc
+        - 0.04 * spread
+        + 0.02 * imbalance * 10
+        + rng.normal(0, 1.1, N)
+    )
     prob = 1 / (1 + np.exp(-log_odds))
     label = (rng.uniform(size=N) < prob).astype(np.int32)
     net_profit = np.where(label == 1, rng.normal(45, 60, N), rng.normal(-35, 25, N))
 
     split = ["train"] * N_TRAIN + ["validation"] * N_VAL + ["test"] * N_TEST
-    return pl.DataFrame({
-        "spread_bps_mean": spread,
-        "depth_bid_10bp_mean": depth_bid,
-        "depth_ask_10bp_mean": depth_ask,
-        "imbalance_1bp_mean": imbalance,
-        "cross_quote_basis_usdc_bps": basis_usdc,
-        "cross_quote_basis_usdt_bps": basis_usdt,
-        "cross_quote_basis_maxabs_bps": basis_maxabs,
-        LABEL_COL: label,
-        NET_PROFIT_COL: net_profit,
-        "split": split,
-    })
+    return pl.DataFrame(
+        {
+            "spread_bps_mean": spread,
+            "depth_bid_10bp_mean": depth_bid,
+            "depth_ask_10bp_mean": depth_ask,
+            "imbalance_1bp_mean": imbalance,
+            "cross_quote_basis_usdc_bps": basis_usdc,
+            "cross_quote_basis_usdt_bps": basis_usdt,
+            "cross_quote_basis_maxabs_bps": basis_maxabs,
+            LABEL_COL: label,
+            NET_PROFIT_COL: net_profit,
+            "split": split,
+        }
+    )
 
 
 def load_dataset(data_dir: Path) -> pl.DataFrame:
@@ -121,6 +132,7 @@ def load_dataset(data_dir: Path) -> pl.DataFrame:
 # NumPy GRU cell (reused from train_temporal_model.py)
 # ---------------------------------------------------------------------------
 
+
 class NumpyGRUCell:
     def __init__(self, input_size: int, hidden_size: int, rng: np.random.Generator):
         self.input_size = input_size
@@ -131,9 +143,15 @@ class NumpyGRUCell:
             return rng.uniform(-lim, lim, (fan_out, fan_in)).astype(np.float32)
 
         h, d = hidden_size, input_size
-        self.W_z = xavier(d, h); self.U_z = xavier(h, h); self.b_z = np.zeros(h, np.float32)
-        self.W_r = xavier(d, h); self.U_r = xavier(h, h); self.b_r = np.zeros(h, np.float32)
-        self.W_h = xavier(d, h); self.U_h = xavier(h, h); self.b_h = np.zeros(h, np.float32)
+        self.W_z = xavier(d, h)
+        self.U_z = xavier(h, h)
+        self.b_z = np.zeros(h, np.float32)
+        self.W_r = xavier(d, h)
+        self.U_r = xavier(h, h)
+        self.b_r = np.zeros(h, np.float32)
+        self.W_h = xavier(d, h)
+        self.U_h = xavier(h, h)
+        self.b_h = np.zeros(h, np.float32)
 
     @staticmethod
     def _sigmoid(x):
@@ -152,13 +170,23 @@ class NumpyGRUCell:
 
     @property
     def params(self):
-        return [self.W_z, self.U_z, self.b_z, self.W_r, self.U_r, self.b_r,
-                self.W_h, self.U_h, self.b_h]
+        return [
+            self.W_z,
+            self.U_z,
+            self.b_z,
+            self.W_r,
+            self.U_r,
+            self.b_r,
+            self.W_h,
+            self.U_h,
+            self.b_h,
+        ]
 
 
 # ---------------------------------------------------------------------------
 # GRU Policy (actor-only, binary action: enter=1, wait=0)
 # ---------------------------------------------------------------------------
+
 
 class GRUPolicy:
     """GRU encoder + linear softmax head. Supports REINFORCE gradient update."""
@@ -199,13 +227,15 @@ class GRUPolicy:
     def predict_proba(self, X_win: np.ndarray) -> np.ndarray:
         """Return (N, 2) action probability array."""
         Xn = self._normalize(X_win, fit=not self._fitted)
-        h = self._gru.forward_sequence(Xn)        # (N, H)
+        h = self._gru.forward_sequence(Xn)  # (N, H)
         logits = h @ self._W_out.T + self._b_out  # (N, 2)
-        return self._softmax(logits)               # (N, 2)
+        return self._softmax(logits)  # (N, 2)
 
-    def sample_action(self, X_win: np.ndarray, epsilon: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
+    def sample_action(
+        self, X_win: np.ndarray, epsilon: float = 0.0
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Sample actions with ε-greedy exploration. Returns (actions, log_probs)."""
-        probs = self.predict_proba(X_win)          # (N, 2)
+        probs = self.predict_proba(X_win)  # (N, 2)
         N = len(probs)
         if epsilon > 0:
             explore = self._rng.uniform(size=N) < epsilon
@@ -214,9 +244,7 @@ class GRUPolicy:
             actions = np.where(explore, random_actions, greedy_actions)
         else:
             # Stochastic sampling proportional to probabilities
-            actions = np.array([
-                self._rng.choice(2, p=probs[i]) for i in range(N)
-            ])
+            actions = np.array([self._rng.choice(2, p=probs[i]) for i in range(N)])
         log_probs = np.log(probs[np.arange(N), actions] + 1e-7)
         return actions.astype(np.int8), log_probs
 
@@ -240,11 +268,15 @@ class GRUPolicy:
         d_logit = (advantages[:, None] * (action_onehot - probs)) / N  # (N, 2)
 
         # Loss for logging (negative expected reward)
-        loss = -float(np.mean(advantages * np.log(probs[np.arange(N), actions.astype(int)] + 1e-7)))
+        loss = -float(
+            np.mean(
+                advantages * np.log(probs[np.arange(N), actions.astype(int)] + 1e-7)
+            )
+        )
 
         # Gradients for output layer
-        dW_out = d_logit.T @ h    # (2, H)
-        db_out = d_logit.sum(0)   # (2,)
+        dW_out = d_logit.T @ h  # (2, H)
+        db_out = d_logit.sum(0)  # (2,)
         d_h = d_logit @ self._W_out  # (N, H)
 
         # One-step TBPTT through GRU (same truncation as NumpyGRUClassifier)
@@ -252,20 +284,31 @@ class GRUPolicy:
         t_last = T - 1
         x = Xn[:, t_last, :]
         # Recompute last-step intermediates
-        hprev = self._gru.forward_sequence(Xn[:, :t_last, :]) if t_last > 0 else np.zeros((N, gru.hidden_size), np.float32)
+        hprev = (
+            self._gru.forward_sequence(Xn[:, :t_last, :])
+            if t_last > 0
+            else np.zeros((N, gru.hidden_size), np.float32)
+        )
         z = NumpyGRUCell._sigmoid(x @ gru.W_z.T + hprev @ gru.U_z.T + gru.b_z)
         r = NumpyGRUCell._sigmoid(x @ gru.W_r.T + hprev @ gru.U_r.T + gru.b_r)
         ht = np.tanh(x @ gru.W_h.T + (r * hprev) @ gru.U_h.T + gru.b_h)
 
-        d_ht = d_h * z * (1.0 - ht ** 2)
-        d_z  = d_h * (ht - hprev) * z * (1.0 - z)
-        d_r  = (d_ht @ gru.U_h) * hprev * r * (1.0 - r)
+        d_ht = d_h * z * (1.0 - ht**2)
+        d_z = d_h * (ht - hprev) * z * (1.0 - z)
+        d_r = (d_ht @ gru.U_h) * hprev * r * (1.0 - r)
 
         grads = [
-            d_z.T @ x, d_z.T @ hprev, d_z.sum(0),
-            d_r.T @ x, d_r.T @ hprev, d_r.sum(0),
-            d_ht.T @ x, d_ht.T @ (r * hprev), d_ht.sum(0),
-            dW_out, db_out,
+            d_z.T @ x,
+            d_z.T @ hprev,
+            d_z.sum(0),
+            d_r.T @ x,
+            d_r.T @ hprev,
+            d_r.sum(0),
+            d_ht.T @ x,
+            d_ht.T @ (r * hprev),
+            d_ht.sum(0),
+            dW_out,
+            db_out,
         ]
 
         # Adam update
@@ -274,8 +317,12 @@ class GRUPolicy:
         t = self._adam_t
         for i, (p, g) in enumerate(zip(self._all_params(), grads)):
             self._m[i] = beta1 * self._m[i] + (1 - beta1) * g
-            self._v[i] = beta2 * self._v[i] + (1 - beta2) * g ** 2
-            p += lr * (self._m[i] / (1 - beta1 ** t)) / (np.sqrt(self._v[i] / (1 - beta2 ** t)) + eps)
+            self._v[i] = beta2 * self._v[i] + (1 - beta2) * g**2
+            p += (
+                lr
+                * (self._m[i] / (1 - beta1**t))
+                / (np.sqrt(self._v[i] / (1 - beta2**t)) + eps)
+            )
 
         return loss
 
@@ -283,6 +330,7 @@ class GRUPolicy:
 # ---------------------------------------------------------------------------
 # MDP Environment
 # ---------------------------------------------------------------------------
+
 
 class StressBenchMDPEnv:
     """Episode-based MDP wrapping the benchmark's per-minute data.
@@ -297,9 +345,9 @@ class StressBenchMDPEnv:
 
     def __init__(
         self,
-        X: np.ndarray,           # (N, n_features) chronological
-        y_net: np.ndarray,       # (N,) net profit bps
-        y_label: np.ndarray,     # (N,) binary profitable label
+        X: np.ndarray,  # (N, n_features) chronological
+        y_net: np.ndarray,  # (N,) net profit bps
+        y_label: np.ndarray,  # (N,) binary profitable label
         look_back: int = 30,
         episode_len: int = EPISODE_LEN,
     ):
@@ -314,7 +362,9 @@ class StressBenchMDPEnv:
 
     def _valid_starts(self):
         """Starting indices for episodes (need look_back context)."""
-        return list(range(self.look_back, self._N - self.episode_len + 1, self.episode_len // 2))
+        return list(
+            range(self.look_back, self._N - self.episode_len + 1, self.episode_len // 2)
+        )
 
     def reset_episode(self, start_idx: int | None = None) -> None:
         if start_idx is None:
@@ -363,6 +413,7 @@ def compute_returns(rewards: np.ndarray, gamma: float = 0.99) -> np.ndarray:
 # Training loop
 # ---------------------------------------------------------------------------
 
+
 def collect_batch(
     env: StressBenchMDPEnv,
     policy: GRUPolicy,
@@ -373,11 +424,13 @@ def collect_batch(
     all_windows, all_actions, all_returns = [], [], []
 
     starts = env._valid_starts()
-    chosen = np.random.choice(len(starts), size=min(n_episodes, len(starts)), replace=False)
+    chosen = np.random.choice(
+        len(starts), size=min(n_episodes, len(starts)), replace=False
+    )
 
     for idx in chosen:
         env.reset_episode(starts[idx])
-        windows = env.get_windows()               # (T, look_back, F)
+        windows = env.get_windows()  # (T, look_back, F)
         actions, _ = policy.sample_action(windows, epsilon=epsilon)
         rewards = env.get_rewards(actions)
         returns = compute_returns(rewards)
@@ -385,7 +438,7 @@ def collect_batch(
         all_actions.append(actions)
         all_returns.append(returns)
 
-    W = np.concatenate(all_windows)   # (total_steps, look_back, F)
+    W = np.concatenate(all_windows)  # (total_steps, look_back, F)
     A = np.concatenate(all_actions)
     R = np.concatenate(all_returns)
 
@@ -430,13 +483,13 @@ def evaluate_policy(
 
     # Build all windows
     windows = np.array(
-        [X[t - look_back:t] for t in range(look_back, N)],
+        [X[t - look_back : t] for t in range(look_back, N)],
         dtype=np.float32,
     )  # (N-look_back, look_back, F)
 
     probs = policy.predict_proba(windows)[:, 1]  # enter probability
     aligned_label = y_label[look_back:]
-    aligned_net   = y_net[look_back:]
+    aligned_net = y_net[look_back:]
 
     signal = (probs > threshold).astype(np.int8)
     n_trades = int(signal.sum())
@@ -453,11 +506,15 @@ def evaluate_policy(
             auroc = float(roc_auc_score(aligned_label, probs))
         except ValueError:
             auroc = float("nan")
-        oracle_cap = net_bps / ORACLE_NET_BPS * 100 if not np.isnan(net_bps) else float("nan")
+        oracle_cap = (
+            net_bps / ORACLE_NET_BPS * 100 if not np.isnan(net_bps) else float("nan")
+        )
 
     logger.info(
         "[%s] threshold=%.2f  n_trades=%d  net_bps=%.1f  AUROC=%.3f  oracle_cap=%.1f%%",
-        split_name, threshold, n_trades,
+        split_name,
+        threshold,
+        n_trades,
         net_bps if not np.isnan(net_bps) else -9999,
         auroc if not np.isnan(auroc) else -9999,
         oracle_cap if not np.isnan(oracle_cap) else -9999,
@@ -478,8 +535,11 @@ def evaluate_policy(
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Train RL execution policy (PPO-GRU, cross-mechanism)")
+    parser = argparse.ArgumentParser(
+        description="Train RL execution policy (PPO-GRU, cross-mechanism)"
+    )
     parser.add_argument("--data-dir", default="data/gold")
     parser.add_argument("--output-dir", default="results/experiments")
     parser.add_argument("--n-epochs", type=int, default=N_EPOCHS)
@@ -513,15 +573,31 @@ def main():
         sdf = df.filter(pl.col("split") == split)
         X = sdf.select(feature_cols).to_numpy().astype(np.float32)
         X = np.nan_to_num(X, nan=0.0)
-        y_net = sdf[NET_PROFIT_COL].to_numpy().astype(np.float64) if NET_PROFIT_COL in sdf.columns else np.zeros(len(sdf))
-        y_label = sdf[LABEL_COL].to_numpy().astype(np.int8) if LABEL_COL in sdf.columns else np.zeros(len(sdf), dtype=np.int8)
+        y_net = (
+            sdf[NET_PROFIT_COL].to_numpy().astype(np.float64)
+            if NET_PROFIT_COL in sdf.columns
+            else np.zeros(len(sdf))
+        )
+        y_label = (
+            sdf[LABEL_COL].to_numpy().astype(np.int8)
+            if LABEL_COL in sdf.columns
+            else np.zeros(len(sdf), dtype=np.int8)
+        )
         return X, np.nan_to_num(y_net, nan=-999.0), y_label
 
-    X_train, y_net_train, y_label_train = _extract("validation")   # Terra/LUNA
-    X_test,  y_net_test,  y_label_test  = _extract("test")         # SVB
+    X_train, y_net_train, y_label_train = _extract("validation")  # Terra/LUNA
+    X_test, y_net_test, y_label_test = _extract("test")  # SVB
 
-    logger.info("Train (Terra/LUNA): %d rows, pos=%.2f%%", len(X_train), y_label_train.mean() * 100)
-    logger.info("Test  (SVB):        %d rows, pos=%.2f%%", len(X_test),  y_label_test.mean() * 100)
+    logger.info(
+        "Train (Terra/LUNA): %d rows, pos=%.2f%%",
+        len(X_train),
+        y_label_train.mean() * 100,
+    )
+    logger.info(
+        "Test  (SVB):        %d rows, pos=%.2f%%",
+        len(X_test),
+        y_label_test.mean() * 100,
+    )
 
     # Initialize policy
     rng = np.random.default_rng(42)
@@ -529,7 +605,10 @@ def main():
 
     # Fit scaler on training features (windows)
     sample_windows = np.array(
-        [X_train[t - LOOK_BACK:t] for t in range(LOOK_BACK, min(5000 + LOOK_BACK, len(X_train)))],
+        [
+            X_train[t - LOOK_BACK : t]
+            for t in range(LOOK_BACK, min(5000 + LOOK_BACK, len(X_train)))
+        ],
         dtype=np.float32,
     )
     policy._normalize(sample_windows, fit=True)
@@ -547,7 +626,9 @@ def main():
     t0 = time.perf_counter()
     for epoch in range(1, args.n_epochs + 1):
         epsilon = max(0.02, EPSILON * (1 - epoch / args.n_epochs))
-        W, A, advantages = collect_batch(env, policy, n_episodes=EPISODE_BATCH, epsilon=epsilon)
+        W, A, advantages = collect_batch(
+            env, policy, n_episodes=EPISODE_BATCH, epsilon=epsilon
+        )
 
         loss = policy.reinforce_update(W, A, advantages, lr=LR)
 
@@ -558,38 +639,60 @@ def main():
             elapsed = time.perf_counter() - t0
             logger.info(
                 "Epoch %3d/%d  loss=%.4f  mean_adv=%.3f  eps=%.3f  %.1fs",
-                epoch, args.n_epochs, loss, ep_ret, epsilon, elapsed,
+                epoch,
+                args.n_epochs,
+                loss,
+                ep_ret,
+                epsilon,
+                elapsed,
             )
 
     # Calibrate threshold on training (Terra/LUNA) split
     logger.info("\nCalibrating threshold on Terra/LUNA hold-out...")
     cal_windows = np.array(
-        [X_train[t - LOOK_BACK:t] for t in range(LOOK_BACK, len(X_train))],
+        [X_train[t - LOOK_BACK : t] for t in range(LOOK_BACK, len(X_train))],
         dtype=np.float32,
     )
     cal_probs = policy.predict_proba(cal_windows)[:, 1]
-    cal_net   = y_net_train[LOOK_BACK:]
+    cal_net = y_net_train[LOOK_BACK:]
     threshold = calibrate_threshold(cal_probs, cal_net, min_trades=MIN_TRADES)
     logger.info("Calibrated threshold: %.3f", threshold)
 
     # Evaluate on test (SVB) — cross-mechanism
     logger.info("\nEvaluating cross-mechanism on SVB test split...")
     test_result = evaluate_policy(
-        policy, X_test, y_net_test, y_label_test,
-        look_back=LOOK_BACK, threshold=threshold, split_name="test_SVB",
+        policy,
+        X_test,
+        y_net_test,
+        y_label_test,
+        look_back=LOOK_BACK,
+        threshold=threshold,
+        split_name="test_SVB",
     )
 
     # Also evaluate on training split for comparison
     train_result = evaluate_policy(
-        policy, X_train, y_net_train, y_label_train,
-        look_back=LOOK_BACK, threshold=threshold, split_name="train_TerraLUNA",
+        policy,
+        X_train,
+        y_net_train,
+        y_label_train,
+        look_back=LOOK_BACK,
+        threshold=threshold,
+        split_name="train_TerraLUNA",
     )
 
     # Write results
     out_path = Path(args.output_dir) / "rl_agent_results.csv"
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["split", "n_trades", "net_bps_captured", "auroc", "hit_rate_above_cost",
-              "oracle_capture_pct", "threshold"]
+    fields = [
+        "split",
+        "n_trades",
+        "net_bps_captured",
+        "auroc",
+        "hit_rate_above_cost",
+        "oracle_capture_pct",
+        "threshold",
+    ]
     with open(out_path, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=fields)
         w.writeheader()
@@ -606,11 +709,13 @@ def main():
     print(f"  Meta-labeling (reference): +82.5 bps (397 trades, 50.8% oracle)")
     if test_result:
         nbps = test_result.get("net_bps_captured", float("nan"))
-        ntr  = test_result.get("n_trades", 0)
-        aur  = test_result.get("auroc", float("nan"))
+        ntr = test_result.get("n_trades", 0)
+        aur = test_result.get("auroc", float("nan"))
         ocap = test_result.get("oracle_capture_pct", float("nan"))
-        print(f"  PPO-GRU (cross-mech.):     {nbps:+.1f} bps ({ntr} trades, "
-              f"{ocap:.1f}% oracle capture, AUROC {aur:.3f})")
+        print(
+            f"  PPO-GRU (cross-mech.):     {nbps:+.1f} bps ({ntr} trades, "
+            f"{ocap:.1f}% oracle capture, AUROC {aur:.3f})"
+        )
     print("=" * 60)
 
 

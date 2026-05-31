@@ -183,9 +183,7 @@ class SpreadDepthRule:
     def fit(self, X: np.ndarray, y: np.ndarray) -> "SpreadDepthRule":
         pos_mask = y == 1
         if pos_mask.any():
-            self._depth_threshold = float(
-                np.median(X[pos_mask, self.depth_col_index])
-            )
+            self._depth_threshold = float(np.median(X[pos_mask, self.depth_col_index]))
         else:
             self._depth_threshold = self.depth_threshold
         return self

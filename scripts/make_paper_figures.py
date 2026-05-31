@@ -72,8 +72,11 @@ def figure_1_usdc_basis(dataset_path: Path, output_dir: Path, fmt: str) -> None:
     df = pl.read_parquet(str(dataset_path))
     stress = df.filter(pl.col("split") == "test").sort("ts_1m_ns")
 
-    required = ["cross_quote_basis_usdc_bps", "cross_quote_basis_usdt_bps",
-                "cross_quote_basis_maxabs_bps"]
+    required = [
+        "cross_quote_basis_usdc_bps",
+        "cross_quote_basis_usdt_bps",
+        "cross_quote_basis_maxabs_bps",
+    ]
     missing = [c for c in required if c not in stress.columns]
     if stress.is_empty() or missing:
         logger.warning("Missing columns for Figure 1: %s", missing)
@@ -96,7 +99,9 @@ def figure_1_usdc_basis(dataset_path: Path, output_dir: Path, fmt: str) -> None:
     ax.plot(dt, usdc_plot, lw=0.7, color="#003057", label="USDC basis", zorder=3)
     ax.plot(dt, usdt_plot, lw=0.7, color="#d73027", label="USDT basis", zorder=2)
     ax.plot(dt, maxabs_plot, lw=0.9, color="#F2A900", label="Max-abs basis", zorder=1)
-    ax.axhline(10, ls="--", lw=0.8, color="#F2A900", alpha=0.8, label="+10 bps threshold")
+    ax.axhline(
+        10, ls="--", lw=0.8, color="#F2A900", alpha=0.8, label="+10 bps threshold"
+    )
     ax.set_ylim(-200, 200)
     ax.set_xlabel("UTC date (SVB stress window, Mar 10–20 2023)")
     ax.set_ylabel("Basis (bps)")
@@ -107,8 +112,11 @@ def figure_1_usdc_basis(dataset_path: Path, output_dir: Path, fmt: str) -> None:
     if n_outliers > 0:
         ax.annotate(
             f"{n_outliers} windows beyond ±200 bps not shown",
-            xy=(0.01, 0.04), xycoords="axes fraction",
-            fontsize=7, color="gray", style="italic",
+            xy=(0.01, 0.04),
+            xycoords="axes fraction",
+            fontsize=7,
+            color="gray",
+            style="italic",
         )
     fig.tight_layout()
     _savefig(fig, output_dir / "figure_1_usdc_basis_svb", fmt)

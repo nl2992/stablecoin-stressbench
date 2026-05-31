@@ -81,9 +81,7 @@ _NOTIONAL_DEPTH_MAP: dict[int, float] = {
 _DEPTH_COLS = ["depth_bid_10bp_mean", "depth_ask_10bp_mean"]
 
 # Net-profit columns that will be adjusted for depth constraints
-_NET_PROFIT_TEMPLATES = {
-    q: f"net_profit_bps_q{q}" for q in _NOTIONAL_DEPTH_MAP
-}
+_NET_PROFIT_TEMPLATES = {q: f"net_profit_bps_q{q}" for q in _NOTIONAL_DEPTH_MAP}
 
 # Default evaluation task: executable_arb at $10k within 5 minutes
 _DEFAULT_TASK = "executable_arb_q10000_5m"
@@ -241,9 +239,7 @@ def _compute_forward_label(
     work = df.select([ts_col, net_col]).with_row_index("_row_idx")
 
     # Replace NaN with null so rolling_max ignores depth-limited rows
-    work = work.with_columns(
-        pl.col(net_col).fill_nan(None).alias("_clean_net")
-    )
+    work = work.with_columns(pl.col(net_col).fill_nan(None).alias("_clean_net"))
 
     ts_max = work[ts_col].max()
     ts_min = work[ts_col].min()
@@ -314,7 +310,9 @@ def apply_depth_scaling(
         exprs = [pl.col(c) * retention for c in present_depth_cols]
         scaled_min_expr = exprs[0]
         for e in exprs[1:]:
-            scaled_min_expr = pl.when(scaled_min_expr < e).then(scaled_min_expr).otherwise(e)
+            scaled_min_expr = (
+                pl.when(scaled_min_expr < e).then(scaled_min_expr).otherwise(e)
+            )
 
     if not depth_available or net_col not in df.columns:
         # Cannot simulate depth gating; return net column unchanged
@@ -345,7 +343,9 @@ def compute_metrics(
 ) -> dict:
     """Compute agreement, precision, recall, F1, exec-rate, and oracle-return metrics."""
     # Exclude rows where either label is null/nan
-    valid = ~(np.isnan(real_labels.astype(float)) | np.isnan(proxy_labels.astype(float)))
+    valid = ~(
+        np.isnan(real_labels.astype(float)) | np.isnan(proxy_labels.astype(float))
+    )
     r = real_labels[valid].astype(int)
     p = proxy_labels[valid].astype(int)
     net_v = real_net[valid]
@@ -401,8 +401,12 @@ def compute_metrics(
     real_returns = net_clean[real_pos] if real_pos.sum() > 0 else np.array([])
     proxy_returns = net_clean[proxy_pos] if proxy_pos.sum() > 0 else np.array([])
 
-    oracle_return_real = float(np.nanmean(real_returns)) if len(real_returns) > 0 else float("nan")
-    oracle_return_proxy = float(np.nanmean(proxy_returns)) if len(proxy_returns) > 0 else float("nan")
+    oracle_return_real = (
+        float(np.nanmean(real_returns)) if len(real_returns) > 0 else float("nan")
+    )
+    oracle_return_proxy = (
+        float(np.nanmean(proxy_returns)) if len(proxy_returns) > 0 else float("nan")
+    )
 
     oracle_return_diff = (
         oracle_return_proxy - oracle_return_real
@@ -416,15 +420,29 @@ def compute_metrics(
         "depth_retained_pct": round((1 - scale_factor) * 100, 0),
         "n_rows": n,
         "label_agreement": round(agreement, 4),
-        "precision_proxy": round(precision, 4) if not np.isnan(precision) else float("nan"),
+        "precision_proxy": (
+            round(precision, 4) if not np.isnan(precision) else float("nan")
+        ),
         "recall_proxy": round(recall, 4) if not np.isnan(recall) else float("nan"),
         "f1_proxy": round(f1, 4) if not np.isnan(f1) else float("nan"),
         "exec_rate_real": round(exec_rate_real, 4),
         "exec_rate_proxy": round(exec_rate_proxy, 4),
         "exec_rate_diff": round(exec_rate_proxy - exec_rate_real, 4),
-        "oracle_return_real_bps": round(oracle_return_real, 2) if not np.isnan(oracle_return_real) else float("nan"),
-        "oracle_return_proxy_bps": round(oracle_return_proxy, 2) if not np.isnan(oracle_return_proxy) else float("nan"),
-        "oracle_return_diff_bps": round(oracle_return_diff, 2) if not np.isnan(oracle_return_diff) else float("nan"),
+        "oracle_return_real_bps": (
+            round(oracle_return_real, 2)
+            if not np.isnan(oracle_return_real)
+            else float("nan")
+        ),
+        "oracle_return_proxy_bps": (
+            round(oracle_return_proxy, 2)
+            if not np.isnan(oracle_return_proxy)
+            else float("nan")
+        ),
+        "oracle_return_diff_bps": (
+            round(oracle_return_diff, 2)
+            if not np.isnan(oracle_return_diff)
+            else float("nan")
+        ),
     }
 
 
@@ -467,7 +485,11 @@ def print_summary(rows: list[dict]) -> None:
         od = r["oracle_return_diff_bps"]
 
         def _fmt(v: float, decimals: int = 3) -> str:
-            return f"{v:.{decimals}f}" if not (isinstance(v, float) and np.isnan(v)) else "  nan"
+            return (
+                f"{v:.{decimals}f}"
+                if not (isinstance(v, float) and np.isnan(v))
+                else "  nan"
+            )
 
         print(
             f"{sf:>7.0%}  {ret:>8.0f}%  {_fmt(ag):>10}  "

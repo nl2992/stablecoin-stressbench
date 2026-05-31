@@ -28,14 +28,16 @@ import matplotlib.ticker as mticker
 import numpy as np
 
 REPO = Path(__file__).parent.parent
-GRID_CSV  = REPO / "results" / "experiments_addon" / "robustness_price_execution_gap.csv"
-SUMM_CSV  = REPO / "results" / "paper_addon" / "table_8_robustness_summary.csv"
+GRID_CSV = REPO / "results" / "experiments_addon" / "robustness_price_execution_gap.csv"
+SUMM_CSV = REPO / "results" / "paper_addon" / "table_8_robustness_summary.csv"
 OUT_A = REPO / "results" / "paper_addon" / "figures" / "figure_notional_scaling.png"
-OUT_B = REPO / "results" / "paper_addon" / "figures" / "figure_8_robustness_notional_v2.png"
+OUT_B = (
+    REPO / "results" / "paper_addon" / "figures" / "figure_8_robustness_notional_v2.png"
+)
 
-C_EXEC   = "#d73027"   # red — executable rate
-C_ORACLE = "#F2A900"   # gold — oracle bps
-C_ELBOW  = "#4d4d4d"   # dark grey — elbow marker
+C_EXEC = "#d73027"  # red — executable rate
+C_ORACLE = "#F2A900"  # gold — oracle bps
+C_ELBOW = "#4d4d4d"  # dark grey — elbow marker
 
 
 def load_notional_data():
@@ -51,7 +53,8 @@ def load_notional_data():
         all_rows = list(csv.DictReader(fh))
 
     rows = [
-        r for r in all_rows
+        r
+        for r in all_rows
         if r.get("fee_regime") == "base_fee"
         and r.get("settlement_penalty_bps") == "0"
         and r.get("basis_threshold_bps") == "10"
@@ -66,15 +69,15 @@ def load_notional_data():
     for r in rows:
         q = int(r["notional"])
         notional_map[q] = {
-            "exec_pct":   float(r["executable_signal_pct"]),
+            "exec_pct": float(r["executable_signal_pct"]),
             "oracle_bps": float(r["oracle_net_bps"]),
-            "price_pct":  float(r["price_signal_pct"]),
+            "price_pct": float(r["price_signal_pct"]),
         }
 
     notionals = sorted(notional_map.keys())
-    exec_pcts  = [notional_map[q]["exec_pct"]   for q in notionals]
+    exec_pcts = [notional_map[q]["exec_pct"] for q in notionals]
     oracle_bps = [notional_map[q]["oracle_bps"] for q in notionals]
-    price_pct  = notional_map[notionals[0]]["price_pct"]
+    price_pct = notional_map[notionals[0]]["price_pct"]
 
     return notionals, exec_pcts, oracle_bps, price_pct
 
@@ -89,7 +92,8 @@ def load_summary_data():
 
     # Filter test split, base_fee, horizon=5m, threshold=10
     filtered = [
-        r for r in rows
+        r
+        for r in rows
         if r.get("split") == "test"
         and r.get("fee_regime") == "base_fee"
         and r.get("basis_threshold_bps") == "10"
@@ -108,15 +112,15 @@ def load_summary_data():
     for r in filtered:
         q = int(r["notional"])
         notional_map[q] = {
-            "exec_pct":   float(r.get("executable_signal_pct", 0)),
+            "exec_pct": float(r.get("executable_signal_pct", 0)),
             "oracle_bps": float(r.get("oracle_net_bps", 0)),
-            "price_pct":  float(r.get("price_signal_pct", 12.646)),
+            "price_pct": float(r.get("price_signal_pct", 12.646)),
         }
 
     notionals = sorted(notional_map.keys())
-    exec_pcts  = [notional_map[q]["exec_pct"]   for q in notionals]
+    exec_pcts = [notional_map[q]["exec_pct"] for q in notionals]
     oracle_bps = [notional_map[q]["oracle_bps"] for q in notionals]
-    price_pct  = notional_map[notionals[0]]["price_pct"]
+    price_pct = notional_map[notionals[0]]["price_pct"]
     return notionals, exec_pcts, oracle_bps, price_pct
 
 
@@ -128,10 +132,10 @@ def synthetic_data():
     # $100K: exec=2.866%, oracle=123.05
     # $500K: exec=0.429%, oracle=26.36
     # Add $1K extrapolation
-    notionals  = [1_000, 10_000, 50_000, 100_000, 500_000]
-    exec_pcts  = [8.5,   5.644,  4.255,  2.866,   0.429]
-    oracle_bps = [280.0, 224.57, 146.75, 123.05,  26.36]
-    price_pct  = 12.646
+    notionals = [1_000, 10_000, 50_000, 100_000, 500_000]
+    exec_pcts = [8.5, 5.644, 4.255, 2.866, 0.429]
+    oracle_bps = [280.0, 224.57, 146.75, 123.05, 26.36]
+    price_pct = 12.646
     return notionals, exec_pcts, oracle_bps, price_pct
 
 
@@ -143,36 +147,52 @@ def make_figure(out_path: Path, notionals, exec_pcts, oracle_bps, price_pct) -> 
 
     # ---- Left axis: executable rate ----
     ax1.plot(
-        notionals, exec_pcts,
-        color=C_EXEC, marker="o", ms=7, lw=2.2,
-        label="Executable rate (%)", zorder=5,
+        notionals,
+        exec_pcts,
+        color=C_EXEC,
+        marker="o",
+        ms=7,
+        lw=2.2,
+        label="Executable rate (%)",
+        zorder=5,
     )
     ax1.fill_between(notionals, exec_pcts, alpha=0.12, color=C_EXEC)
 
     # Price signal reference line
     ax1.axhline(
-        price_pct, ls="--", lw=1.3, color="#2166ac", alpha=0.85,
+        price_pct,
+        ls="--",
+        lw=1.3,
+        color="#2166ac",
+        alpha=0.85,
         label=f"Price signal rate ({price_pct:.1f}%)",
     )
 
     # ---- Right axis: oracle bps ----
     ax2.plot(
-        notionals, oracle_bps,
-        color=C_ORACLE, marker="s", ms=7, lw=2.2,
-        ls="--", label="Oracle net bps", zorder=4,
+        notionals,
+        oracle_bps,
+        color=C_ORACLE,
+        marker="s",
+        ms=7,
+        lw=2.2,
+        ls="--",
+        label="Oracle net bps",
+        zorder=4,
     )
 
     # ---- Annotate elbow: largest drop in executable rate ----
     drops = [exec_pcts[i] - exec_pcts[i + 1] for i in range(len(exec_pcts) - 1)]
-    elbow_idx = int(np.argmax(drops)) + 1   # index of the drop
-    elbow_q   = notionals[elbow_idx]
-    elbow_ep  = exec_pcts[elbow_idx]
+    elbow_idx = int(np.argmax(drops)) + 1  # index of the drop
+    elbow_q = notionals[elbow_idx]
+    elbow_ep = exec_pcts[elbow_idx]
 
     ax1.annotate(
         f"Retail ceiling\n~${elbow_q//1000}K",
         xy=(elbow_q, elbow_ep),
         xytext=(elbow_q * 1.8, elbow_ep + 1.0),
-        fontsize=9, color=C_ELBOW,
+        fontsize=9,
+        color=C_ELBOW,
         arrowprops=dict(arrowstyle="->", color=C_ELBOW, lw=1.0),
         zorder=10,
     )
@@ -181,15 +201,25 @@ def make_figure(out_path: Path, notionals, exec_pcts, oracle_bps, price_pct) -> 
     # Annotate each point on left axis
     for q, ep in zip(notionals, exec_pcts):
         ax1.text(
-            q, ep + 0.18, f"{ep:.2f}%",
-            ha="center", va="bottom", fontsize=8, color=C_EXEC,
+            q,
+            ep + 0.18,
+            f"{ep:.2f}%",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color=C_EXEC,
         )
 
     # Annotate each point on right axis
     for q, ob in zip(notionals, oracle_bps):
         ax2.text(
-            q, ob + 4, f"{ob:.0f}",
-            ha="center", va="bottom", fontsize=8, color=C_ORACLE,
+            q,
+            ob + 4,
+            f"{ob:.0f}",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color=C_ORACLE,
         )
 
     # ---- Axes formatting ----
@@ -202,8 +232,9 @@ def make_figure(out_path: Path, notionals, exec_pcts, oracle_bps, price_pct) -> 
 
     # Custom x-tick labels
     ax1.set_xticks(notionals)
-    ax1.set_xticklabels([f"${q//1000}K" if q >= 1000 else f"${q}" for q in notionals],
-                        fontsize=9)
+    ax1.set_xticklabels(
+        [f"${q//1000}K" if q >= 1000 else f"${q}" for q in notionals], fontsize=9
+    )
     ax1.get_xaxis().set_minor_formatter(mticker.NullFormatter())
 
     ax1.set_ylim(0, max(exec_pcts) * 1.35)

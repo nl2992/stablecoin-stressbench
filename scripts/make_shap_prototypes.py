@@ -366,9 +366,9 @@ def build_result_rows(
             X_terra_scaled, X_svb_scaled, proto_idx, n_nearest
         )
         for match_rank, svb_idx in enumerate(svb_nearest_idxs, start=1):
-            dist = float(np.linalg.norm(
-                X_terra_scaled[proto_idx] - X_svb_scaled[svb_idx]
-            ))
+            dist = float(
+                np.linalg.norm(X_terra_scaled[proto_idx] - X_svb_scaled[svb_idx])
+            )
             svb_row: dict = {
                 "prototype_rank": proto_rank + 1,
                 "cluster_size": cluster_size,
@@ -404,12 +404,12 @@ def make_figure(
     Right column: Nearest SVB window.
     x-axis: feature values (horizontal bar chart).
     """
-    import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
 
     # Palette
-    _TERRA_COLOR = "#d73027"   # red for Terra
-    _SVB_COLOR = "#2166ac"     # blue for SVB
+    _TERRA_COLOR = "#d73027"  # red for Terra
+    _SVB_COLOR = "#2166ac"  # blue for SVB
 
     # Group rows by prototype_rank
     prototypes: dict[int, dict] = {}
@@ -427,7 +427,8 @@ def make_figure(
     n_rows = k
     n_cols = 2
     fig, axes = plt.subplots(
-        n_rows, n_cols,
+        n_rows,
+        n_cols,
         figsize=(11, 2.6 * n_rows),
         sharey=True,
     )
@@ -440,10 +441,12 @@ def make_figure(
         proto = prototypes.get(pr)
         svb_nearest = svb_matches.get(pr, [{}])[0]  # first (nearest) SVB match
 
-        for col_idx, (record, color, title_prefix, split_label) in enumerate([
-            (proto,       _TERRA_COLOR, f"Prototype {pr}", "Terra/LUNA val"),
-            (svb_nearest, _SVB_COLOR,   f"SVB match (proto {pr})", "USDC/SVB test"),
-        ]):
+        for col_idx, (record, color, title_prefix, split_label) in enumerate(
+            [
+                (proto, _TERRA_COLOR, f"Prototype {pr}", "Terra/LUNA val"),
+                (svb_nearest, _SVB_COLOR, f"SVB match (proto {pr})", "USDC/SVB test"),
+            ]
+        ):
             ax = axes[row_idx, col_idx]
             if not record:
                 ax.set_visible(False)
@@ -468,7 +471,11 @@ def make_figure(
             basis_val = record.get("cross_quote_basis_usdc_bps")
             net_val = record.get("net_profit_bps_q10000")
 
-            exec_str = "exec=1" if exec_label_val == 1 else ("exec=0" if exec_label_val == 0 else "exec=?")
+            exec_str = (
+                "exec=1"
+                if exec_label_val == 1
+                else ("exec=0" if exec_label_val == 0 else "exec=?")
+            )
             basis_str = f"basis={basis_val:.1f}bps" if basis_val is not None else ""
             net_str = f"net={net_val:.1f}bps" if net_val is not None else ""
 
@@ -490,7 +497,7 @@ def make_figure(
     # Legend
     legend_patches = [
         mpatches.Patch(color=_TERRA_COLOR, label="Terra/LUNA prototype"),
-        mpatches.Patch(color=_SVB_COLOR,   label="Nearest SVB window"),
+        mpatches.Patch(color=_SVB_COLOR, label="Nearest SVB window"),
     ]
     fig.legend(
         handles=legend_patches,
@@ -631,8 +638,7 @@ def main() -> None:
     cluster_sizes = [(cluster_labels == c).sum() for c in range(k)]
     for c, (pidx, csize) in enumerate(zip(prototype_indices, cluster_sizes)):
         print(
-            f"  Cluster {c+1}: {csize:,} rows  "
-            f"prototype row_idx={pidx}",
+            f"  Cluster {c+1}: {csize:,} rows  " f"prototype row_idx={pidx}",
             flush=True,
         )
 

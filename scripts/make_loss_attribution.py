@@ -37,8 +37,8 @@ from pathlib import Path
 _ALL_RESULTS = Path("results/experiments/all_results.csv")
 _OUT_CSV = Path("results/paper_addon/table_loss_attribution.csv")
 TASK = "basis_usdc_1m_gt10bps"
-ORACLE_NET_BPS = 161.72755272090245   # from all_results oracle row
-ORACLE_N_TRADES = 316                  # oracle trades in test set
+ORACLE_NET_BPS = 161.72755272090245  # from all_results oracle row
+ORACLE_N_TRADES = 316  # oracle trades in test set
 
 _OUT_FIELDS = [
     "model",
@@ -53,6 +53,7 @@ _OUT_FIELDS = [
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
+
 
 def load_all_results(csv_path: Path) -> list[dict]:
     """Load all rows from all_results.csv as a list of dicts."""
@@ -89,6 +90,7 @@ def safe_int(val: str, default: int = 0) -> int:
 # ---------------------------------------------------------------------------
 # Loss attribution computation
 # ---------------------------------------------------------------------------
+
 
 def compute_loss_attribution(rows: list[dict]) -> list[dict]:
     """Compute loss attribution for each model on the target task.
@@ -129,7 +131,7 @@ def compute_loss_attribution(rows: list[dict]) -> list[dict]:
 
         net_bps = safe_float(row["net_bps_captured"])
         n_trades = safe_int(row["n_trades"])
-        fp_cost = safe_float(row["false_positive_cost"])   # negative bps (mean FP trade)
+        fp_cost = safe_float(row["false_positive_cost"])  # negative bps (mean FP trade)
 
         # Signal absence: oracle trades the model didn't take
         missing_trades = max(0, ORACLE_N_TRADES - n_trades)
@@ -139,14 +141,18 @@ def compute_loss_attribution(rows: list[dict]) -> list[dict]:
         # FP loss: expose false_positive_cost directly (it is already a loss, i.e. negative)
         fp_loss_bps = fp_cost  # e.g. -293 bps for price_threshold_10bps
 
-        attribution_rows.append({
-            "model": model,
-            "feature_set": feature_set,
-            "net_bps": round(net_bps, 2) if not math.isnan(net_bps) else "nan",
-            "n_trades": n_trades,
-            "fp_loss_bps": round(fp_loss_bps, 2) if not math.isnan(fp_loss_bps) else "nan",
-            "signal_absence_bps": round(signal_absence_bps, 2),
-        })
+        attribution_rows.append(
+            {
+                "model": model,
+                "feature_set": feature_set,
+                "net_bps": round(net_bps, 2) if not math.isnan(net_bps) else "nan",
+                "n_trades": n_trades,
+                "fp_loss_bps": (
+                    round(fp_loss_bps, 2) if not math.isnan(fp_loss_bps) else "nan"
+                ),
+                "signal_absence_bps": round(signal_absence_bps, 2),
+            }
+        )
 
     return attribution_rows
 
@@ -154,6 +160,7 @@ def compute_loss_attribution(rows: list[dict]) -> list[dict]:
 # ---------------------------------------------------------------------------
 # CSV output
 # ---------------------------------------------------------------------------
+
 
 def write_attribution_csv(rows: list[dict], out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -168,12 +175,15 @@ def write_attribution_csv(rows: list[dict], out_path: Path) -> None:
 # Formatted table
 # ---------------------------------------------------------------------------
 
+
 def print_formatted_table(rows: list[dict]) -> None:
     """Print a readable loss attribution table to stdout."""
     print()
     print("=" * 90)
     print(f"LOSS ATTRIBUTION — Task: {TASK}")
-    print(f"Oracle benchmark: {ORACLE_NET_BPS:.2f} net bps  |  Oracle n_trades: {ORACLE_N_TRADES}")
+    print(
+        f"Oracle benchmark: {ORACLE_NET_BPS:.2f} net bps  |  Oracle n_trades: {ORACLE_N_TRADES}"
+    )
     print("=" * 90)
 
     hdr = (
@@ -188,9 +198,19 @@ def print_formatted_table(rows: list[dict]) -> None:
         fp = r["fp_loss_bps"]
         sa = r["signal_absence_bps"]
 
-        net_s = f"{net:>+.1f}" if isinstance(net, (int, float)) and not math.isnan(float(str(net).replace("nan","0"))) else "   nan"
-        fp_s  = f"{fp:>+.1f}" if isinstance(fp, (int, float)) and not math.isnan(float(str(fp).replace("nan","0"))) else "    nan"
-        sa_s  = f"{sa:>+.1f}"
+        net_s = (
+            f"{net:>+.1f}"
+            if isinstance(net, (int, float))
+            and not math.isnan(float(str(net).replace("nan", "0")))
+            else "   nan"
+        )
+        fp_s = (
+            f"{fp:>+.1f}"
+            if isinstance(fp, (int, float))
+            and not math.isnan(float(str(fp).replace("nan", "0")))
+            else "    nan"
+        )
+        sa_s = f"{sa:>+.1f}"
 
         try:
             net_s = f"{float(net):>+.1f}"
@@ -211,14 +231,11 @@ def print_formatted_table(rows: list[dict]) -> None:
 
     # Narrative summary
     rows_with_trades = [
-        r for r in rows
-        if isinstance(r["net_bps"], str) is False
-        or r["net_bps"] != "nan"
+        r
+        for r in rows
+        if isinstance(r["net_bps"], str) is False or r["net_bps"] != "nan"
     ]
-    rows_with_trades = [
-        r for r in rows_with_trades
-        if r["n_trades"] > 10
-    ]
+    rows_with_trades = [r for r in rows_with_trades if r["n_trades"] > 10]
 
     if rows_with_trades:
         # Model with smallest FP loss
@@ -233,8 +250,12 @@ def print_formatted_table(rows: list[dict]) -> None:
             if fp_vals_valid:
                 best_fp = max(fp_vals_valid, key=lambda x: x[2])  # least negative
                 worst_fp = min(fp_vals_valid, key=lambda x: x[2])
-                print(f"Best FP cost:  {best_fp[0]} / {best_fp[1]}  → {best_fp[2]:+.1f} bps per FP trade")
-                print(f"Worst FP cost: {worst_fp[0]} / {worst_fp[1]}  → {worst_fp[2]:+.1f} bps per FP trade")
+                print(
+                    f"Best FP cost:  {best_fp[0]} / {best_fp[1]}  → {best_fp[2]:+.1f} bps per FP trade"
+                )
+                print(
+                    f"Worst FP cost: {worst_fp[0]} / {worst_fp[1]}  → {worst_fp[2]:+.1f} bps per FP trade"
+                )
                 print()
 
     print(
@@ -252,13 +273,16 @@ def print_formatted_table(rows: list[dict]) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     print(f"[main] Reading {_ALL_RESULTS} …")
     all_rows = load_all_results(_ALL_RESULTS)
 
     print(f"[main] Loaded {len(all_rows)} total rows; filtering task={TASK!r}")
     attribution_rows = compute_loss_attribution(all_rows)
-    print(f"[main] Computed attribution for {len(attribution_rows)} model-feature-set pairs")
+    print(
+        f"[main] Computed attribution for {len(attribution_rows)} model-feature-set pairs"
+    )
 
     write_attribution_csv(attribution_rows, _OUT_CSV)
     print_formatted_table(attribution_rows)

@@ -27,13 +27,13 @@ DATASET = REPO / "data" / "gold" / "dataset.parquet"
 OUT = REPO / "results" / "paper" / "figures" / "figure_1_usdc_basis_svb.png"
 
 # SVB window
-SVB_START_NS = 1_678_406_400_000_000_000   # 2023-03-10 00:00 UTC
-SVB_END_NS   = 1_678_838_400_000_000_000   # 2023-03-15 00:00 UTC
+SVB_START_NS = 1_678_406_400_000_000_000  # 2023-03-10 00:00 UTC
+SVB_END_NS = 1_678_838_400_000_000_000  # 2023-03-15 00:00 UTC
 
-C_USDC     = "#2166ac"   # blue
-C_USDT     = "#d73027"   # red
-C_MAXABS   = "#4d4d4d"   # dark grey
-C_THRESH   = "#fdae61"   # orange dashed
+C_USDC = "#2166ac"  # blue
+C_USDT = "#d73027"  # red
+C_MAXABS = "#4d4d4d"  # dark grey
+C_THRESH = "#fdae61"  # orange dashed
 
 
 def synthetic_figure() -> None:
@@ -60,8 +60,8 @@ def synthetic_figure() -> None:
 
     # SVB shock: day 1 (minutes 0–1440) → spike starting at minute 600
     shock_start = 600
-    shock_peak  = 900
-    shock_end   = 2800
+    shock_peak = 900
+    shock_end = 2800
 
     # Gaussian shock envelope
     def shock_envelope(n, start, peak, end, amplitude):
@@ -77,7 +77,9 @@ def synthetic_figure() -> None:
 
     # USDT basis: smaller, negative during shock (flight to USD)
     usdt_base = ar1(n, phi=0.95, sigma=1.2)
-    usdt_shock = -shock_envelope(n, shock_start + 50, shock_peak + 100, shock_end - 200, amplitude=60)
+    usdt_shock = -shock_envelope(
+        n, shock_start + 50, shock_peak + 100, shock_end - 200, amplitude=60
+    )
     usdt_basis = usdt_base + usdt_shock
 
     max_abs = np.where(np.abs(usdc_basis) >= np.abs(usdt_basis), usdc_basis, usdt_basis)
@@ -98,28 +100,52 @@ def synthetic_figure() -> None:
 
     # Shaded SVB window (full figure width — already filtered to shock)
     svb_start_dt = pd.Timestamp("2023-03-10 00:00", tz="UTC")
-    svb_end_dt   = pd.Timestamp("2023-03-14 23:59", tz="UTC")
-    ax.axvspan(mdates.date2num(svb_start_dt.to_pydatetime()),
-               mdates.date2num(svb_end_dt.to_pydatetime()),
-               alpha=0.06, color="red", zorder=0)
+    svb_end_dt = pd.Timestamp("2023-03-14 23:59", tz="UTC")
+    ax.axvspan(
+        mdates.date2num(svb_start_dt.to_pydatetime()),
+        mdates.date2num(svb_end_dt.to_pydatetime()),
+        alpha=0.06,
+        color="red",
+        zorder=0,
+    )
 
-    ax.plot(index, usdc_clip,   lw=1.0, color=C_USDC,   label="USDC basis (bps)", alpha=0.85)
-    ax.plot(index, usdt_clip,   lw=1.0, color=C_USDT,   label="USDT basis (bps)", alpha=0.85)
-    ax.plot(index, maxabs_clip, lw=1.6, color=C_MAXABS,
-            label="Max-abs basis", alpha=0.90, zorder=3)
+    ax.plot(
+        index, usdc_clip, lw=1.0, color=C_USDC, label="USDC basis (bps)", alpha=0.85
+    )
+    ax.plot(
+        index, usdt_clip, lw=1.0, color=C_USDT, label="USDT basis (bps)", alpha=0.85
+    )
+    ax.plot(
+        index,
+        maxabs_clip,
+        lw=1.6,
+        color=C_MAXABS,
+        label="Max-abs basis",
+        alpha=0.90,
+        zorder=3,
+    )
 
     # Reference lines
-    ax.axhline(10,  ls="--", lw=1.0, color=C_THRESH, alpha=0.9, label="+10 bps threshold")
+    ax.axhline(
+        10, ls="--", lw=1.0, color=C_THRESH, alpha=0.9, label="+10 bps threshold"
+    )
     ax.axhline(-10, ls="--", lw=1.0, color=C_THRESH, alpha=0.9, label="_nolegend_")
-    ax.axhline(0,   ls="-",  lw=0.6, color="black",  alpha=0.4)
+    ax.axhline(0, ls="-", lw=0.6, color="black", alpha=0.4)
 
     # Shade region above 10 bps
-    ax.fill_between(index, 10, usdc_clip, where=usdc_clip > 10,
-                    alpha=0.12, color=C_USDC, interpolate=True)
+    ax.fill_between(
+        index,
+        10,
+        usdc_clip,
+        where=usdc_clip > 10,
+        alpha=0.12,
+        color=C_USDC,
+        interpolate=True,
+    )
 
     # Rate annotation
     pct_above = np.mean(np.abs(usdc_basis) > 10) * 100
-    peak_val  = np.max(usdc_basis)
+    peak_val = np.max(usdc_basis)
     ax.annotate(
         f"Peak: {peak_val:.0f} bps\n({pct_above:.1f}% of minutes > |10 bps|)",
         xy=(index[shock_peak], min(clip, peak_val)),
@@ -144,15 +170,20 @@ def synthetic_figure() -> None:
 
     if n_outliers > 0:
         fig.text(
-            0.01, 0.01,
+            0.01,
+            0.01,
             f"Note: {n_outliers} minutes clipped at ±{clip} bps for display clarity.",
-            fontsize=7, color="grey",
+            fontsize=7,
+            color="grey",
         )
 
     fig.text(
-        0.5, -0.02,
+        0.5,
+        -0.02,
         "Reconstructed from published summary statistics (synthetic illustration).",
-        ha="center", fontsize=7, color="grey",
+        ha="center",
+        fontsize=7,
+        color="grey",
     )
 
     fig.tight_layout()
@@ -170,8 +201,7 @@ def real_figure() -> None:
 
     df = pl.read_parquet(str(DATASET))
     stress = df.filter(
-        (pl.col("ts_1m_ns") >= SVB_START_NS)
-        & (pl.col("ts_1m_ns") <= SVB_END_NS)
+        (pl.col("ts_1m_ns") >= SVB_START_NS) & (pl.col("ts_1m_ns") <= SVB_END_NS)
     ).sort("ts_1m_ns")
 
     if stress.is_empty():
@@ -205,22 +235,37 @@ def real_figure() -> None:
 
     fig, ax = plt.subplots(figsize=(11, 4.5))
     svb_start_dt = pd.Timestamp("2023-03-10", tz="UTC")
-    svb_end_dt   = pd.Timestamp("2023-03-15", tz="UTC")
-    ax.axvspan(mdates.date2num(svb_start_dt.to_pydatetime()),
-               mdates.date2num(svb_end_dt.to_pydatetime()),
-               alpha=0.06, color="red", zorder=0)
+    svb_end_dt = pd.Timestamp("2023-03-15", tz="UTC")
+    ax.axvspan(
+        mdates.date2num(svb_start_dt.to_pydatetime()),
+        mdates.date2num(svb_end_dt.to_pydatetime()),
+        alpha=0.06,
+        color="red",
+        zorder=0,
+    )
 
     ax.plot(dt_list, usdc_c, lw=1.0, color=C_USDC, label="USDC basis (bps)", alpha=0.85)
     if usdt_c is not None:
-        ax.plot(dt_list, usdt_c, lw=1.0, color=C_USDT, label="USDT basis (bps)", alpha=0.85)
+        ax.plot(
+            dt_list, usdt_c, lw=1.0, color=C_USDT, label="USDT basis (bps)", alpha=0.85
+        )
     ax.plot(dt_list, maxabs_c, lw=1.6, color=C_MAXABS, label="Max-abs basis", alpha=0.9)
 
-    ax.axhline(10,  ls="--", lw=1.0, color=C_THRESH, alpha=0.9, label="+10 bps threshold")
+    ax.axhline(
+        10, ls="--", lw=1.0, color=C_THRESH, alpha=0.9, label="+10 bps threshold"
+    )
     ax.axhline(-10, ls="--", lw=1.0, color=C_THRESH, alpha=0.9)
-    ax.axhline(0,   ls="-",  lw=0.6, color="black",  alpha=0.4)
+    ax.axhline(0, ls="-", lw=0.6, color="black", alpha=0.4)
 
-    ax.fill_between(dt_list, 10, usdc_c, where=usdc_c > 10,
-                    alpha=0.12, color=C_USDC, interpolate=True)
+    ax.fill_between(
+        dt_list,
+        10,
+        usdc_c,
+        where=usdc_c > 10,
+        alpha=0.12,
+        color=C_USDC,
+        interpolate=True,
+    )
 
     ax.set_ylim(-clip * 1.05, clip * 1.05)
     ax.set_ylabel("Basis (bps)", fontsize=11)
@@ -237,9 +282,11 @@ def real_figure() -> None:
 
     if n_outliers > 0:
         fig.text(
-            0.01, 0.01,
+            0.01,
+            0.01,
             f"Note: {n_outliers} minutes clipped at ±{clip} bps for display clarity.",
-            fontsize=7, color="grey",
+            fontsize=7,
+            color="grey",
         )
 
     fig.tight_layout()

@@ -28,28 +28,32 @@ import numpy as np
 REPO = Path(__file__).parent.parent
 ALL_RESULTS = REPO / "results" / "experiments" / "all_results.csv"
 OUT_PAPER = REPO / "results" / "paper" / "figures" / "figure_3_cumulative_pnl.png"
-OUT_ADDON = REPO / "results" / "paper_addon" / "figures" / "figure_16_cumulative_pnl_v2.png"
+OUT_ADDON = (
+    REPO / "results" / "paper_addon" / "figures" / "figure_16_cumulative_pnl_v2.png"
+)
 
 # ---------------------------------------------------------------------------
 # Colors per spec
 # ---------------------------------------------------------------------------
-C_ORACLE  = "#F2A900"      # gold
-C_LGBM    = "#003057"      # navy
-C_PRICE   = "#d73027"      # red
-C_NOTRADE = "#bababa"      # dashed grey
-C_META    = "#2ca02c"      # green (cross-mechanism meta-label)
+C_ORACLE = "#F2A900"  # gold
+C_LGBM = "#003057"  # navy
+C_PRICE = "#d73027"  # red
+C_NOTRADE = "#bababa"  # dashed grey
+C_META = "#2ca02c"  # green (cross-mechanism meta-label)
 
 # ---------------------------------------------------------------------------
 # Read all_results.csv and extract key statistics
 # ---------------------------------------------------------------------------
+
 
 def load_results(path: Path) -> list[dict]:
     with open(path) as fh:
         return list(csv.DictReader(fh))
 
 
-def get_stat(rows: list[dict], task: str, model: str, field: str,
-             feature_set: str | None = None) -> float | None:
+def get_stat(
+    rows: list[dict], task: str, model: str, field: str, feature_set: str | None = None
+) -> float | None:
     for r in rows:
         if r["task"] != task or r["model"] != model:
             continue
@@ -66,6 +70,7 @@ def get_stat(rows: list[dict], task: str, model: str, field: str,
 # ---------------------------------------------------------------------------
 # Simulate cumulative P&L time series
 # ---------------------------------------------------------------------------
+
 
 def simulate_pnl(
     n_trades: int,
@@ -114,63 +119,85 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
     # SVB window: March 10–15 2023. Assuming test split covers ~11 weeks,
     # the SVB shock is in the final portion. Use indices 12000–14400 as shock window.
     SVB_START = 12_000
-    SVB_END   = 14_400
+    SVB_END = 14_400
 
     # ---- Oracle ----
-    oracle_bps    = 161.73
+    oracle_bps = 161.73
     oracle_trades = 316
 
     # ---- PriceBasis10bps ----
-    price_bps    = -269.46
+    price_bps = -269.46
     price_trades = 2002
 
     # ---- Best LightGBM variant ----
     # Paper Table 7: lgbm@all features, basis_usdc_1m_gt10bps, +17.2 bps, 106 trades
     # (from experiments_addon/all_results.csv — the addon run with full feature sets)
     ADDON_RESULTS = REPO / "results" / "experiments_addon" / "all_results.csv"
-    lgbm_bps    = 17.24
+    lgbm_bps = 17.24
     lgbm_trades = 106
     if ADDON_RESULTS.exists():
         addon_rows = load_results(ADDON_RESULTS)
         lgbm_candidates = [
-            r for r in addon_rows
-            if r["task"] == TASK and r["model"] == "lgbm"
+            r
+            for r in addon_rows
+            if r["task"] == TASK
+            and r["model"] == "lgbm"
             and r.get("n_trades", "0") not in ("", "0", "nan")
         ]
         if lgbm_candidates:
-            best = max(lgbm_candidates, key=lambda r: float(r.get("net_bps_captured") or -999))
-            lgbm_bps    = float(best["net_bps_captured"])
+            best = max(
+                lgbm_candidates, key=lambda r: float(r.get("net_bps_captured") or -999)
+            )
+            lgbm_bps = float(best["net_bps_captured"])
             lgbm_trades = int(best["n_trades"])
 
     # ---- Cross-mechanism meta-labeling (Paper Table 8) ----
     # Trained on Terra/LUNA, evaluated on SVB; +82.5 bps, 397 trades
-    meta_bps    = 82.5
+    meta_bps = 82.5
     meta_trades = 397
 
     # Simulate time series then normalize to per-trade mean net bps.
     # Dividing cumulative sum by total n_trades scales each curve so it ends
     # at the model's mean net bps per trade — directly comparable to the oracle
     # gap table and the per-trade values cited throughout the paper.
-    oracle_cum = simulate_pnl(
-        oracle_trades, oracle_bps, N_MINUTES, rng,
-        cluster_around=[(SVB_START, SVB_END)],
-        noise_scale=0.0,
-    ) / oracle_trades
+    oracle_cum = (
+        simulate_pnl(
+            oracle_trades,
+            oracle_bps,
+            N_MINUTES,
+            rng,
+            cluster_around=[(SVB_START, SVB_END)],
+            noise_scale=0.0,
+        )
+        / oracle_trades
+    )
 
-    price_cum = simulate_pnl(
-        price_trades, price_bps, N_MINUTES, rng,
-        cluster_around=[(SVB_START, SVB_END)],
-        noise_scale=0.0,
-    ) / price_trades
+    price_cum = (
+        simulate_pnl(
+            price_trades,
+            price_bps,
+            N_MINUTES,
+            rng,
+            cluster_around=[(SVB_START, SVB_END)],
+            noise_scale=0.0,
+        )
+        / price_trades
+    )
 
     lgbm_cum = simulate_pnl(
-        lgbm_trades, lgbm_bps, N_MINUTES, rng,
+        lgbm_trades,
+        lgbm_bps,
+        N_MINUTES,
+        rng,
         cluster_around=[(SVB_START, SVB_END)],
         noise_scale=0.0,
     ) / max(lgbm_trades, 1)
 
     meta_cum = simulate_pnl(
-        meta_trades, meta_bps, N_MINUTES, rng,
+        meta_trades,
+        meta_bps,
+        N_MINUTES,
+        rng,
         cluster_around=[(SVB_START, SVB_END)],
         noise_scale=0.0,
     ) / max(meta_trades, 1)
@@ -201,37 +228,74 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
     # Shade SVB window
     ax.axvspan(SVB_START, SVB_END, alpha=0.08, color="red", label="_nolegend_")
     ax.text(
-        (SVB_START + SVB_END) / 2, ax.get_ylim()[0] if False else 0,
+        (SVB_START + SVB_END) / 2,
+        ax.get_ylim()[0] if False else 0,
         "SVB shock\nMar 10–15",
-        ha="center", va="bottom", fontsize=7.5, color="darkred",
+        ha="center",
+        va="bottom",
+        fontsize=7.5,
+        color="darkred",
         transform=ax.get_xaxis_transform(),
     )
 
-    ax.plot(x, oracle_cum, color=C_ORACLE, lw=2.5, label="Oracle (hindsight ceiling)",
-            zorder=5)
-    ax.plot(x, meta_cum,   color=C_META,   lw=2.0, ls="-.",
-            label=f"Cross-mech meta-label (Terra/LUNA train, {meta_trades} trades)",
-            zorder=4)
-    ax.plot(x, lgbm_cum,   color=C_LGBM,   lw=1.8,
-            label=f"LightGBM best (calm train, {lgbm_trades} trades)", zorder=3)
-    ax.plot(x, price_cum,  color=C_PRICE,   lw=1.8,
-            label="PriceBasis10bps (2,002 trades)", zorder=2)
-    ax.plot(x, notrade_cum, color=C_NOTRADE, lw=1.2, ls="--",
-            label="NoTrade (floor)", zorder=1)
+    ax.plot(
+        x,
+        oracle_cum,
+        color=C_ORACLE,
+        lw=2.5,
+        label="Oracle (hindsight ceiling)",
+        zorder=5,
+    )
+    ax.plot(
+        x,
+        meta_cum,
+        color=C_META,
+        lw=2.0,
+        ls="-.",
+        label=f"Cross-mech meta-label (Terra/LUNA train, {meta_trades} trades)",
+        zorder=4,
+    )
+    ax.plot(
+        x,
+        lgbm_cum,
+        color=C_LGBM,
+        lw=1.8,
+        label=f"LightGBM best (calm train, {lgbm_trades} trades)",
+        zorder=3,
+    )
+    ax.plot(
+        x,
+        price_cum,
+        color=C_PRICE,
+        lw=1.8,
+        label="PriceBasis10bps (2,002 trades)",
+        zorder=2,
+    )
+    ax.plot(
+        x,
+        notrade_cum,
+        color=C_NOTRADE,
+        lw=1.2,
+        ls="--",
+        label="NoTrade (floor)",
+        zorder=1,
+    )
 
     # Annotate final values (per-trade mean net bps)
     pad = N_MINUTES * 0.01
     for cum, color, label in [
         (oracle_cum, C_ORACLE, f"{oracle_cum[-1]:+.1f} bps/trade"),
-        (meta_cum,   C_META,   f"{meta_cum[-1]:+.1f} bps/trade"),
-        (lgbm_cum,  C_LGBM,   f"{lgbm_cum[-1]:+.1f} bps/trade"),
-        (price_cum, C_PRICE,  f"{price_cum[-1]:+.1f} bps/trade"),
+        (meta_cum, C_META, f"{meta_cum[-1]:+.1f} bps/trade"),
+        (lgbm_cum, C_LGBM, f"{lgbm_cum[-1]:+.1f} bps/trade"),
+        (price_cum, C_PRICE, f"{price_cum[-1]:+.1f} bps/trade"),
     ]:
         ax.annotate(
             label,
             xy=(N_MINUTES - 1, cum[-1]),
             xytext=(N_MINUTES - 1 + pad, cum[-1]),
-            fontsize=8, color=color, va="center",
+            fontsize=8,
+            color=color,
+            va="center",
             arrowprops=dict(arrowstyle="-", color=color, lw=0.8),
         )
 
