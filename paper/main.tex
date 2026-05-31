@@ -70,14 +70,16 @@ microstructure is mechanism-invariant.
 A PPO-GRU agent trained on the same cross-mechanism protocol converges
 to NoTrade. The 2.3\% positive rate in the Terra/LUNA training split
 produces a reward signal too sparse to calibrate entry timing,
-confirming that explicit positive examples at training time --- not
-sequential observability --- are the key requirement.
+confirming that explicit positive examples at training time, not
+sequential observability, are the key requirement.
 To our knowledge, this is the first benchmark to provide per-minute
-execution-aware labels for stablecoin arbitrage: labels that account
-for order-book depth, VWAP slippage, and settlement costs rather than
-treating quoted price gaps as profit proxies, with documented depth
-provenance for every observation, a hindsight oracle ceiling, and
-cross-mechanism transfer evaluation.
+execution-aware stablecoin labels grounded in order-book depth, VWAP
+slippage, and settlement costs rather than quoted price gaps.
+Three features distinguish it from prior work: documented depth
+provenance for every label observation, a hindsight oracle ceiling
+that calibrates the performance gap, and cross-mechanism transfer
+evaluation demonstrating that execution microstructure is
+mechanism-invariant across structurally different stress events.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -172,27 +174,20 @@ Section~\ref{sec:conclusion} concludes.
 \label{sec:related}
 
 \tp{Stablecoin stress.}
-The USDC/SVB episode produced well-documented price fragmentation in
-CEX markets.
-Uhlig \cite{uhlig2022luna} analyses the reflexive mechanics of the
-Terra/LUNA collapse, which we use as our cross-mechanism validation
-split: the algorithmic redemption spiral provides a structurally
-different stress trigger than the SVB bank shock, making it a clean
-out-of-distribution test for mechanism-invariant microstructure
-features.
-Griffin and Shams \cite{griffin2020tether} study Tether price
-manipulation via on-chain flows; their finding that quoted prices can
-reflect non-fundamental demand informs our decision to separate optical
-from executable dislocations rather than treating any price gap as an
-arbitrage signal.
+Uhlig \cite{uhlig2022luna} analyses the Terra/LUNA collapse, which
+we use as a cross-mechanism validation split: the algorithmic
+redemption spiral provides a structurally different stress trigger
+than the SVB bank shock, making it a clean out-of-distribution test
+for mechanism-invariant microstructure.
+Griffin and Shams \cite{griffin2020tether} find that quoted prices
+can reflect non-fundamental demand, informing our decision to separate
+optical from executable dislocations.
 
 \tp{Limits to arbitrage and crypto fragmentation.}
 Shleifer and Vishny \cite{shleifer1997limits} and Gromb and Vayanos
-\cite{gromb2010limits} establish the theoretical framework: arbitrage
-is limited by capital constraints and execution frictions, not just
-price divergence.
-We operationalise this directly by constructing execution-aware labels
-that apply these frictions at the per-minute level.
+\cite{gromb2010limits} establish that arbitrage is limited by capital
+constraints and execution frictions; we operationalise this at the
+per-minute label level.
 Makarov and Schoar \cite{makarov2020trading} show empirically that
 cross-venue crypto price gaps persist for minutes to hours and are not
 executable profits once latency and depth are accounted for; their
@@ -215,32 +210,28 @@ that learns when the primary signal produces true versus false positives.
 We adopt this architecture in \S\ref{sec:diagnostics}, using a
 LightGBM secondary model conditioned on primary-signal fires to learn
 the microstructure signature of executable windows.
-The cross-mechanism variant --- training on Terra/LUNA and evaluating
-on SVB --- extends meta-labeling to out-of-distribution stress events,
-which to our knowledge has not been done before.
-Adams and MacKay \cite{adamsmackay2007bocpd} introduce Bayesian online
-changepoint detection (BOCPD).
-Cintra and Holloway \cite{cintra2023bocpd} apply it to detect the
-Terra depeg 12~hours early from Curve AMM pool reserves, which
-motivated us to test BOCPD as a stress-regime pre-filter.
-We find it achieves only AUROC~0.23 on CEX cross-quote data, because
-AMM reserves accumulate gradually while CEX basis is mean-reverting ---
-a signal-type distinction that explains why their result does not
-transfer to our setting.
+The cross-mechanism variant, training on Terra/LUNA and evaluating on
+SVB, extends meta-labeling to out-of-distribution stress events, which
+to our knowledge has not been done before.
+Cintra and Holloway \cite{cintra2023bocpd} apply BOCPD
+\cite{adamsmackay2007bocpd} to detect the Terra depeg 12~hours early
+from Curve AMM pool reserves.
+We test BOCPD as a stress-regime pre-filter and find AUROC~0.23 on
+CEX cross-quote data: AMM reserves accumulate gradually, but CEX basis
+is mean-reverting, explaining why their result does not transfer.
 Moallemi and Wang \cite{moallemi2022rl} and Ning et al.\
 \cite{ning2021ddql} apply RL to optimal order execution in equity
-markets, establishing the MDP framing we adopt in \S\ref{sec:rl_baseline}.
-Our application differs in that the training-distribution mismatch
-identified in \S\ref{sec:seq_results} makes cross-mechanism
-initialisation a necessary precondition for any positive result, a
-constraint that does not arise in the stationary equity execution
-settings they study.
+markets, establishing the finite-horizon MDP framing we adopt in
+\S\ref{sec:rl_baseline}; we additionally show that cross-mechanism
+initialisation is a necessary precondition in the non-stationary
+stress-event setting.
 To our knowledge, this is the first benchmark to provide per-minute
-execution-aware labels for stablecoin arbitrage: labels that account
-for order-book depth, VWAP slippage, and settlement costs rather than
-treating quoted price gaps as profit proxies, with documented depth
-provenance, a hindsight oracle ceiling, and cross-mechanism transfer
-evaluation.
+execution-aware stablecoin labels grounded in order-book depth, VWAP
+slippage, and settlement costs rather than quoted price gaps.
+Three features distinguish it from prior work: documented depth
+provenance for every label observation, a hindsight oracle ceiling
+calibrating the performance gap, and cross-mechanism transfer
+evaluation across structurally different stress mechanisms.
 
 
 %% =============================================================
@@ -421,7 +412,10 @@ Primary task: \task{basis\_usdc\_1m\_gt10bps}.
 Parameters: $c{=}10\bps$, taker fee 4\,bps/side, $\delta{=}5\bps$.
 Primary economic task: \task{executable\_arb\_q10000\_5m}.
 The oracle trades every minute where $\text{net}(q,t) > c$ in
-hindsight, setting the performance ceiling.
+hindsight, setting the performance ceiling: a hypothetical trader
+with foreknowledge who enters only the 2.88\% of minutes that will be
+profitable and never the 97.12\% that will not, providing a ceiling no
+deployable model can exceed.
 
 
 %% =============================================================
@@ -569,8 +563,8 @@ route-complete L2 archives for those venues.
 \subsection{Oracle Gap: Profitable Windows Exist but Only in Hindsight}
 \label{sec:oracle_gap}
 
-The oracle earns $+162.2\bps$ on \task{basis\_usdc\_1m\_gt10bps}
-(315 trades); $+225.0\bps$ on \task{executable\_arb\_q10000\_5m}.
+The oracle earns $+162.2\bps$ on the basis task (315 trades) and
+$+225.0\bps$ on the executable arbitrage task.
 Figure~\ref{fig:cumulative_pnl} shows the evolution: the price rule
 diverges sharply negative while the oracle climbs steadily.
 
@@ -731,9 +725,9 @@ MLP-Window (30-min) & $-340.7$ & 1{,}052 & 0.648 & 502\,bps\\
 Both models are deeply negative, confirming the oracle gap is
 structural and not closed by temporal sequence modelling.
 The high AUROC (0.80 for GRU) combined with catastrophic economic
-performance illustrates the same AUROC-vs-economics disconnect
-observed for the price-threshold rule (\S\ref{sec:ladder}):
-ranking accuracy does not translate to positive net returns when
+performance illustrates the same disconnect observed for the
+price-threshold rule in \S\ref{sec:ladder}.
+Ranking accuracy does not translate to positive net returns when
 97\% of windows are false positives.
 The failure mode is the training split: calm-control windows
 contain zero positive stress examples, so the model learns
@@ -775,10 +769,9 @@ This is consistent with mechanism-invariant execution microstructure:
 the same order-book features that predict profitable windows during
 an algorithmic collapse (Terra/LUNA) also predict them during a
 fiat-reserve shock (SVB).
-The meta-model's dominant features mirror the main SHAP ranking:
-\texttt{depth\_ask\_10bp\_mean} and \texttt{spread\_bps\_mean} lead,
-consistent with the SHAP analysis below (\S\ref{sec:shap}), which
-identifies the same depth and spread features as the leading
+The meta-model's dominant features mirror the main SHAP ranking.
+Ask-side depth and bid-ask spread lead, consistent with the SHAP
+analysis below (\S\ref{sec:shap}), which identifies the same
 microstructure signals.
 The intuition is that regardless of whether the stress trigger is an
 algorithmic redemption spiral or a bank reserve shock, the order book
@@ -827,9 +820,10 @@ mean-reverting, making changepoint detection unreliable on CEX prices.
 \tp{False-positive structural diagnosis.}
 \texttt{PriceBasis10bps} produces 2,002 trades; 581 (29\%) are
 false positives at mean $-38.7\bps$.
-The structural cause: TP windows have mean
-$|b_{\text{USDC}}| = 344\bps$ (large USDC discount), while FP windows
-have mean $|b_{\text{USDC}}| = 0.56\bps$ (essentially zero).
+The structural cause is route-direction mismatch: true-positive
+windows have a mean USDC basis of 344\,bps, reflecting a genuine
+USDC discount, while false-positive windows have a mean basis of just
+0.56\,bps, essentially zero.
 FP trades are triggered by \emph{USDT} route dislocations (27.4\% of
 minutes) where the USDC route is not simultaneously profitable.
 The false-positive windows show \emph{higher} average bid depth
@@ -895,8 +889,9 @@ a retail ceiling (\$10K--\$50K) rather than a uniform fee floor.
 Detection mechanisms also differ: Curve LP reserve imbalance
 accumulates \emph{gradually} (enabling BOCPD early warning), whereas
 CEX basis is mean-reverting and yields BOCPD AUROC~0.23
-(\S\ref{sec:diagnostics}): stress is first detectable in on-chain
-liquidity, not in CEX prices.
+(\S\ref{sec:diagnostics}).
+Stress is therefore first detectable in on-chain liquidity, not in
+CEX prices.
 Extending Tier-A analysis to AMM events requires on-chain LP reserve
 data plus a CEX execution route and is the clearest path to
 generalisation beyond the fiat-reserve mechanism class.
@@ -985,9 +980,9 @@ as the dominant structural barrier.
 All supervised models observe a feature snapshot and classify whether
 the current minute will be profitable; they cannot learn to delay entry
 until depth has withdrawn to a favourable level.
-An RL agent, by contrast, can learn a sequential entry policy:
-observe the depth trajectory, wait for the withdrawal signature to
-mature, and enter at the optimal point in the sequence.
+An RL agent, by contrast, can learn a sequential entry policy,
+observing the depth trajectory, waiting for the withdrawal signature
+to mature, and entering at the optimal point in the sequence.
 
 We evaluate whether this sequential framing closes any portion of
 the 40--80\,bps timing component using the PPO-GRU agent described
@@ -1023,12 +1018,13 @@ MLP-Window supervised (calm-ctrl)   & $-340.7$ & 1{,}052\\
 
 The PPO-GRU converges to a degenerate NoTrade policy: it makes zero
 entries on the SVB test split despite achieving AUROC~0.74 on the test
-feature distribution.
+feature distribution (the AUROC reflects entry-probability scores, not
+trades; the calibrated threshold is never crossed).
 The failure mechanism is distinct from the supervised GRU case.
 The policy \emph{can} rank windows (AUROC~0.74) but learns to never
 enter.
 The 2.30\% positive rate in the Terra/LUNA training split produces a
-reward signal too sparse to calibrate entry timing --- the agent's
+reward signal too sparse to calibrate entry timing: the agent's
 expected reward from entering at any given minute is negative, so it
 optimises by abstaining.
 
