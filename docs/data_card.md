@@ -12,9 +12,9 @@ StressBench is a transaction-cost-aware benchmark dataset for detecting, forecas
 |---|---|
 | **Version** | 0.1.0 |
 | **Date range** | 2022-01-10 – 2024-01-21 |
-| **Gold rows** | 47,487 (1-minute bars) |
+| **Gold rows** | 56,134 (1-minute bars in the current committed dataset) |
 | **Gold columns** | 125 (features + labels + meta) |
-| **Venues** | Binance spot, Coinbase REST, Kraken WS |
+| **Venues** | Binance spot/futures, Coinbase REST/WS support, Kraken WS support |
 | **Instruments** | 18 (USDC, USDT, DAI, BTC cross-pairs) |
 | **On-chain** | Ethereum mainnet ERC-20 transfers (USDC, USDT, DAI) |
 | **License** | MIT |
@@ -90,7 +90,7 @@ Manually curated issuer-level events for USDC (Circle):
 | Etherscan ERC-20 transfers | `fetch_real_data.py` | `normalize_etherscan_transfers` | `feat_settlement_1m` | — |
 | The Graph Uniswap v3 swaps | `fetch_real_data.py` | `normalize_uniswap_swaps` | `feat_settlement_1m` | — |
 
-> **depth_source** tags each Silver book row by data quality. Valid values: `real_l2_snapshot` (full book snapshot from WebSocket/REST), `real_l2_incremental` (incremental diff updates reconstructed into full book), and `synthetic_kline` (5-level synthetic ladder inferred from OHLCV klines). Only `real_l2_snapshot` and `real_l2_incremental` rows are used for paper-grade net-profit computations. `synthetic_kline` rows are acceptable only for price-reference features.
+> **depth_source** tags each Silver book row by data quality. Valid values: `real_l2_snapshot` (full book snapshot from WebSocket/REST), `real_l2_incremental` (incremental diff updates reconstructed into full book), and `synthetic_kline` (5-level synthetic ladder inferred from OHLCV klines). Net-profit rows carry provenance through `depth_source`, `depth_sources_used`, and `is_paper_grade_depth`; claim scope for proxy legs is documented in `docs/execution_route_coverage.md`.
 
 ---
 
@@ -142,7 +142,7 @@ One row per UTC minute; produced by `scripts/build_features.py`.
 | `net_profit_bps_q100000` | Same at $100K notional |
 | `net_profit_bps_q500000` | Same at $500K notional |
 | `buy_venue` / `sell_venue` | Best route identified by the VWAP walk |
-| `depth_source` | One of `"real_l2_snapshot"`, `"real_l2_incremental"`, or `"synthetic_kline"` — indicates book data quality; only `real_l2_*` values are used for paper-grade net-profit labels |
+| `depth_source` | One of `"real_l2_snapshot"`, `"real_l2_incremental"`, or `"synthetic_kline"` — indicates book data quality for the selected route |
 
 ### Book microstructure columns (feat_book_1m, aggregated in dataset.parquet)
 
@@ -166,7 +166,7 @@ One row per UTC minute; produced by `scripts/build_features.py`.
 
 Binary columns (`_gt{N}bps`) are `int8` — 1 if `|future_basis| > N bps`.  Regression targets (no threshold suffix) are `float64` in basis points.
 
-**Executable arbitrage labels** (notional × horizon): `label_executable_arb_q{10000,50000}__{1m,5m}_gt0bps` — 1 if net_profit_bps > 0 over the next H minutes at the given notional size.
+**Executable arbitrage labels** (notional × horizon): `label_arb_q{10000,50000,100000,500000}_{1m,5m,15m}_gt{0,5,10}bps` — 1 if net profit exceeds the threshold over the next horizon at the given notional size.
 
 **Regime labels**: `label_regime_{calm,stress,recovery}` — manual event-based regime tags.
 
@@ -178,16 +178,20 @@ Binary columns (`_gt{N}bps`) are `int8` — 1 if `|future_basis| > N bps`.  Regr
 
 | Split | Rows | Dates |
 |---|---|---|
-| Train (3 control windows) | 20,125 | ~14 days |
-| Validation (Terra/Luna 2022) | 11,523 | ~8 days |
-| Test (USDC/SVB depeg 2023) | 15,839 | ~11 days |
-| **Total** | **47,487** | **~33 days** |
+| Train (3 control windows) | 28,776 | calm-control windows |
+| Validation (Terra/Luna 2022) | 11,526 | May 2022 stress window |
+| Test (USDC/SVB depeg 2023) | 15,832 | Mar 2023 stress and recovery window |
+| **Total** | **56,134** | current `data/gold/dataset.parquet` |
+
+The frozen baseline paper tables use the filtered benchmark-freeze view recorded
+in `results/paper/table_1_data_coverage.csv` (47,487 rows). Current add-on
+experiments read the committed Gold dataset directly.
 
 ---
 
 ## Known Limitations
 
-1. **Depth coverage by venue**: The Gold dataset primarily uses Binance USDM futures bookDepth for BTC-route VWAP execution labels. The Silver pipeline supports Coinbase WebSocket L2 and Kraken WebSocket book (via live capture) and Tardis snapshots (via archive), but **full historical L2 for Coinbase and Kraken during the SVB period (March 2023) requires a Tardis subscription not included in the committed dataset.parquet**. Rows where Coinbase/Kraken L2 is unavailable use price-reference features only; net-profit labels are computed on the available real-L2 routes. See `depth_sources_used` and `is_paper_grade_depth` columns for per-row provenance. The phrase "execution-grade" refers to rows with at least one `real_l2_snapshot` or `real_l2_incremental` depth source — not necessarily full three-venue coverage.
+1. **Depth coverage by route leg**: The Gold dataset primarily uses Binance depth and kline-derived proxy depth for BTC-route VWAP execution labels. The Silver pipeline supports Coinbase WebSocket L2, Kraken WebSocket book (via live capture), and Tardis snapshots (via archive), but **full historical L2 for Coinbase and Kraken during the SVB period (March 2023) requires a Tardis subscription not included in the committed dataset.parquet**. Rows where full L2 is unavailable retain price-reference and proxy-depth provenance; net-profit labels are computed on the available route books. See `depth_source`, `depth_sources_used`, and `is_paper_grade_depth` columns for per-row provenance. The phrase "execution-grade" refers to committed VWAP labels with documented route-level depth provenance — not necessarily full three-venue L2 coverage.
 
 2. **Execution cost overestimate**: Net profit computations use BTCUSDT futures band-average prices as a proxy for the BTCUSDC buy side. This overstates price impact for small trades but is directionally correct for stress periods.
 

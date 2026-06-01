@@ -2,7 +2,7 @@
 
 ## Study in One Paragraph
 
-This paper introduces **Stablecoin StressBench**, a transaction-cost-aware benchmark for evaluating machine learning models on stablecoin dislocation detection and arbitrage prediction. Using the March 2023 USDC/SVB de-peg as the primary test event, we show that while price-level signals fire frequently during stress (35.1% of 1-minute windows exceed 10 bps primary/max cross-quote basis; 12.65% for the USDC-specific basis), almost none survive a realistic execution filter: only 2.88% of those windows remain profitable at $10K notional after a full VWAP order-book walk inclusive of taker fees and market impact. The oracle upper bound confirms profitable windows exist (161–225 net bps on average), but every ML and rule-based model tested produces negative net bps on the test split, yielding a large and persistent **oracle gap**. The benchmark thus functions as a rigorous null result: it establishes that standard classification and regression models, even with rich microstructure features, do not yet solve the execution-barrier problem in stablecoin arbitrage.
+This paper introduces **Stablecoin StressBench**, a transaction-cost-aware benchmark for evaluating stablecoin dislocation models. In the March 2023 USDC/SVB test event, price-level signals fire often: 34.3% of current-dataset 1-minute windows exceed a 10 bps primary/max cross-quote basis, and 12.45% exceed that threshold on the USDC-specific basis. Only 2.88% exceed the $10K executable-profit threshold after a VWAP order-book walk, taker fees, and market impact. The oracle upper bound confirms profitable windows exist (161–225 net bps on average), but calm-trained executable-arbitrage models remain negative out of sample. The current paper draft adds one positive transfer result: meta-labeling trained on Terra/LUNA earns +82.5 bps on SVB, while a conditioned PPO-GRU with the same positive-label density earns -29.2 bps. The benchmark therefore frames the problem as execution-aware stress transfer, not simple price-signal detection.
 
 ---
 
@@ -26,9 +26,13 @@ This paper introduces **Stablecoin StressBench**, a transaction-cost-aware bench
 
 | Split | Event | Period | Minutes |
 |---|---|---|---|
-| Train | Calm control (pre-stress baseline) | ~Aug 2022 – Jan 2023 | 20,125 |
-| Validation | Terra/LUNA de-peg | May 2022 | 11,523 |
-| Test | USDC/SVB de-peg | Mar 10–15 2023 | 15,839 |
+| Train | Calm control windows | 2022, 2023, 2024 controls | 28,776 |
+| Validation | Terra/LUNA de-peg | May 2022 | 11,526 |
+| Test | USDC/SVB de-peg and recovery | Mar 2023 | 15,832 |
+
+These are the row counts in the current committed `data/gold/dataset.parquet`.
+The frozen baseline paper tables use the filtered benchmark-freeze view in
+`results/paper/table_1_data_coverage.csv` (47,487 rows).
 
 Splits are non-overlapping by construction (verified by `tests/test_split_integrity.py`). The validation event is used exclusively for threshold calibration and model selection; no test-split information leaks into any training or calibration step.
 
@@ -53,12 +57,12 @@ All labels are constructed by joining the basis/profit series at `t + horizon` b
 
 The executable arbitrage label is the central methodological innovation. For each 1-minute window:
 
-1. **Book walk**: Traverse real-L2 order-book snapshots (`depth_source ∈ {real_l2_snapshot, real_l2_incremental}`) using a VWAP walk at notional sizes $10K, $50K, $100K, $500K.
-2. **Fee deduction**: Apply taker fee schedule per venue (configured in `configs/fees.yaml`).
+1. **Book walk**: Traverse the available route books using a VWAP walk at notional sizes $10K, $50K, $100K, $500K. Rows retain `depth_source`, `depth_sources_used`, and `is_paper_grade_depth` so real-L2 and proxy legs can be audited separately.
+2. **Fee deduction**: Apply taker fee schedule per venue (configured in `configs/fee_schedules.yaml`).
 3. **Market impact**: Depth consumed above the top-of-book is priced at the marginal level reached.
 4. **Net profit label**: `net_profit_bps_q{N} = gross_basis_bps - vwap_slippage_bps - fee_bps`. A window is labelled executable (`label_arb_q{N}_{horizon}_gt0bps = 1`) iff `net_profit_bps_q{N} > 0`.
 
-Synthetic kline depth (`depth_source = synthetic_kline`) is never used in paper-grade net-profit calculations. The Gold pipeline writes `feat_net_profit_1m` only when real-L2 data is available; a proxy file (`feat_net_profit_1m_proxy`) is written for CI/smoke-test runs only.
+Synthetic kline depth (`depth_source = synthetic_kline`) is separated from real-L2 depth and treated as proxy depth. The Gold pipeline writes `feat_net_profit_1m` when real-L2 books are available and writes `feat_net_profit_1m_proxy` only for CI/smoke-test runs that have no real L2.
 
 Depth-source provenance is auditable per row via `depth_sources_used`, `is_paper_grade_depth`, and `depth_source` columns (verified by `tests/test_depth_source_filter.py`).
 
@@ -132,12 +136,15 @@ This objective is economically grounded: a strategy with high mean bps but few t
 
 | Threshold | Price signal (% windows) | Executable at $10K (% windows) | Ratio |
 |---|---|---|---|
-| 0 bps | 97.15% | 3.34% | 29× |
-| 5 bps | 63.22% | 3.03% | 21× |
-| 10 bps | 35.09% | 2.88% | 12× |
-| 25 bps | 9.63% | 2.62% | 3.7× |
+| 0 bps | 95.86% | 3.34% | 29× |
+| 5 bps | 61.99% | 3.03% | 20× |
+| 10 bps | 34.33% | 2.88% | 12× |
+| 25 bps | 9.54% | 2.62% | 3.6× |
 
-Source: `results/paper/table_2_price_execution_gap.csv`.
+Source: current `data/gold/dataset.parquet` and the paper draft. The frozen
+baseline artifact `results/paper/table_2_price_execution_gap.csv` records the
+earlier benchmark-freeze view (35.09% primary/max and 12.65% USDC-specific at
+the 10 bps threshold).
 
 ### Oracle gap (test split, Table 4)
 
@@ -150,19 +157,29 @@ Source: `results/paper/table_2_price_execution_gap.csv`.
 
 Source: `results/paper/table_4_oracle_gap.csv`.
 
-All non-oracle models produce **negative net bps** on the test split. The oracle gap is not a model-selection problem — it is an execution-barrier problem.
+Frozen calm-trained executable-arbitrage models produce **negative net bps** on the test split. The oracle gap is not a simple model-selection problem; it reflects the execution barrier and the lack of stress-like training examples.
+
+### Cross-mechanism transfer and policy diagnostics
+
+| Method | Training | Test result |
+|---|---|---|
+| Meta-labeling, `price_plus_book` | Terra/LUNA validation split | +82.45 bps, 397 trades, 50.8% oracle capture |
+| Conditioned PPO-GRU | Terra/LUNA primary-signal windows | -29.24 bps, 919 trades |
+
+Source files: `results/experiments_addon/meta_labeling_crossmech_results.csv`
+and `results/experiments/conditioned_rl_results.csv`.
 
 ---
 
 ## Four Paper Claims
 
-1. **Price dislocations are frequent during stress.** In the SVB test split, 35.1% of 1-minute windows exceed a 10 bps primary/max cross-quote basis (12.65% for the USDC-specific basis). The signal is strong and persistent for days.
+1. **Price dislocations are frequent during stress.** In the current SVB test split, 34.3% of 1-minute windows exceed a 10 bps primary/max cross-quote basis (12.45% for the USDC-specific basis). The signal is strong and persistent for days.
 
-2. **Most dislocations are not executable after costs.** Only 2.88% of windows remain profitable at $10K notional after a VWAP depth walk, taker fees, and market impact. The price-to-execution ratio is 12× at 10 bps and 29× unconditionally.
+2. **Most dislocations are not executable after costs.** Only 2.88% of windows exceed the $10K executable-profit threshold after a VWAP depth walk, taker fees, and market impact. The price-to-execution ratio is 12× at 10 bps and 29× unconditionally.
 
-3. **ML models classify but do not execute.** All tested models achieve above-chance AUROC on the classification task but produce negative economic returns on the test split. Microstructure features do not close the gap: `price_only` and `price_plus_book` perform similarly.
+3. **Calm-trained models classify but do not execute.** The frozen executable-arbitrage models produce negative economic returns on the test split. Microstructure features help in places, but they do not close the oracle gap without stress-like training data.
 
-4. **The oracle gap is real and large.** A hindsight oracle yields 162–225 net bps per trade on average. The gap between oracle and best model is 200+ bps, establishing that profitable windows exist but that ex-ante identification is an open problem.
+4. **The oracle gap is real and large.** A hindsight oracle yields 162–225 net bps per trade on average. Terra/LUNA-trained meta-labeling narrows the basis-task gap, but executable-arbitrage prediction remains an open problem.
 
 ---
 
@@ -170,14 +187,14 @@ All non-oracle models produce **negative net bps** on the test split. The oracle
 
 - [x] Bronze → Silver → Gold pipeline reproduced from raw data
 - [x] Depth-source provenance tagged per row (`depth_sources_used`, `is_paper_grade_depth`)
-- [x] Real-L2-only net-profit labels (`feat_net_profit_1m`)
+- [x] Route-level depth provenance for net-profit labels (`feat_net_profit_1m`)
 - [x] No-lookahead labels verified (`tests/test_no_lookahead.py`)
 - [x] Split integrity verified (`tests/test_split_integrity.py`)
 - [x] Depth-source filter verified (`tests/test_depth_source_filter.py`)
-- [x] **198 tests passing** (`pytest tests/ -q`)
+- [x] Full test suite available via `pytest tests/ -q`
 - [x] Full experiment grid committed (`results/experiments/all_results.csv`, 136 rows)
 - [x] Paper tables committed (`results/paper/table_{1-4}_*.csv`)
-- [x] Paper figures committed (`results/paper/figures/figure_{1-5}_*.png`)
+- [x] Paper figures committed in `results/paper/figures/`
 - [x] Tag: `v0.1.0-benchmark-freeze`
 
 ---
@@ -206,25 +223,9 @@ Source verification: `src/stressbench/history/source_verification.py` (26 record
 Price-grade feature summaries: `results/paper_addon/table_17_historical_price_grade_summary.csv`.
 Mechanism taxonomy: `results/paper_addon/table_18_mechanism_taxonomy_summary.csv`.
 
-## Benchmark-Freeze Checklist
-
-- [x] Bronze → Silver → Gold pipeline reproduced from raw data
-- [x] Depth-source provenance tagged per row (`depth_sources_used`, `is_paper_grade_depth`)
-- [x] Real-L2-only net-profit labels (`feat_net_profit_1m`)
-- [x] No-lookahead labels verified (`tests/test_no_lookahead.py`)
-- [x] Split integrity verified (`tests/test_split_integrity.py`)
-- [x] Depth-source filter verified (`tests/test_depth_source_filter.py`)
-- [x] **198 tests passing** (`pytest tests/ -q`)
-- [x] Full experiment grid committed (`results/experiments/all_results.csv`, 136 rows)
-- [x] Paper tables committed (`results/paper/table_{1-4}_*.csv`)
-- [x] Paper figures committed (`results/paper/figures/figure_{1-5}_*.png`)
-- [x] Add-on tables committed (`results/paper_addon/table_{5,8,8b,9,10,14-19}_*.csv`)
-- [x] Historical catalogue: 18 events, 7 mechanism classes, source verification registry
-- [x] Tag: `v0.1.0-benchmark-freeze`
-
 ## Open Problems (future work)
 
 - **Tier A expansion**: Acquire L2 archives for Terra/UST (Binance), FTX stress (Kraken), USDT/Curve to enable cross-mechanism execution-gap comparison.
 - **Uncertainty-aware abstention**: Bootstrap ensemble models that abstain when uncertainty is high; computational cost deferred.
-- **Threshold ablation**: Full multi-rule ablation (fixed 0.5/0.7, validation F1, mean bps) to confirm null result is threshold-rule-independent.
-- **Meta-labeling on validation split**: Current meta-labeling fails due to zero profitable primary-signal windows in the calm training split; re-train on Terra/LUNA validation data.
+- **Meta-labeling beyond one training event**: Terra/LUNA-to-SVB transfer works in the current draft; the next question is whether it survives more mechanisms once Tier-A depth is available.
+- **Reactive RL simulation**: The conditioned PPO-GRU result is a diagnostic, not a production execution simulator.

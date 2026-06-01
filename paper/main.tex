@@ -134,7 +134,7 @@ The remainder of the paper measures each gap in turn, in
         stress taxonomy for data governance, and a hindsight oracle
         ceiling. (\S\ref{sec:benchmark}--\ref{sec:models})
   \item The first evidence, on the single cross-mechanism pair with
-        route-complete test data, of order-book execution microstructure
+        committed route-level VWAP labels, of order-book execution microstructure
         transfer across structurally distinct stress mechanisms:
         meta-labeling trained on Terra/LUNA achieves $+82.5\bps$
         (50.8\% oracle capture) on the SVB test split, while every
@@ -366,8 +366,8 @@ liquidation} (DAI Black Thursday); and \emph{RWA/niche}
 Data availability governs which claims are permitted
 (Table~\ref{tab:tiers}).
 The Tier-A event (USDC/SVB test split) supports execution-gap,
-oracle-gap, and model evaluation claims because route-complete L2
-depth is available for all three arbitrage legs.
+oracle-gap, and model evaluation claims because committed route-level
+VWAP labels and depth provenance are available for the arbitrage path.
 Tier-B events ($N{=}11$, OHLCV or pool data only) support price
 magnitude estimates; among these, peak optical gaps range from
 approximately $100\bps$ (Celsius/3AC) to above $500\bps$ (Curve/UST)
@@ -1152,7 +1152,7 @@ the CEX order book during the same window.
 \begin{table}[h]
 \centering
 \caption{On-chain settlement cost validation (USDC ERC-20 transfers,
-  100K sample, Mar~10--20 2023, ETH \$\approx$1{,}580).
+  100K sample, Mar~10--20 2023, ETH $\approx\$1{,}580$).
   $\delta{=}5\bps$ is conservative on all days except the Mar~11
   gas spike at peak depeg.}
 \label{tab:settlement}

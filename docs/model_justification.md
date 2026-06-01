@@ -20,9 +20,10 @@ on the cost of acquiring information relative to passive investment).
 **Benchmark question answered.** Does the model produce positive economic value? If oracle_capture_pct
 is negative, the answer is no.
 
-**Paper interpretation.** All models tested in the benchmark have oracle_capture_pct ≤ 0 on the test
-split, confirming that identifying profitable windows ex ante is a hard open problem. The no-trade
-baseline thus "wins" economically against every ML and rule-based model.
+**Paper interpretation.** The no-trade baseline beats any strategy with negative net bps and is the
+right floor for the frozen executable-arbitrage tasks. It no longer describes every result in the
+repository: the current paper draft also reports a positive cross-mechanism meta-labeling add-on on
+the SVB basis task.
 
 ---
 
@@ -248,9 +249,9 @@ high-frequency trading systems and financial ML research for its speed and accur
 
 **Benchmark question answered.** Does the best available tabular ML model close the oracle gap?
 
-**Paper interpretation.** LightGBM is the best-performing non-oracle model on AUROC (0.71–0.79
-depending on feature set) but produces negative oracle_capture_pct. This is the central null
-result of the paper: even the best model is economically worse than abstaining.
+**Paper interpretation.** LightGBM is a strong tabular baseline and, in the current paper draft,
+one calm-trained basis-task run is slightly positive. That does not remove the main result:
+calm-trained executable-arbitrage models remain negative, and the oracle gap is still large.
 
 ---
 
@@ -297,18 +298,16 @@ crypto trading (Li et al. 2021).
 **Benchmark question answered.** Can a secondary classifier, trained only on the basis-fire events,
 filter the false positives that drive the economic losses?
 
-**Paper interpretation.** Meta-labeling produces an **informative null result** in this benchmark.
-The train split (calm control regime) contains only 53 primary-signal windows (|b_USDC| > 10 bps),
-and zero of those are net-profitable executable windows. The meta-model therefore has no positive
-class to learn from and takes 0 trades on the test split.
+**Paper interpretation.** Calm-control meta-labeling remains an informative null result: the
+calm train split has too few profitable primary-signal fires for the secondary model to learn a
+stress filter. The current paper draft then tests the obvious fix: train the secondary model on
+Terra/LUNA primary-signal windows and evaluate on SVB.
 
-This is not an architectural failure — it is a data-tiering finding: calm-control training data
-contains no executable positives, so the meta-filter has nothing to distinguish.
-
-The correct interpretation is: meta-labeling is viable only when the training regime contains
-sufficient positive meta-label examples. In this benchmark, the gap between training regime
-(calm) and test regime (SVB stress) is the root cause. Future work should evaluate meta-labeling
-trained on the Terra/LUNA validation split, which has a positive executable-arb rate of ~2.45%.
+That cross-mechanism run is the one positive transfer result in the repository:
+`MetaLabelingFilter_lgbm_crossmech` with `price_plus_book` features earns +82.45 bps on the SVB
+test split, takes 397 trades, and captures 50.8% of the basis-task oracle. The interpretation is
+not that meta-labeling solves all executable arbitrage tasks; it shows that stress-like positive
+examples matter more than adding another calm-trained classifier.
 
 ---
 
@@ -364,13 +363,13 @@ The benchmark is designed as a model ladder, where each rung answers a specific 
 
 | Rung | Model Family | Question | Key result |
 |------|-------------|----------|------------|
-| 0 | NoTradeBaseline | Floor: is trading better than abstaining? | No — all models negative |
+| 0 | NoTradeBaseline | Floor: is trading better than abstaining? | Beats negative executable-task baselines |
 | 1 | PriceBasisThreshold | Does the naive rule work? | No — 12× price-to-execution gap |
 | 2 | LastValue / RollingMean / AR1 | Is there lag persistence? | Weak signal, not profitable |
 | 3 | Logistic / Ridge / Lasso | Does linear ML beat threshold rules? | Marginal AUROC gain, still negative econ |
 | 4 | RF / XGBoost / LightGBM | Does nonlinear ML close the gap? | Best AUROC but still negative econ |
 | 5 | ExpectedNetProfitRegressor | Does aligning objectives help? | Near-zero but not positive |
-| 6 | MetaLabelingFilter | Does FP filtering help? | Improved hit rate, still not profitable |
+| 6 | MetaLabelingFilter | Does FP filtering help? | Positive only when trained on Terra/LUNA stress fires |
 | 7 | Regime detectors | Does regime conditioning help? | Reduces trade count, mixed econ result |
 | ∞ | NetProfitOracleUpperBound | Ceiling: what is achievable? | 161–225 net bps/trade |
 

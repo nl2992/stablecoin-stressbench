@@ -2,196 +2,97 @@
 
 ## Overview
 
-StressBench is an event-based benchmark for evaluating stablecoin dislocation models on realistic, transaction-cost-aware metrics. The central claim is:
+StressBench evaluates stablecoin dislocation models on transaction-cost-aware
+outcomes. The benchmark separates three layers that are often conflated:
 
-> **Naive price-signal detection of stablecoin arbitrage is misleading. After accounting for VWAP execution costs, exchange fees, and settlement friction, the majority of apparent arbitrage windows are unprofitable.**
-
----
-
-## Task Definition
-
-**Primary task:** Binary classification — predict whether the cross-quote basis between USDC/USDT will exceed 10 bps in the next 1 minute (`label_basis_1m_gt10bps`).
-
-**Economic task:** Given a model's signal, determine whether predicted opportunities are executable at $50K notional after all transaction costs.
-
-**Secondary tasks:** Regression (predict future basis in bps), multi-horizon (1m, 5m, 15m, 1h), multi-notional ($10K – $500K).
-
----
-
-## Evaluation Protocol
-
-### Splits
-
-Models are trained on calm control windows and evaluated on stress episodes — reflecting the real deployment scenario where stress is unknown at training time.
-
-| Split | Window | Rows |
+| Layer | Meaning | Main field |
 |---|---|---|
-| Train | Normal (Jan 2022, Feb 2023, Jan 2024) | 30,252 |
-| Validation | Terra/Luna collapse (May 2022) | 11,568 |
-| Test | USDC SVB depeg + recovery (Mar 2023) | 15,899 |
+| Optical | A price-basis signal is visible | `cross_quote_basis_*_bps` |
+| Executable | The route is profitable after VWAP, fees, and settlement costs | `net_profit_bps_q*` |
+| Predictable | A model identifies the executable windows ex ante | experiment outputs |
 
-**No temporal leakage**: labels are forward-looking (basis at `t + horizon`); features use only information available at time `t`. The train/validation/test split is event-based, not time-based, to avoid look-ahead bias from parameter tuning.
+The headline result is the optical-to-executable gap in the March 2023 USDC/SVB
+test window. In the current paper dataset, 34.33% of test minutes exceed a
+10 bps primary/max basis threshold and 12.45% exceed the USDC-specific threshold,
+while 2.88% exceed the $10K executable-profit threshold after costs. The frozen
+baseline table in `results/paper/table_2_price_execution_gap.csv` records the
+earlier benchmark-freeze view (35.09% primary/max; 12.65% USDC-specific).
 
-### ML Metrics
+## Tasks
 
-| Metric | Description |
-|---|---|
-| AUROC | Area under the ROC curve |
-| AUPRC | Area under the precision-recall curve |
-| F1 (threshold=0.5) | Harmonic mean of precision and recall |
-| Balanced Accuracy | Mean of per-class recall |
-| Brier Score | Mean squared probability error |
+| Task | Label | Primary use |
+|---|---|---|
+| `basis_usdc_1m_gt10bps` | `label_basis_usdc_1m_gt10bps` | USDC-specific basis forecasting |
+| `executable_arb_q10000_5m` | `label_arb_q10000_5m_gt0bps` | $10K executable-arbitrage prediction |
+| `executable_arb_q50000_5m` | `label_arb_q50000_5m_gt0bps` | $50K executable-arbitrage prediction |
+| `cross_mech_transfer` | meta-label on primary fires | Terra/LUNA-to-SVB transfer |
+| `policy_entry` | enter/wait reward | RL timing diagnostic |
 
-### Economic Metrics
+## Splits
 
-| Metric | Description |
-|---|---|
-| Net bps captured | Mean net profit (bps) across all signalled trades |
-| Hit rate above cost | Fraction of signalled trades that are executable net-positive |
-| False positive cost | Mean loss (bps) on signalled trades that were unprofitable |
-| # trades | Total number of trades signalled |
-| Final P&L (USD) | Cumulative dollar profit at $50K notional |
-| Max drawdown (USD) | Maximum peak-to-trough dollar loss |
-| Sharpe ratio | Annualized Sharpe computed on per-trade returns |
+The current committed Gold dataset has 56,134 rows and 125 columns.
 
----
+| Split | Event | Rows |
+|---|---|---|
+| Train | Calm-control windows | 28,776 |
+| Validation | Terra/LUNA May 2022 | 11,526 |
+| Test | USDC/SVB March 2023 | 15,832 |
 
-## Central Finding: The Price-to-Execution Gap
+The frozen baseline paper tables use the benchmark-freeze view in
+`results/paper/table_1_data_coverage.csv` (47,487 rows). This is why some
+baseline result files show 15,839 test rows.
 
-The benchmark quantifies the gap between apparent and executable arbitrage:
+## Metrics
 
-| Period | Basis >10bps | Executable net-profit >0 at $10K | Δ (Gap) |
-|---|---|---|---|
-| Train — normal (calm) | 4.2% | **0.00%** | 4.2 pp |
-| Validation — Terra/Luna stress | 13.7% | 2.57% | 11.1 pp |
-| Test — SVB depeg stress | 35.1% | **3.34%** | 31.8 pp |
+Statistical metrics are AUROC, AUPRC, balanced accuracy, and Brier score.
+Economic metrics are primary: `net_bps_captured`, `hit_rate_above_cost`,
+`n_trades`, `final_pnl_usd`, false-positive cost, and oracle capture.
 
-During the SVB crisis, 35% of minutes showed a price dislocation > 10 bps, but only 3.34% were actually executable after VWAP sweep + fees + settlement delay. The execution cost averages ~88 bps for a $10K round-trip through the BTCUSDC book.
+The no-trade baseline is 0 bps. The oracle trades only hindsight-profitable
+windows and is not deployable.
 
----
+## Main Results
 
-## Leaderboard (Test Set — `label_basis_1m_gt10bps`, $50K notional)
+| Result | Value | Source |
+|---|---:|---|
+| Primary/max basis > 10 bps, SVB test | 34.33% current; 35.09% frozen | `data/gold/dataset.parquet`; `results/paper/table_2_price_execution_gap.csv` |
+| USDC-specific basis > 10 bps, SVB test | 12.45% current; 12.65% frozen | `data/gold/dataset.parquet`; `results/paper/table_2_price_execution_gap.csv` |
+| Executable threshold at $10K, 1m | 2.88% | `data/gold/dataset.parquet`; `results/paper/table_2_price_execution_gap.csv` |
+| Price-to-execution ratio | 12x | `data/gold/dataset.parquet`; `results/paper/table_2_price_execution_gap.csv` |
+| Oracle, `basis_usdc_1m_gt10bps` | +161.7 bps | `results/paper/table_4_oracle_gap.csv` |
+| Oracle, `executable_arb_q10000_5m` | +224.6 bps | `results/paper/table_4_oracle_gap.csv` |
+| Best frozen executable-task model | -42.9 bps | `results/paper/table_4_oracle_gap.csv` |
+| Cross-mechanism meta-labeling | +82.5 bps | `results/experiments_addon/meta_labeling_crossmech_results.csv` |
+| Conditioned PPO-GRU diagnostic | -29.2 bps | `results/experiments/conditioned_rl_results.csv` |
 
-| Rank | Model | AUROC | AUPRC | F1 | Bal. Acc | Net Bps | Hit Rate | # Trades |
-|---|---|---|---|---|---|---|---|---|
-| 1 | Random Forest | **0.723** | 0.579 | 0.359 | 0.591 | -30.7 | 12.3% | 1,933 |
-| 2 | Logistic | 0.713 | **0.596** | **0.566** | 0.591 | -75.7 | 4.4% | 11,967 |
-| 3 | Lasso | 0.705 | 0.594 | 0.487 | 0.633 | **-22.3** | **15.3%** | 3,470 |
-| 4 | Ridge | 0.689 | 0.587 | 0.525 | **0.647** | -33.9 | 12.7% | 4,179 |
-| 5 | XGBoost | 0.674 | 0.504 | 0.441 | 0.596 | -63.2 | 6.9% | 3,875 |
-| 6 | LightGBM | 0.622 | 0.449 | 0.542 | 0.599 | -75.3 | 4.4% | 8,936 |
-| — | Last Value | 0.500 | 0.361 | — | 0.500 | — | — | 0 |
-| — | Rolling Mean | 0.500 | 0.361 | — | 0.500 | — | — | 0 |
-| — | AR1 | 0.500 | 0.361 | — | 0.500 | — | — | 0 |
+The frozen executable-arbitrage tasks remain negative for deployable
+calm-trained models. The current paper draft adds a separate positive result:
+meta-labeling trained on Terra/LUNA transfers to SVB and recovers about half of
+the basis-task oracle return.
 
-**Key observations:**
+## Reproduction
 
-1. **Best ML model (RF AUROC 0.72) still loses money.** The execution cost barrier means no model achieves positive net P&L at $50K notional during the test period.
-
-2. **Lasso is the most economical baseline** (-22.3 net bps, 15.3% hit rate) because L1 regularization selects a sparse, low-false-positive signal. It makes fewer but more targeted predictions.
-
-3. **High AUROC ≠ positive P&L.** Logistic regression achieves AUROC 0.713 but loses -75.7 bps per trade on average due to excessive false positives (11,967 trades vs. 3,470 for Lasso).
-
-4. **Tree models overfit to volume patterns** visible in calm training data that do not generalize to the SVB stress regime structure.
-
-5. **Naïve baselines (Last Value, Rolling Mean, AR1) never trade.** They correctly identify no executable opportunities, equivalent to a trivially conservative policy.
-
----
-
-## Submission Format
-
-To participate, submit a model with the following interface:
-
-```python
-class MyModel:
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None: ...
-    def predict(self, X: np.ndarray) -> np.ndarray: ...
-    def predict_proba(self, X: np.ndarray) -> np.ndarray: ...
-    # predict_proba[:,1] is the probability of label=1
-```
-
-Evaluation uses `scripts/evaluate_models.py`. Save your model as a pickle file:
-
-```
-models/trained/{model_name}_label_basis_1m_gt10bps.pkl
-```
-
-Then run:
+Baseline grid:
 
 ```bash
-python scripts/evaluate_models.py \
-    --data-dir data/gold \
-    --model-dir models/trained \
-    --output my_leaderboard.csv
+python scripts/run_experiments.py --data-dir data/gold
+python scripts/make_paper_tables.py
+python scripts/make_paper_figures.py --output-dir results/paper/figures
 ```
 
----
-
-## Reproducibility
-
-The full benchmark can be reproduced from raw data archives:
+Add-ons:
 
 ```bash
-# 1. Pull raw data (Binance Vision archive — free, no API key required)
-python scripts/pull_data.py \
-    --start 2022-01-10 --end 2024-01-22 \
-    --venues binance --mode archive
-
-# 2. Build Silver + Gold features and labels (40 event-window days)
-python scripts/build_features.py \
-    --start 2022-01-10 --end 2024-01-22
-
-# 3. Train all baseline models
-python scripts/train_models.py \
-    --data-dir data/gold --model-dir models/trained
-
-# 4. Evaluate and produce leaderboard
-python scripts/evaluate_models.py \
-    --data-dir data/gold --model-dir models/trained \
-    --output results/benchmark_results.csv
+python scripts/run_robustness_grid.py
+python scripts/run_addon_experiments.py
+python scripts/run_meta_labeling_crossmech.py
+python scripts/run_conditioned_rl.py
+python scripts/make_addon_tables.py
 ```
 
-Or end-to-end:
+## Scope
 
-```bash
-python scripts/run_pipeline.py --start 2022-01-10 --end 2024-01-22
-```
-
----
-
-## Historical Event Catalogue
-
-The benchmark catalogues **18 stress events** (2020–2023) across **7 mechanism classes**
-(algorithmic/reflexive, fiat-reserve bank shock, regulatory winddown, exchange credit/liquidity,
-DeFi pool imbalance, collateral liquidation, RWA/niche stablecoin).
-
-Execution-aware claims are anchored to **Tier A events only** (USDC/SVB 2023).
-Tier B events support price-grade (estimate) claims. Tier C events provide taxonomy context.
-
-See `docs/stablecoin_stress_event_catalog.md` for full entries.
-
-## Limitations and Caveats
-
-1. **Single Tier-A stress event**: The test set covers the March 2023 USDC/SVB depeg (one of two Tier A events). Generalisation to other mechanism classes (algorithmic, exchange-credit, DeFi-pool) requires Tier A data for those events, which is not yet available.
-
-2. **Binance-centric depth**: Net profit computations rely on Binance book depth. Coinbase/Kraken depth data would change execution cost estimates.
-
-3. **No short selling**: The benchmark considers unidirectional arbitrage (buy cheap USDC, sell expensive USDC). Short constraints are not modeled.
-
-4. **Latency**: The benchmark assumes immediate execution at VWAP. Real-world latency and partial fills would further reduce executable profits.
-
-5. **Regime shift**: Training on calm periods and testing on crisis is by design but limits the amount of in-distribution training data for stress-period patterns.
-
----
-
-## Citation
-
-```bibtex
-@misc{li2024stressbench,
-  title   = {Stablecoin StressBench: A Transaction-Cost-Aware Benchmark for Settlement-Risk Dislocations},
-  author  = {Nigel Li},
-  year    = {2024},
-  note    = {ICAIF Competition Track},
-  url     = {https://github.com/nl2992/stablecoin-stressbench}
-}
-```
+Execution-grade claims are anchored to the SVB test event. Terra/LUNA is used as
+a validation and cross-mechanism training event, but its executable labels rely
+on proxy depth and are directional rather than Tier-A headline evidence. Other
+catalogue events are Tier B/C unless sufficient route-level depth data is added.

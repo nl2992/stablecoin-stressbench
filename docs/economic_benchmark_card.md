@@ -47,7 +47,8 @@ These measure whether a model strategy is economically viable after costs. A mod
 | `no_trade` | 0 (by definition) | Economic lower bound; floor for comparison |
 | `oracle` | +161 to +225 bps | Theoretical ceiling; not deployable |
 | `price_threshold_10bps` | Negative (test split) | Naive rule baseline |
-| `logistic@price_plus_book` | −49 bps (test split) | Best non-oracle ML result |
+| `logistic@price_plus_book` | −49 bps (basis task, frozen baseline) | Best frozen non-oracle ML result for the basis task |
+| `meta_labeling_crossmech@price_plus_book` | +82.5 bps (basis task, add-on) | Terra/LUNA-trained transfer result; not part of the calm-trained baseline grid |
 
 ## Oracle
 
@@ -64,39 +65,45 @@ The `NoTradeBaseline` never trades. It returns exactly 0 net bps and 0 final P&L
 
 ## Main Result
 
-**Price dislocations are common; executable opportunities are rare; oracle is positive; deployable models are negative.**
+**Price dislocations are common; executable opportunities are rare; the oracle is positive; calm-trained executable-task models are negative.**
 
-- 35.1% of test-split minutes show |primary/max basis| > 10 bps (12.65% for USDC-specific basis)
-- 2.88% are executable at $10K after costs (12× price-to-execution ratio)
-- Oracle earns +161 bps; best ML model loses −49 bps; oracle gap = 210 bps
-- All non-oracle models produce negative net bps on the SVB test split
+- 34.3% of current test-split minutes show |primary/max basis| > 10 bps (12.45% for USDC-specific basis); the frozen baseline table records 35.09% and 12.65%
+- 2.88% exceed the $10K executable-profit threshold after costs (12× price-to-execution ratio)
+- Oracle earns +161 to +225 bps depending on task
+- Frozen executable-arbitrage models are negative out of sample
+- Cross-mechanism meta-labeling trained on Terra/LUNA is the positive add-on result: +82.5 bps on the SVB basis task
 
 ## Dataset
 
 | Split | Event | Minutes | Positive rate (executable 5m $10K) |
 |---|---|---|---|
-| Train | Calm baseline | 20,125 | 0.0% (no real-L2 depth data in train) |
-| Validation | Terra/LUNA May 2022 | 11,523 | 2.45% |
-| Test | USDC/SVB Mar 2023 | 15,839 | 2.88% |
-| **Total** | | **47,487** | |
+| Train | Calm baseline | 28,776 | 0.0% |
+| Validation | Terra/LUNA May 2022 | 11,526 | 2.3% |
+| Test | USDC/SVB Mar 2023 | 15,832 | Current dataset uses the same split; headline 2.88% comes from the paper-freeze evaluation view |
+| **Total** | | **56,134** | |
+
+The frozen baseline paper tables use the 47,487-row benchmark-freeze view in
+`results/paper/table_1_data_coverage.csv`; current add-on scripts read the
+committed 56,134-row `data/gold/dataset.parquet`.
 
 ## Depth Provenance
 
-Net-profit labels use only real L2 order-book depth:
-- `real_l2_snapshot`: Coinbase, Kraken full-book snapshots
-- `real_l2_incremental`: Tardis incremental updates
+Net-profit labels carry route-level depth provenance:
+- `real_l2_snapshot`: full-book snapshots when available
+- `real_l2_incremental`: reconstructed incremental depth when available
+- `synthetic_kline`: proxy depth inferred from OHLCV
 
-Synthetic kline depth (`synthetic_kline`) is excluded from paper-grade calculations. Provenance is auditable per row via `is_paper_grade_depth` and `depth_sources_used` columns.
+Synthetic kline depth is treated as proxy depth, not as full L2. Provenance is auditable per row via `depth_source`, `is_paper_grade_depth`, and `depth_sources_used` columns, and claim scope is documented in `docs/execution_route_coverage.md`.
 
 ## Historical Event Catalogue
 
 The benchmark catalogues **18 stress events** (2020–2023) across **7 mechanism classes**.
-Execution-grade claims are anchored to the two Tier A events (USDC/SVB 2023).
+Execution-grade headline claims are anchored to the USDC/SVB test event.
 Source verification status for every event is in `src/stressbench/history/source_verification.py`.
 
 | Tier | N | Example | Execution claims? |
 |---|---|---|---|
-| A | 2 | USDC/SVB Mar 2023 | Yes — all oracle gap, net bps, model evaluation |
+| A | 2 | USDC/SVB Mar 2023 and recovery/comparator windows | Yes, with claim scope documented in `docs/execution_route_coverage.md` |
 | B | 11 | Terra/UST, FTX, BUSD, USDT/Curve | Price-grade estimates only ("est.") |
 | C | 5 | IRON/TITAN, FEI, Acala, Binance conversion | Taxonomy context only |
 
@@ -109,10 +116,10 @@ Source verification status for every event is in `src/stressbench/history/source
 | Experiment runner | `scripts/run_experiments.py` |
 | All results | `results/experiments/all_results.csv` (136 rows) |
 | Paper tables | `results/paper/table_{1-4}_*.csv` |
-| Paper figures | `results/paper/figures/figure_{1-5}_*.png` |
+| Paper figures | `results/paper/figures/` |
 | Historical tables (14–19) | `results/paper_addon/table_{14..19}_*.csv` |
 | Historical figures (25–28) | `results/paper_addon/figures/figure_{25..28}_*.png` |
-| Tests | **198 passing** (`pytest tests/ -q`) |
+| Tests | Run `pytest tests/ -q`; current count depends on the local pytest/plugin version |
 
 ## Benchmark-Freeze Tag
 

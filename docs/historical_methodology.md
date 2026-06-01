@@ -26,15 +26,15 @@ motivation only.
 
 | Tier | Name | What is available | What is computable | Paper use |
 |---|---|---|---|---|
-| **A** | Execution-grade | Real L2 order-book depth (snapshot or incremental) | VWAP execution, `net_profit_bps`, oracle gap, price-to-execution ratio | All quantitative claims |
+| **A** | Execution-grade | Route-level depth provenance sufficient for VWAP labels | VWAP execution, `net_profit_bps`, oracle gap, price-to-execution ratio | Execution-scope quantitative claims |
 | **B** | Price/liquidity-grade | OHLCV, CEX trades, DEX pool reserves, on-chain flows, or liquidity proxies | Peg deviation, cross-quote basis, liquidity stress, pool imbalance, regime labels | Price-grade summaries only |
 | **C** | Context-grade | Partial data, news, issuer reports, or on-chain metrics only | Mechanism taxonomy, historical narrative | Taxonomy and motivation only |
 
 ### Tier A acceptance criteria
 
 A window may be tagged Tier A only if ALL of the following are true:
-- `depth_source ∈ {real_l2_snapshot, real_l2_incremental}` for at least one venue
-- At least two venues have overlapping coverage during the event window
+- `depth_source` / `depth_sources_used` document all route legs used for labels
+- At least two route legs have overlapping coverage during the event window
 - `is_paper_grade_depth = True` for ≥ 80% of rows in the event window
 - `net_profit_bps_q10000` is non-null for ≥ 50% of rows
 
@@ -136,7 +136,7 @@ Illustrative values must not be cited as measured data in the paper.
 - Regime/stress indicator patterns ✓
 
 ### Tier B — NOT allowed
-- Executable net_profit_bps without real L2 depth ✗
+- Executable net_profit_bps without documented route-level depth provenance ✗
 - Oracle gap without depth data ✗
 - "Arbitrage was available" without execution measurement ✗
 
@@ -160,7 +160,7 @@ A new event may be added to the catalogue only if:
 3. `data_tier` is explicitly assigned (A, B, or C)
 4. `verification_status` is one of: `verified`, `needs_source`, `do_not_use_in_paper`
 5. At least one entry exists in `source_verification.py` for the event
-6. No execution-grade claim is made unless `data_tier = A` and real L2 depth is documented
+6. No execution-grade claim is made unless `data_tier = A` and route-level depth provenance is documented
 7. `max_depeg_bps_est` is labelled "est." and sourced, or left null
 
 ---
@@ -174,4 +174,4 @@ For the paper, use exactly this framing:
 > from 2020 to 2023. Events are classified by data availability tier: Tier A (execution-grade,
 > N=2), Tier B (price/liquidity-grade, N=11), and Tier C (context-grade, N=5).
 > Execution-aware arbitrage claims — price-to-execution gap, oracle gap, model evaluation —
-> are made only for Tier A events where real L2 order-book depth supports VWAP net-profit labels.
+> are made only for Tier A events where route-level depth provenance supports VWAP net-profit labels.

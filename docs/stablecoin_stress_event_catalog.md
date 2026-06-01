@@ -14,12 +14,14 @@ Source verification status for each event is in
 
 | Tier | Description | Computability | Benchmark use |
 |------|-------------|--------------|---------------|
-| **A** | Execution-grade: full L2 order book + VWAP labels computable | Full `net_profit_bps` labels; oracle bound | Primary benchmark tasks |
+| **A** | Execution-grade: committed VWAP labels with route-level depth provenance | `net_profit_bps` labels; oracle bound | Primary benchmark tasks |
 | **B** | Price-grade: OHLCV / DEX / trades available, no full L2 | Price-basis labels; depeg magnitude | Secondary analysis; estimates only |
 | **C** | Context-grade: partial data or post-hoc reconstruction | Historical taxonomy; qualitative | Literature framing; no empirical claims |
 
-Tier A execution-gap claims are valid **only for USDC/SVB Mar 2023** (the two Tier A events).
-All Tier B magnitude figures must use "est." notation in paper text.
+Tier A execution-gap claims are valid **only for the USDC/SVB Mar 2023 depeg
+and recovery windows**. In the committed dataset, some route legs use proxy
+depth with explicit provenance and sensitivity checks. All Tier B magnitude
+figures must use "est." notation in paper text.
 
 ---
 
@@ -279,14 +281,17 @@ for SVB, resolving the uncertainty. USDC recovered to $0.997 by March 13 and to 
 
 **Coverage score:** 1.0
 
-> **Note on "execution-grade"**: execution-grade labels are computed from real L2 depth on at least one venue. Full three-venue coverage requires Tardis. See `docs/data_card.md` Known Limitation #1 for details.
+> **Note on "execution-grade"**: execution-grade labels are computed from the
+> available route books and retain row-level provenance. Full three-venue
+> historical L2 coverage requires Tardis. See `docs/data_card.md` Known
+> Limitation #1 and `docs/execution_route_coverage.md` for details.
 
 **Core benchmark results (all execution-grade, test split):**
-- 35.1% of minutes exceed 10 bps primary/max cross-quote basis (12.65% USDC-specific)
-- 2.88% executable at $10K/1m after VWAP walk + fees → **12× price-to-execution gap**
+- 34.3% of current-dataset minutes exceed 10 bps primary/max cross-quote basis (12.45% USDC-specific); frozen table: 35.09% / 12.65%
+- 2.88% exceed the $10K/1m executable-profit threshold after VWAP walk + fees → **12× price-to-execution gap**
 - Oracle: +161.7 bps (basis task), +224.6 bps (executable arb task)
-- Best ML model: −49.1 bps (logistic@price\_plus\_book); oracle gap 211 bps
-- All non-oracle models: **negative net bps** out of sample
+- Best frozen calm-trained ML model: −49.1 bps (logistic@price\_plus\_book); oracle gap 211 bps
+- Current add-on result: Terra/LUNA-trained meta-labeling earns +82.5 bps on the SVB basis task
 
 **Empirical use:** Primary benchmark test split. All execution-grade claims anchored here.
 

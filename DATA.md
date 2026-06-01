@@ -1,9 +1,10 @@
-# Data Plan
+# Data Notes
 
-Stablecoin StressBench does not commit raw market or on-chain data to Git.
-The repository tracks code, schemas, configs, notebooks, tests, and a small
-data directory skeleton. Actual datasets should live locally under `data/` or
-in an external artifact store.
+Stablecoin StressBench does not commit raw market or on-chain archives to Git.
+The repository tracks code, schemas, configs, notebooks, tests, paper result
+artifacts, and the current Gold benchmark dataset used by the paper draft.
+Large raw Bronze and normalized Silver archives should live locally under
+`data/` or in an external artifact store.
 
 ## Local Layout
 
@@ -11,10 +12,10 @@ in an external artifact store.
 data/
   bronze/   # immutable raw vendor messages and downloaded archive files
   silver/   # normalized canonical trade, book, metadata, and on-chain tables
-  gold/     # benchmark features, labels, splits, model-ready matrices
+  gold/     # benchmark features, labels, splits, model-ready dataset.parquet
 ```
 
-## Intended Sources
+## Sources
 
 - Binance public archives from `https://data.binance.vision`
 - Live Binance, Coinbase, and Kraken WebSocket captures
@@ -24,13 +25,23 @@ data/
 
 ## Git Policy
 
-- Keep raw and generated data out of Git.
+- Keep large raw and generated data out of Git.
 - Commit only tiny examples or fixtures when needed for tests.
 - Store API keys in `.env`, never in committed files.
 - Prefer reproducible pull/build scripts over manually shared files.
 
 ## Current Status
 
-The repository currently contains the data layer scaffolding and core
-normalization/feature/label code. The full Bronze-to-Silver-to-Gold pipeline is
-still being wired, so real benchmark datasets are not yet produced end to end.
+The committed Gold dataset is `data/gold/dataset.parquet` with 56,134 rows and
+125 columns. It contains calm-control, Terra/LUNA validation, and USDC/SVB test
+splits.
+
+The frozen baseline paper tables in `results/paper/` were generated from the
+benchmark-freeze dataset view documented in `results/paper/table_1_data_coverage.csv`.
+The current paper draft also uses add-on artifacts in `results/experiments_addon/`
+and `results/paper_addon/`, including cross-mechanism meta-labeling, RL
+diagnostics, robustness grids, source-audit tables, and settlement checks.
+
+Rebuilding from raw sources is supported by `scripts/pull_data.py`,
+`scripts/archive_to_bronze.py`, and `scripts/build_features.py`, but exact
+historical Coinbase/Kraken L2 replay requires external Tardis credentials.

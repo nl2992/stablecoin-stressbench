@@ -4,13 +4,13 @@
 
 Stablecoin dislocations are often measured using quoted price deviations, but quoted price gaps are not necessarily executable. A dislocation is economically meaningful only if it survives order-book depth, VWAP execution, taker fees, market impact, and settlement frictions.
 
-During the March 2023 USDC/SVB de-peg — the primary test event in this benchmark — 35.1% of 1-minute windows showed a primary/max cross-quote basis exceeding 10 bps on price alone (12.65% for the USDC-specific basis). After a full VWAP order-book walk at $10K notional including taker fees and market impact, only 2.88% remained profitable. This **12× price-to-execution gap** defines the core measurement challenge.
+During the March 2023 USDC/SVB de-peg — the primary test event in this benchmark — 34.3% of current-dataset 1-minute windows showed a primary/max cross-quote basis exceeding 10 bps on price alone (12.45% for the USDC-specific basis). After a full VWAP order-book walk at $10K notional including taker fees and market impact, only 2.88% exceeded the executable-profit threshold. This **12× price-to-execution gap** defines the core measurement challenge.
 
 ## 2. Research Question
 
 **Can AI and econometric models identify stablecoin dislocations that remain profitable after realistic execution costs?**
 
-The benchmark answers this with a structured null result: a hindsight oracle earns 161–225 net bps per trade on the test split, confirming profitable windows exist, but every ML and rule-based model tested produces **negative net bps** out of sample.
+The benchmark answers this with a structured null result and one transfer result: a hindsight oracle earns 161–225 net bps per trade on the test split, confirming profitable windows exist; calm-trained executable-arbitrage models are negative out of sample; Terra/LUNA-trained meta-labeling is positive on the SVB basis task.
 
 ## 3. Benchmark Contribution
 
@@ -18,16 +18,19 @@ Stablecoin StressBench introduces an execution-aware benchmark that separates fo
 
 | Layer | Measure | Empirical result (test split) |
 |---|---|---|
-| 1. Price-only dislocation | `|cross_quote_basis_maxabs_bps| > 10 bps` (primary/max basis; USDC-specific: 12.65%) | 35.1% of minutes |
+| 1. Price-only dislocation | `|cross_quote_basis_maxabs_bps| > 10 bps` (primary/max basis; USDC-specific: 12.45%) | 34.3% of minutes |
 | 2. Gross arbitrage | Raw buy/sell spread | Positive in ~35% of minutes |
 | 3. Net executable arbitrage | VWAP walk + fees + impact | 2.88% of minutes at $10K |
-| 4. Predictable executable arbitrage | Ex-ante model identifies net-profitable minutes | 0% (all tested models negative) |
+| 4. Predictable executable arbitrage | Ex-ante model identifies net-profitable minutes | Calm-trained executable models negative; Terra/LUNA-trained meta-labeling positive on the basis task |
 
 This decomposition is the central methodological contribution. Layers 1–3 are measured from data; layer 4 is the open benchmark challenge.
 
 ## 4. Execution-Aware Label
 
-For each 1-minute window at notional size $q$, we reconstruct executable prices using real L2 order-book depth (not synthetic kline-inferred depth). The net-profit label is:
+For each 1-minute window at notional size $q$, we reconstruct executable prices
+using the available route books and retain row-level depth provenance. Real-L2
+and proxy legs are auditable through `depth_source`, `depth_sources_used`, and
+`is_paper_grade_depth`. The net-profit label is:
 
 ```
 net_profit_bps(q) =
@@ -40,7 +43,7 @@ net_profit_bps(q) =
 
 A window is labelled **executable** (`label_arb_q{N}_{horizon}_gt0bps = 1`) iff `future net_profit_bps(q) > 0` within the prediction horizon.
 
-**Depth provenance guarantee**: only `depth_source ∈ {real_l2_snapshot, real_l2_incremental}` contributes to net-profit labels. Synthetic kline depth (`depth_source = synthetic_kline`) is isolated to a proxy file and excluded from paper-grade calculations. Provenance is auditable per row via `depth_sources_used`, `is_paper_grade_depth`, and `depth_source` columns.
+**Depth provenance guarantee**: net-profit labels carry route provenance in `depth_sources_used`, `is_paper_grade_depth`, and `depth_source`. Real-L2 and proxy legs are separated in the data, and claim scope is governed by `docs/execution_route_coverage.md`.
 
 ## 5. Model Evaluation
 
@@ -77,8 +80,8 @@ This is economically grounded: a strategy must have sufficient trade count to di
 
 The benchmark establishes three empirical facts:
 
-1. **Price dislocations are frequent.** 35.1% of SVB test-split minutes exceed 10 bps primary/max cross-quote basis (12.65% for the USDC-specific basis alone).
-2. **Executable opportunities are rare.** Only 2.88% survive a $10K VWAP execution filter (12× price-to-execution ratio).
+1. **Price dislocations are frequent.** 34.3% of current SVB test-split minutes exceed 10 bps primary/max cross-quote basis (12.45% for the USDC-specific basis alone).
+2. **Executable opportunities are rare.** Only 2.88% survive the $10K VWAP executable-profit threshold (12× price-to-execution ratio).
 3. **The oracle gap is large.** The hindsight oracle earns +161 bps; the best ML model loses −49 bps; the gap is 210 bps.
 
 The conclusion is not that stablecoin arbitrage is impossible — the oracle proves otherwise — but that **standard classification and regression models do not yet solve the execution-identification problem**.
@@ -97,7 +100,10 @@ Rather than classifying whether a threshold will be exceeded, the `ExpectedNetPr
 The uncertainty module (`src/stressbench/experiments/uncertainty.py`) implements bootstrap ensemble and quantile regression models that abstain when prediction uncertainty is high. Experiments comparing these abstention strategies against the no-trade baseline are reserved for future work due to the computational cost of bootstrap ensembles.
 
 ### 7d. Threshold calibration sensitivity
-The primary threshold rule maximizes validation total P&L subject to ≥ 25 trades. Sensitivity to this choice is indicated by the robustness grid: fee and settlement parameter changes of realistic magnitudes do not change the qualitative null result (all non-oracle models remain economically negative). A full multi-rule threshold ablation (fixed 0.5/0.7, validation F1, validation mean bps) is planned as a follow-up.
+The primary threshold rule maximizes validation total P&L subject to ≥ 25 trades. Sensitivity to this choice is covered by `results/paper_addon/table_9_threshold_ablation.csv`: fixed thresholds, F1-style rules, and economic-threshold rules do not remove the execution gap.
+
+### 7f. Cross-mechanism meta-labeling and RL diagnostic
+The current paper draft adds a transfer test. A meta-labeling filter trained on Terra/LUNA primary-signal windows earns +82.5 bps on the SVB basis task, while a conditioned PPO-GRU trained on the same positive-density window set earns −29.2 bps. This separates the value of stress-like binary supervision from reward-only policy learning under sparse profitable windows.
 
 ### 7e. False-positive diagnosis
 Feature profiles of true positives vs false positives are compared to explain why models trade bad windows (large basis but insufficient depth, high spread, or unfavorable fee conditions).
@@ -108,7 +114,7 @@ This work contributes to the following ICAIF topic areas:
 
 - **Financial benchmark construction**: systematic train/validation/test split with event-based design and benchmark-freeze protocol
 - **Blockchain and cryptocurrency**: stablecoin de-peg mechanics, cross-venue arbitrage, on-chain settlement frictions
-- **Market microstructure**: real L2 order-book depth, VWAP execution, spread/depth deterioration during stress
+- **Market microstructure**: route-level order-book depth provenance, VWAP execution, spread/depth deterioration during stress
 - **Trading and execution**: execution-aware label construction, transaction cost modeling, oracle gap evaluation
 - **Validation and calibration of financial AI models**: threshold calibration on economic objectives, out-of-sample robustness, no-lookahead guarantees
 - **Uncertainty quantification**: abstention under model uncertainty, confidence-weighted trading signals
@@ -121,7 +127,7 @@ The benchmark distinguishes three data availability tiers for historical stress 
 
 | Tier | Description | What is computable | Benchmark use |
 |------|-------------|-------------------|--------------|
-| **A** | Execution-grade: full L2 order book + trade tape for all venues | Full `net_profit_bps` labels; oracle bound; execution-gap claims | Primary benchmark tasks |
+| **A** | Execution-grade: committed VWAP labels with route-level depth provenance | `net_profit_bps` labels; oracle bound; execution-gap claims within documented scope | Primary benchmark tasks |
 | **B** | Price-grade: OHLCV / CEX trades / DEX pool data, no full L2 | Price-basis labels; depeg magnitude; frequency claims | Secondary analysis only |
 | **C** | Context-grade: partial data, post-hoc reconstruction only | Historical taxonomy; qualitative mechanism description | Literature framing |
 
@@ -132,7 +138,7 @@ Tier classification is formally encoded in `configs/event_windows_historical.yam
 ### 9.2 Which Claims are Execution-Grade vs Price-Grade
 
 **Execution-grade claims (Tier A only):**
-- The 12× price-to-execution gap (35% price-basis positive vs 2.88% executable at $10K)
+- The 12× price-to-execution gap (34.3% price-basis positive vs 2.88% executable-threshold positive at $10K)
 - Oracle net bps per trade (161–225 bps)
 - All `oracle_capture_pct` values
 - Model `net_bps_captured` and `test_final_pnl_usd`

@@ -1,39 +1,64 @@
-# Stablecoin StressBench Implementation Status
+# Stablecoin StressBench Status
 
-This repository is the base code for the ICAIF Stablecoin StressBench project.
+This repository contains the code, dataset artifacts, experiment outputs, and
+paper support files for the ICAIF Stablecoin StressBench project.
 
 ## Positioning
 
-Stablecoin StressBench is a benchmark for settlement-risk dislocations in stablecoin markets. It sits at the intersection of financial benchmark construction, blockchain and cryptocurrency, market microstructure, trading and smart order routing, risk management, financial time-series analysis, and graph/network modeling.
+Stablecoin StressBench is a benchmark for settlement-risk dislocations in
+stablecoin markets. It sits at the intersection of financial benchmark
+construction, blockchain and cryptocurrency, market microstructure, trading and
+smart order routing, risk management, financial time-series analysis, and
+graph/network modeling.
 
-## Implemented
+## In Place
 
 - Core Python package under `src/stressbench`.
-- Order-book reconstruction, spread, depth, imbalance, and crossed-book checks.
-- Executable VWAP and transaction-cost-aware net profit calculations.
-- Kraken-style checksum helpers.
-- Bronze raw writer and manifest utilities.
-- Live WebSocket collectors for Binance, Coinbase, and Kraken.
-- Function-level normalization for trade and order-book messages.
-- Feature computation modules for microstructure, basis, fragmentation, settlement proxies, issuer events, and graph snapshots.
-- Label modules for basis forecasting, arbitrage windows, profitability, regimes, and recovery.
-- Baseline, tree, sequence, and placeholder graph model wrappers.
+- Order-book reconstruction, spread, depth, imbalance, crossed-book checks, and
+  executable VWAP net-profit calculations.
+- Bronze raw writer, manifest utilities, and live WebSocket collectors for
+  Binance, Coinbase, and Kraken.
+- Archive and live normalization for trades, books, klines, Tardis payloads,
+  metadata, and on-chain transfers.
+- Feature modules for microstructure, basis, fragmentation, settlement proxies,
+  issuer events, and graph snapshots.
+- Labels for basis forecasting, arbitrage windows, profitability, regimes, and
+  recovery.
+- Rule, linear, tree, sequence, cost-sensitive, regime-detection,
+  meta-labeling, and graph-model wrappers.
 - Evaluation metrics, backtest wrapper, and leaderboard builder.
 - ClickHouse DDL files and YAML configs.
-- Unit tests for the lower-level utilities and formulas.
+- Bronze-to-Silver-to-Gold orchestration in `scripts/build_features.py`.
+- Experiment runners for the baseline grid, robustness, expected-net-profit
+  regression, meta-labeling, RL diagnostics, SHAP prototypes, settlement
+  validation, and paper tables/figures.
+- Committed Gold dataset and paper result artifacts under `data/gold/`,
+  `results/paper/`, `results/experiments/`, `results/paper_addon/`, and
+  `results/experiments_addon/`.
+- Pytest coverage for book logic, normalization, labels, feature contracts,
+  no-lookahead checks, split integrity, robustness, add-on overwrite guards,
+  meta-labeling, uncertainty APIs, and historical-layer checks.
 
-## Not Yet Implemented
+## Research State
 
-- End-to-end Bronze-to-Silver-to-Gold data pipeline.
-- Historical Coinbase/Kraken archive pulls outside Tardis-style loaders.
-- Production-ready feature table materialization.
-- Model training/evaluation on real Gold datasets.
-- Public benchmark artifact generation and leaderboard publishing.
-- Full graph model training loop.
-- Live capture entrypoint scripts referenced by older docs and Makefile targets.
+- The baseline freeze is tagged `v0.1.0-benchmark-freeze`.
+- The current Gold dataset has 56,134 rows and 125 columns.
+- Frozen baseline paper tables are in `results/paper/`.
+- Current add-on work is isolated under `results/experiments_addon/` and
+  `results/paper_addon/`.
+- The paper draft uses the SVB test event for execution-grade claims, Terra/LUNA
+  as a stress validation/cross-mechanism training event, and an 18-event
+  catalogue for tiering and governance.
 
 ## Known Gaps
 
-- Some operational scripts expect class-style loader APIs that are not yet present.
-- `scripts/build_features.py` currently contains orchestration stubs for actual file IO.
-- The codebase has strong research primitives, but the reproducible benchmark pipeline still needs wiring and validation.
+- Public historical Coinbase/Kraken L2 replay is not available without Tardis or
+  equivalent paid archives.
+- Some stress events in the catalogue remain Tier B/C because they lack
+  sufficient route-level depth provenance for VWAP labels; their numbers are
+  price-grade or taxonomy-only.
+- The SVB BTC-USDC buy leg uses proxy depth in the committed benchmark view;
+  sensitivity checks apply a depth haircut and keep the main execution-gap
+  conclusion intact.
+- Graph models and reactive RL simulation remain research extensions rather than
+  paper-grade headline results.
