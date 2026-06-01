@@ -1,7 +1,7 @@
 event_id,display_name,mechanism_class,stablecoins,start,end,data_tier,coverage_score,max_depeg_bps_est,duration_class,verification_status,empirical_use
 fei_launch_2021,FEI Launch Stress,Algorithmic / Reflexive,FEI,2021-04-01,2021-04-10,C,0.25,-2000,days,needs_source,Taxonomy context only; no benchmark tasks
 iron_titan_2021,IRON/TITAN Collapse,Algorithmic / Reflexive,IRON,2021-06-16,2021-06-17,C,0.25,-10000,hours,needs_source,Taxonomy context only; no benchmark tasks
-mim_wonderland_2022,MIM/Wonderland Shock,Algorithmic / Reflexive,MIM,2022-01-27,2022-02-03,B,0.5,-300,days,needs_source,Taxonomy context only; price-basis claims only if confirmed
+mim_wonderland_2022,MIM/Wonderland Shock,Algorithmic / Reflexive,MIM,2022-01-27,2022-02-03,C,0.25,-300,days,needs_source,Taxonomy context only; no benchmark tasks
 terra_ust_2022,Terra/UST Collapse,Algorithmic / Reflexive,"UST, USDT, DAI",2022-05-07,2022-05-14,B,0.5,-10000,weeks,verified,Validation split illustrative; price-basis claims only
 usdd_tron_2022,USDD/TRON Stress,Algorithmic / Reflexive,USDD,2022-06-13,2022-06-20,B,0.5,-200,days,needs_source,Taxonomy context only; not in benchmark splits
 celsius_3ac_2022,Celsius/3AC Contagion,Exchange Credit / Liquidity,"USDT, USDC, stETH",2022-06-10,2022-06-25,B,0.5,-100,weeks,needs_source,Taxonomy context only; liquidity contagion illustration

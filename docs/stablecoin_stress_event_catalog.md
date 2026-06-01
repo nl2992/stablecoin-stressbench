@@ -121,7 +121,7 @@ Intermediate depeg price path not confirmed from primary on-chain data.
 #### Event A-3: MIM/Wonderland Confidence Shock (January–February 2022)
 
 **Event ID:** `mim_wonderland_2022`  
-**Tier:** B (price-grade)  
+**Tier:** C (context-grade)
 **Verification status:** needs_source
 
 **Mechanism:** Confidence shock from governance controversy. Wonderland (TIME/wMEMO) was a
@@ -147,9 +147,9 @@ Curve MIM-3pool became heavily imbalanced as MIM holders exited.
 - Abracadabra Protocol on-chain: available
 - No CEX L2 for MIM (primarily on-chain and DEX)
 
-**Coverage score:** 0.50
+**Coverage score:** 0.25
 
-**Empirical use:** Taxonomy context; illustrates governance-confidence shock mechanism distinct
+**Empirical use:** Taxonomy context only; illustrates governance-confidence shock mechanism distinct
 from reserve-bank or regulatory events.
 
 **Notes:** The MIM/Wonderland episode demonstrates that off-chain governance controversies can

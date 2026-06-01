@@ -1,7 +1,7 @@
 event_id,data_tier,coverage_score,has_l2_depth,has_trade_tape,has_ohlcv,has_onchain,has_defi_pool,data_sources_count,data_sources_list
 fei_launch_2021,C,0.25,0,0,1,1,0,2,coingecko_ohlcv; uniswap_v2_swaps
 iron_titan_2021,C,0.25,0,0,1,1,0,2,coingecko_ohlcv; polygon_dex_swaps
-mim_wonderland_2022,B,0.5,0,0,1,1,1,3,abracadabra_onchain; coingecko_ohlcv; curve_mim_3pool_reserves
+mim_wonderland_2022,C,0.25,0,0,1,1,1,3,abracadabra_onchain; coingecko_ohlcv; curve_mim_3pool_reserves
 terra_ust_2022,B,0.5,0,0,1,1,1,5,binance_ohlcv; coinbase_ohlcv; curve_pool_reserves; kraken_ohlcv; terra_onchain_transactions
 usdd_tron_2022,B,0.5,0,0,1,0,0,3,coingecko_ohlcv; huobi_ohlcv; poloniex_ohlcv
 celsius_3ac_2022,B,0.5,0,0,1,1,1,4,binance_ohlcv; coinbase_ohlcv; curve_steth_pool_reserves; onchain_celsius_outflows
