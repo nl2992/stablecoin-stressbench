@@ -185,6 +185,13 @@ Paper tables & frozen CSV outputs & result verification\\
 }
 \end{table}
 
+StressBench is intended for three user groups.
+Market makers and arbitrage desks can audit when apparent stablecoin
+basis survives executable depth; risk teams can track which historical
+stress mechanisms resemble current liquidity withdrawal; and benchmark
+researchers can evaluate models against economic labels rather than
+price-only depeg detection.
+
 
 %% =============================================================
 \section{Related Work}
@@ -598,6 +605,14 @@ in hindsight and Layer~3 (predictable with a real model), quantifying
 how hard the prediction problem is even with the correct labels.
 Both gaps are nonzero, independent, and large. This section details
 how they are constructed.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_label_layers_schematic.png}
+  \caption{StressBench separates price-visible optical dislocations
+    from executable opportunities and from model-predictable trades.}
+  \label{fig:label_layers}
+\end{figure}
 
 \subsection{Cross-Quote Basis and Labels}
 \label{sec:basis}
@@ -1227,6 +1242,9 @@ Holloway \cite{cintra2023bocpd}, who detected the Terra depeg 12 hours
 early from AMM pool reserves. CEX basis is mean-reverting, so
 changepoint methods cannot substitute for the training-distribution
 fix that meta-labeling provides.
+This is a negative-result contribution: AMM reserve depletion
+transfers poorly to CEX cross-quote basis, so stress benchmarks must
+separate venue microstructure from event narrative.
 
 
 Figure~\ref{fig:diversity_bar} tests whether training diversity
@@ -1341,6 +1359,17 @@ profitable window, while the RL agent must infer the same distinction
 through a reward signal that is negative on 83\% of entries.
 Explicit supervision is categorically cleaner than implicit reward.
 
+Capturing roughly half of the oracle is therefore economically
+meaningful rather than disappointing.
+The missing half is not explained by model capacity alone: it combines
+residual false positives, missed profitable minutes, timing mismatch
+between Terra and SVB depth-withdrawal sequences, and sizing error as
+depth collapses.
+Closing the remaining oracle gap requires three ingredients that are
+not yet present simultaneously: multi-mechanism stress supervision,
+route-aware timing labels, and reactive market-impact simulation for
+thin-book sizing.
+
 The overtrading pattern points toward a specific failure mode. The
 agent fires on 919 of 15,832 test windows, nearly three times the
 oracle's 316 profitable windows. When a policy fails due to
@@ -1410,6 +1439,15 @@ Extending to exchange-credit or DeFi events requires route-complete
 L2 archives not yet available; this is the primary bottleneck for
 expanding the benchmark's execution-grade scope.
 
+\textbf{Release constraints and data ethics.}
+The benchmark releases derived features, labels, event windows,
+source-tracking metadata, scripts, and frozen paper outputs.
+Some raw exchange order-book archives are API-limited, delayed, or
+subscription-gated; StressBench therefore records route provenance and
+depth-source tags so future users can distinguish reproducible derived
+claims from raw-data acquisition constraints.
+No private user-level trading data is included.
+
 \textbf{RL market-impact feedback.}
 The conditioned PPO-GRU's $-29.2\bps$ may reflect a timing-transfer
 mismatch (Terra/LUNA depth-withdrawal sequence firing at the wrong
@@ -1467,43 +1505,151 @@ execution-grade windows and a cross-mechanism transfer ceiling.
 \section{Full Historical Event Catalogue}
 \label{app:catalogue}
 
-Table~\ref{tab:appendix_catalogue} reports event-level metadata used
-by the main paper.
+Tables~\ref{tab:appendix_catalogue_meta} and
+\ref{tab:appendix_catalogue_claims} split the event catalogue into
+metadata and claim-status views.
 All Tier-B magnitudes are price/liquidity-grade or configured
 estimates, and Tier-C rows are taxonomy-only.
 
 \begin{table*}[t]
 \centering
-\caption{Appendix A: full historical event catalogue.}
-\label{tab:appendix_catalogue}
+\caption{Appendix A1: historical event metadata.}
+\label{tab:appendix_catalogue_meta}
 \setlength{\tabcolsep}{3pt}
 {\scriptsize
-\begin{tabular}{lllp{2.2cm}lrllp{2.4cm}}
+\begin{tabular}{lllp{2.4cm}lp{2.8cm}}
 \toprule
-\textbf{Event ID} & \textbf{Date} & \textbf{Stablecoin} & \textbf{Mechanism} & \textbf{Tier} & \textbf{Cov.} & \textbf{Verif.} & \textbf{Max depeg} & \textbf{Benchmark use}\\
+\textbf{Event ID} & \textbf{Date} & \textbf{Stablecoin} & \textbf{Mechanism} & \textbf{Tier} & \textbf{Benchmark use}\\
 \midrule
-dai\_black\_thursday\_2020 & Mar~2020 & DAI & collateral/liquidation & B & 0.50 & verified & +150 bps est. & above-peg stress\\
-fei\_launch\_2021 & Apr~2021 & FEI & algorithmic/reflexive & C & 0.25 & needs source & -2000 bps est. & taxonomy\\
-iron\_titan\_2021 & Jun~2021 & IRON & algorithmic/reflexive & C & 0.25 & needs source & -10000 bps est. & taxonomy\\
-mim\_wonderland\_2022 & Jan~2022 & MIM & algorithmic/reflexive & C & 0.25 & needs source & -300 bps est. & taxonomy/context\\
-terra\_ust\_2022 & May~2022 & UST & algorithmic/reflexive & B & 0.50 & verified & -10000 bps est. & validation, transfer\\
-usdd\_tron\_2022 & Jun~2022 & USDD & algorithmic/reflexive & B & 0.50 & needs source & -200 bps est. & taxonomy\\
-celsius\_3ac\_2022 & Jun~2022 & USDT/USDC & exchange credit/liquidity & B & 0.50 & needs source & -100 bps est. & transfer\\
-husd\_depeg\_2022 & Aug~2022 & HUSD & exchange credit/liquidity & B & 0.50 & needs source & -800 bps est. & taxonomy\\
-acala\_ausd\_2022 & Aug~2022 & aUSD & RWA/niche & C & 0.25 & needs source & -9900 bps est. & taxonomy\\
-binance\_stablecoin\_conversion\_2022 & Sep~2022 & BUSD/USDC & regulatory winddown & C & 0.25 & needs source & 0 bps & context\\
-ftx\_collapse\_2022 & Nov~2022 & USDT/USDC & exchange credit/liquidity & B & 0.50 & verified & -50 bps est. & transfer contrast\\
-busd\_regulatory\_2023 & Feb~2023 & BUSD & regulatory winddown & B & 0.50 & verified & -30 bps est. & transfer\\
-usdc\_svb\_2023 & Mar~2023 & USDC & fiat-reserve bank shock & A & 1.00 & verified & -1300 bps & execution benchmark\\
-usdc\_svb\_recovery\_2023 & Mar~2023 & USDC & fiat-reserve bank shock & A & 0.75 & verified & -10 bps & recovery benchmark\\
-curve\_3pool\_ust\_2022 & May~2022 & UST/3CRV & DeFi pool imbalance & B & 0.50 & needs source & -500 bps est. & on-chain stress\\
-usdc\_dai\_secondary\_svb\_2023 & Mar~2023 & DAI/FRAX & DeFi pool imbalance & B & 0.75 & needs source & -200 bps est. & DeFi contagion\\
-usdt\_curve\_2023 & Jun~2023 & USDT & DeFi pool imbalance & B & 0.50 & verified & -80 bps est. & on-chain stress\\
-usdr\_2023 & Oct~2023 & USDR & RWA/niche & B & 0.50 & needs source & -5000 bps est. & long-tail stress\\
+dai\_black\_thursday\_2020 & Mar~2020 & DAI & collateral/liquidation & B & above-peg stress\\
+fei\_launch\_2021 & Apr~2021 & FEI & algorithmic/reflexive & C & taxonomy\\
+iron\_titan\_2021 & Jun~2021 & IRON & algorithmic/reflexive & C & taxonomy\\
+mim\_wonderland\_2022 & Jan~2022 & MIM & algorithmic/reflexive & C & taxonomy/context\\
+terra\_ust\_2022 & May~2022 & UST & algorithmic/reflexive & B & validation, transfer\\
+usdd\_tron\_2022 & Jun~2022 & USDD & algorithmic/reflexive & B & taxonomy\\
+celsius\_3ac\_2022 & Jun~2022 & USDT/USDC & exchange credit/liquidity & B & transfer\\
+husd\_depeg\_2022 & Aug~2022 & HUSD & exchange credit/liquidity & B & taxonomy\\
+acala\_ausd\_2022 & Aug~2022 & aUSD & RWA/niche & C & taxonomy\\
+binance\_stablecoin\_conversion\_2022 & Sep~2022 & BUSD/USDC & regulatory winddown & C & context\\
+ftx\_collapse\_2022 & Nov~2022 & USDT/USDC & exchange credit/liquidity & B & transfer contrast\\
+busd\_regulatory\_2023 & Feb~2023 & BUSD & regulatory winddown & B & transfer\\
+usdc\_svb\_2023 & Mar~2023 & USDC & fiat-reserve bank shock & A & execution benchmark\\
+usdc\_svb\_recovery\_2023 & Mar~2023 & USDC & fiat-reserve bank shock & A & recovery benchmark\\
+curve\_3pool\_ust\_2022 & May~2022 & UST/3CRV & DeFi pool imbalance & B & on-chain stress\\
+usdc\_dai\_secondary\_svb\_2023 & Mar~2023 & DAI/FRAX & DeFi pool imbalance & B & DeFi contagion\\
+usdt\_curve\_2023 & Jun~2023 & USDT & DeFi pool imbalance & B & on-chain stress\\
+usdr\_2023 & Oct~2023 & USDR & RWA/niche & B & long-tail stress\\
 \bottomrule
 \end{tabular}
 }
 \end{table*}
+
+\begin{table*}[t]
+\centering
+\caption{Appendix A2: source and claim status.}
+\label{tab:appendix_catalogue_claims}
+\setlength{\tabcolsep}{4pt}
+{\scriptsize
+\begin{tabular}{llrll}
+\toprule
+\textbf{Event ID} & \textbf{Tier} & \textbf{Coverage} & \textbf{Verification} & \textbf{Max depeg / claim}\\
+\midrule
+dai\_black\_thursday\_2020 & B & 0.50 & verified & +150 bps est.\\
+fei\_launch\_2021 & C & 0.25 & needs source & -2000 bps est.\\
+iron\_titan\_2021 & C & 0.25 & needs source & -10000 bps est.\\
+mim\_wonderland\_2022 & C & 0.25 & needs source & -300 bps est.\\
+terra\_ust\_2022 & B & 0.50 & verified & -10000 bps est.\\
+usdd\_tron\_2022 & B & 0.50 & needs source & -200 bps est.\\
+celsius\_3ac\_2022 & B & 0.50 & needs source & -100 bps est.\\
+husd\_depeg\_2022 & B & 0.50 & needs source & -800 bps est.\\
+acala\_ausd\_2022 & C & 0.25 & needs source & -9900 bps est.\\
+binance\_stablecoin\_conversion\_2022 & C & 0.25 & needs source & context event\\
+ftx\_collapse\_2022 & B & 0.50 & verified & -50 bps est.\\
+busd\_regulatory\_2023 & B & 0.50 & verified & -30 bps est.\\
+usdc\_svb\_2023 & A & 1.00 & verified & -1300 bps; execution benchmark\\
+usdc\_svb\_recovery\_2023 & A & 0.75 & verified & -10 bps; recovery benchmark\\
+curve\_3pool\_ust\_2022 & B & 0.50 & needs source & -500 bps est.\\
+usdc\_dai\_secondary\_svb\_2023 & B & 0.75 & needs source & -200 bps est.\\
+usdt\_curve\_2023 & B & 0.50 & verified & -80 bps est.\\
+usdr\_2023 & B & 0.50 & needs source & -5000 bps est.\\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\section{Robustness Sweeps}
+\label{app:robustness}
+
+Table~\ref{tab:app_notional} reports the notional sweep and
+Table~\ref{tab:app_costs} reports the fee/settlement sweep. The
+random-label control and 20\% depth haircut are implemented in the
+same evaluation harness and reported in the main text.
+
+\begin{table}[t]
+\centering
+\caption{Appendix B1: notional and horizon robustness at 10 bps.}
+\label{tab:app_notional}
+\setlength{\tabcolsep}{3pt}
+{\scriptsize
+\begin{tabular}{rrrrr}
+\toprule
+\textbf{Notional} & \textbf{Horizon} & \textbf{Opt.} & \textbf{Exec.} & \textbf{Ratio}\\
+\midrule
+\$10K & 1m & 12.65\% & 3.34\% & 3.79$\times$\\
+\$10K & 5m & 12.65\% & 5.64\% & 2.24$\times$\\
+\$50K & 1m & 12.65\% & 2.22\% & 5.71$\times$\\
+\$100K & 1m & 12.65\% & 1.35\% & 9.40$\times$\\
+\$500K & 1m & 12.65\% & 0.11\% & 117.82$\times$\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Appendix B2: fee and settlement robustness (5m, \$10K).}
+\label{tab:app_costs}
+\setlength{\tabcolsep}{3pt}
+{\scriptsize
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Fee / settlement} & \textbf{Opt.} & \textbf{Exec.} & \textbf{Ratio}\\
+\midrule
+low fee, 0 bps & 12.65\% & 5.83\% & 2.17$\times$\\
+base fee, 0 bps & 12.65\% & 5.64\% & 2.24$\times$\\
+high fee, 5 bps & 12.65\% & 5.07\% & 2.49$\times$\\
+base fee, 10 bps & 12.65\% & 4.88\% & 2.59$\times$\\
+high fee, 10 bps & 12.65\% & 4.81\% & 2.63$\times$\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\section{Reproducibility Manifest}
+\label{app:repro}
+
+The paper outputs are generated by the historical table builder,
+expanded historical figure builder, multi-event diversity runner,
+robustness-grid runner, and paper-figure builder under
+\texttt{scripts/}.
+The multi-event transfer protocol uses seed 42. Key artefact checksums
+for this revision are:
+\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]
+  \item historical windows YAML: \texttt{1ef9b6d8}
+  \item source-verification module: \texttt{c13f0408}
+  \item price/execution gap CSV: \texttt{1da577e3}
+  \item multi-event diversity CSV: \texttt{62885c61}
+\end{itemize}
+
+\section{Leaderboard Protocol}
+\label{app:leaderboard}
+
+StressBench ranks submissions by mean net bps per triggered trade and
+oracle capture. Every submission must report trades, hit rate,
+AUROC/AUPRC, notional size, cost assumptions, calibration split,
+per-event training sources, and the highest data tier used by the
+model. AUROC-only improvements do not constitute leaderboard progress
+unless they improve economic net bps or oracle capture.
 
 \section*{Acknowledgements}
 Anonymised for review.
