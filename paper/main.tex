@@ -99,12 +99,8 @@ The benchmark problem is therefore not merely to detect a depeg, but
 to determine which historical stress signatures remain economically
 executable across mechanisms.
 
-Stablecoin stress is historically mechanism-diverse, but executable
-arbitrage is microstructure-scarce.
-StressBench converts 18 historical stress episodes into a tiered
-benchmark, then shows that price-visible dislocations mostly vanish
-after execution costs, while cross-mechanism supervision recovers
-about half of the oracle and reward-only RL fails.
+Our thesis is that stablecoin stress is historically
+mechanism-diverse, but executable arbitrage is microstructure-scarce.
 When Silicon Valley Bank collapsed in March 2023, USDC briefly
 depegged and cross-venue price gaps appeared profitable on every
 chart.
@@ -146,10 +142,11 @@ why reward-only RL fails.
 
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
-  \item \textbf{Historical catalogue.} We provide a source-verified
+  \item \textbf{Historical catalogue.} We provide a source-tracked
         18-event stablecoin stress catalogue across seven mechanisms,
         with event-level claim provenance, verification flags,
-        coverage scores, and machine-readable windows.
+        coverage scores, machine-readable windows, and source-verified
+        paper claims.
   \item \textbf{Data-tier benchmark.} We formalise Tier A/B/C claim
         permissions so the benchmark separates execution-grade windows,
         price/liquidity-grade events, and context-grade taxonomy.
@@ -165,6 +162,28 @@ why reward-only RL fails.
         conditioned PPO-GRU earns $-29.2\bps$ despite identical
         positive-label density.
 \end{enumerate}
+
+\begin{table}[t]
+\centering
+\caption{Released StressBench artefacts.}
+\label{tab:artefacts}
+\setlength{\tabcolsep}{3pt}
+{\small
+\begin{tabular}{lp{2.9cm}p{1.8cm}}
+\toprule
+\textbf{Component} & \textbf{Contents} & \textbf{Role}\\
+\midrule
+Historical catalogue & 18 events, mechanisms, dates, tiers & defines stress universe\\
+Source registry & claim, source type, verification flag, paper-use flag & auditable claims\\
+Event windows & machine-readable YAML windows & reproducible splits\\
+Execution labels & VWAP net-profit labels, depth provenance & tradable target\\
+Oracle & hindsight executable ceiling & upper bound\\
+Model harness & rules, ML, meta-labeling, PPO-GRU & reproducible baselines\\
+Paper tables & frozen CSV outputs & result verification\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
 
 
 %% =============================================================
@@ -293,19 +312,38 @@ Binance BTC-USDT (sell), and Coinbase BTC-USD (reference).
 
 Data quality varies by leg and window, and every depth record is
 tagged with a provenance field (Table~\ref{tab:route_provenance}).
-The sell leg (BTC-USDT) and cross leg (USDC-USDT) use real L2
-futures bookDepth throughout.
+The sell leg (BTC-USDT) and cross leg (USDC-USDT) use real L2 or raw
+futures bookDepth where archived, with proxy/partial tags where route
+coverage is incomplete.
 The buy leg (BTC-USDC) is the main challenge. The BTC-USDC
 perpetual contract did not exist on Binance until January 2024, so
 the SVB window requires kline-proxy depth, one-minute candlestick
 volume as a substitute for unarchived order-book depth (high-volume
 candles do not guarantee deep books, and a 20\% haircut bounds this error).
+Coverage is tracked at the row and route-leg level rather than
+silently imputed.
+For Mar~10--11, incomplete BTC-USDC and USDC-USDT route legs are
+tagged proxy/partial; Mar~12--20 has complete cross-leg coverage in
+the committed route audit.
+All headline execution claims are recomputed under the 20\% depth
+haircut, and Figure~\ref{fig:depth_provenance} reports the route-leg
+coverage audit used to separate execution-grade SVB claims from
+validation/training-grade Terra/LUNA labels.
 For all 2024 windows, real L2 data is available.
 To bound the proxy error, we apply a 20\% depth haircut to the
 kline-proxy buy leg. The executable rate falls from 2.88\% to
 2.40\%, the ratio widens from $12\times$ to $14\times$, and the
 oracle remains above $+130\bps$. The headline result is therefore
 robust to the approximation.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_depth_provenance_heatmap.png}
+  \caption{Route-depth provenance by benchmark window. Dark cells are
+    real/raw depth, blue cells are proxy or partial route coverage, and
+    grey cells are absent.}
+  \label{fig:depth_provenance}
+\end{figure}
 
 \begin{table}[t]
 \centering
@@ -318,8 +356,8 @@ robust to the approximation.
 \textbf{Leg} & \textbf{SVB Mar~2023} & \textbf{2024 windows}\\
 \midrule
 Buy BTC-USDC    & kline-proxy$^\dagger$  & real L2 (futures)\\
-Cross USDC-USDT & real L2 (Mar~12--20)  & real L2 (futures)\\
-Sell BTC-USDT   & real L2 (futures)     & real L2 (futures)\\
+Cross USDC-USDT & partial/proxy; real L2 where archived  & real L2 (futures)\\
+Sell BTC-USDT   & raw/futures depth     & real L2 (futures)\\
 Ref BTC-USD     & candle-proxy          & candle-proxy\\
 \bottomrule
 \end{tabular}
@@ -437,25 +475,25 @@ Tier-A VWAP-labelled windows.
 The execution benchmark is a strict subset of the empirical panel,
 which is a strict subset of the catalogue.
 
-\begin{figure}[t]
+\begin{figure*}[t]
   \centering
-  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_historical_stressbench_timeline.png}
+  \includegraphics[width=0.88\textwidth]{../results/paper/figures/figure_historical_stressbench_timeline.png}
   \caption{The 18-event mechanism timeline. Marker size scales with
     absolute depeg magnitude; colour gives Tier A/B/C; marker shape
     distinguishes verified claims from events that need additional
     source confirmation.}
   \label{fig:timeline}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[t]
+\begin{figure*}[t]
   \centering
-  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_data_tier_funnel.png}
+  \includegraphics[width=0.78\textwidth]{../results/paper/figures/figure_data_tier_funnel.png}
   \caption{Data-tier funnel from the 18-event catalogue to the
     execution benchmark and transfer protocol. Tier A supports VWAP
     labels and oracle bounds; Tier B supports price/liquidity claims;
     Tier C supports historical taxonomy only.}
   \label{fig:funnel}
-\end{figure}
+\end{figure*}
 
 \subsubsection{Source verification and claim registry.}
 Every event-level claim is tied to a source type, URL/status,
@@ -523,6 +561,10 @@ Adams et al.\ \cite{adams2023mev}          & ---        & $\sim$ & CEX & --- & -
 \end{tabular}
 }
 \end{table}
+
+Unlike execution simulators that optimise within known LOB
+environments, StressBench studies cross-mechanism transfer under
+sparse historical stress labels and fixed replayed liquidity.
 
 \subsection{Feature Sets}
 \label{sec:features}
@@ -655,6 +697,31 @@ Meta-labeling \cite{lopezdeprado2018} and PPO-GRU
 \cite{moallemi2022rl,ning2021ddql} then isolate supervision format:
 same Terra/LUNA density, explicit binary labels versus sparse reward.
 
+\begin{table}[t]
+\centering
+\caption{Feature ablation under calm-trained LightGBM
+  (\task{basis\_usdc\_1m\_gt10bps}).}
+\label{tab:feature_ablation}
+\setlength{\tabcolsep}{3pt}
+{\small
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Feature set} & \textbf{Net bps} & \textbf{Trades} & \textbf{AUROC} & \textbf{AUPRC} & \textbf{Oracle cap.}\\
+\midrule
+\texttt{price\_only}        & $-125.3$ & 487 & 0.663 & 0.248 & $-77.3\%$\\
+\texttt{price\_plus\_book}  & $-101.5$ & 217 & 0.580 & 0.216 & $-62.6\%$\\
+\texttt{price\_book\_frag}  & $-101.5$ & 217 & 0.580 & 0.216 & $-62.6\%$\\
+\texttt{price\_book\_settle}& $-101.5$ & 217 & 0.580 & 0.216 & $-62.6\%$\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+Microstructure features matter only after stress exposure is present.
+Under calm training, richer features do not rescue P\&L; under
+cross-mechanism training, depth and spread features become predictive
+because the model has seen stress-regime depth withdrawal.
+
 \subsection{RL Execution Policy Baseline}
 \label{sec:rl_baseline}
 
@@ -682,11 +749,18 @@ the dominant gap component identified in \S\ref{sec:ladder}.
 \subsection{Calibration and Evaluation}
 \label{sec:eval}
 
+Net bps denotes realised mean net basis points per triggered trade
+after VWAP book-walking, taker fees, and settlement penalties; zero
+trades are reported as NoTrade rather than an undefined average.
 Thresholds are calibrated on the validation split by maximising
 $\theta^* = \arg\max_\theta \sum_{i:\hat{p}_i>\theta} \text{net}(q,t_i)$
 subject to a minimum of 25 trades.
-The primary metrics are net bps captured and oracle capture percentage,
-defined as model net bps divided by oracle net bps (the fraction of
+For cross-mechanism meta-labeling, Terra/LUNA is treated as a blocked
+training-and-calibration event: the secondary classifier is fit on the
+training block, the decision threshold is selected on the calibration
+block, and SVB remains untouched until final evaluation.
+The primary metrics are mean net bps per triggered trade and oracle capture percentage,
+defined as model mean net bps divided by oracle mean net bps (the fraction of
 the oracle's per-trade return that a model recovers).
 Secondary metrics are AUROC (area under the ROC curve) and AUPRC
 (area under the precision-recall curve).
@@ -702,7 +776,7 @@ Five explicit checks guard against leakage and evaluation artefacts:
   \item Shifting features forward by one minute to simulate lookahead does not improve performance.
   \item The calm-control training split contains exactly zero executable arbitrage windows.
   \item Train and test events are separated by event identity; no SVB features appear during model development.
-  \item All threshold calibration uses the Terra/LUNA validation split only; the SVB test split is held out until final evaluation.
+  \item Cross-mechanism threshold calibration uses only the held-out Terra/LUNA calibration block; the SVB test split is held out until final evaluation.
 \end{enumerate}
 
 Table~\ref{tab:benchmark_card} summarises the five evaluation tasks
@@ -721,12 +795,18 @@ shipped with StressBench v1.0.
 \task{optical\_basis} & calm & Terra & SVB & AUROC, AUPRC\\
 \task{exec\_arb\_q10k} & calm & Terra & SVB & net bps, oracle cap.\\
 \task{exec\_arb\_q50k} & calm & Terra & SVB & net bps\\
-\task{cross\_mech} & Terra & Terra & SVB & net bps, oracle cap.\\
-\task{policy\_entry} (RL) & Terra & Terra & SVB & net bps, trades\\
+\task{cross\_mech} & Terra block & Terra calib. & SVB & net bps, oracle cap.\\
+\task{policy\_entry} (RL) & Terra block & Terra calib. & SVB & net bps, trades\\
 \bottomrule
 \end{tabular}
 }
 \end{table}
+
+A valid StressBench submission must report mean net bps per triggered
+trade, trades, hit rate, oracle capture, AUROC/AUPRC, cost assumptions,
+notional size, calibration split, and whether the model uses Tier-A,
+Tier-B, or source-tracked events.
+Models are ranked by net bps and oracle capture, not by AUROC alone.
 
 
 %% =============================================================
@@ -775,8 +855,10 @@ contains zero despite 21.6\% optical activity.
 
 \begin{table}[h]
 \centering
-\caption{Optical and executable rates across both Tier-A windows
-  (real L2 depth throughout).}
+\caption{Optical and executable diagnostics for SVB execution-grade
+  windows and the Terra/LUNA validation window. SVB stress/recovery
+  are Tier-A execution-grade; Terra/LUNA is validation/training-grade
+  and is not used for final execution-grade claims.}
 \label{tab:tier_a_compare}
 \setlength{\tabcolsep}{3pt}
 {\small
@@ -789,30 +871,31 @@ SVB Recovery (Mar~15--20)  & 8{,}643 & 21.6\% & \textbf{0.00\%} & ---\\
 Terra/LUNA (May~2022, val.)& 11{,}526 & 14.0\% & 2.40\% & $+87.6\bps$\\
 \bottomrule
 \multicolumn{5}{l}{\footnotesize Opt.\ = max-abs basis $>10\bps$; Exec.\ = net-profitable windows.}\\
+\multicolumn{5}{l}{\footnotesize Terra/LUNA labels are used for cross-mechanism training and calibration only.}\\
 \end{tabular}
 }
 \end{table}
 
 \begin{table}[t]
 \centering
-\caption{Price-to-execution gap characterisation across mechanism
-  classes. Execution-grade ratios are available only for Tier-A
-  (real L2); Tier-B rates are directional estimates from OHLCV.}
+\caption{Mechanism-level stress-intensity hypotheses. Only the
+  fiat-reserve bank-shock row has execution-grade evidence; all other
+  rows define observable stress channels and permitted paper use.}
 \label{tab:mechanism_gap}
 \setlength{\tabcolsep}{2pt}
 {\scriptsize
-\begin{tabular}{lp{0.5cm}p{2.0cm}p{2.0cm}}
+\begin{tabular}{lp{0.5cm}p{1.7cm}p{1.5cm}p{1.6cm}}
 \toprule
-\textbf{Mechanism} & \textbf{Tier} &
-\textbf{Optical basis range} & \textbf{Est.\ P-to-E ratio}\\
+\textbf{Mechanism} & \textbf{Tier} & \textbf{Observable stress} &
+\textbf{Execution evidence} & \textbf{Paper use}\\
 \midrule
-Fiat-reserve shock     & A & 100--1{,}300\,bps       & $\sim$12$\times$ (verified)\\
-Algorithmic/reflexive  & B & 100--10{,}000\,bps      & $\gg$12$\times$ (est.)\\
-Exchange credit        & B & 5--800\,bps             & 2--5$\times$ (est.)\\
-Regulatory winddown    & B & 10--30\,bps             & 2--5$\times$ (est.)\\
-DeFi pool imbalance    & B & 8--500\,bps             & 5--10$\times$ (est.)\\
-Collateral liquidation & B & $+$150\,bps (above peg) & N/A (different dir.)\\
-RWA / niche            & B & 500--5{,}000\,bps       & Not comparable\\
+Fiat-reserve bank shock & A & price + L2 + labels & verified & execution benchmark\\
+Algorithmic/reflexive & B & price/liquidity & training/validation only & transfer source\\
+Exchange credit & B & price/liquidity & no final execution claim & transfer/contrast\\
+Regulatory winddown & B & price/liquidity & no final execution claim & transfer\\
+DeFi pool imbalance & B & pool/liquidity & no final execution claim & mechanism context\\
+Collateral liquidation & B & price/liquidation & no final execution claim & above-peg stress\\
+RWA/niche & B/C & price/context & no final execution claim & long-tail coverage\\
 \bottomrule
 \end{tabular}
 }
@@ -846,6 +929,31 @@ the phenomenon StressBench measures is not SVB-specific.
 \end{tabular}
 }
 \end{table}
+
+\begin{table}[t]
+\centering
+\caption{Block-bootstrap uncertainty for directly auditable SVB claims
+  (60-minute blocks, 2{,}000 resamples).}
+\label{tab:bootstrap_ci}
+\setlength{\tabcolsep}{3pt}
+{\small
+\begin{tabular}{lrr}
+\toprule
+\textbf{Claim} & \textbf{Point} & \textbf{95\% CI}\\
+\midrule
+Optical rate & 34.3\% & [31.2, 37.5]\%\\
+Executable rate & 2.88\% & [1.47, 4.59]\%\\
+Optical/executable ratio & 11.9$\times$ & [7.6, 23.0]$\times$\\
+Oracle mean net bps & $+259.9$ & [$+213.9$, $+304.2$]\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+The committed result tables store model-level summaries but not every
+model's per-minute trade decisions, so model-return confidence
+intervals are reserved for the reproducibility appendix once those
+decision traces are frozen.
 
 \begin{figure}[t]
   \centering
@@ -983,24 +1091,14 @@ A root-cause analysis identifies route-direction mismatch as the
 primary failure mode: 581 of those false positives are triggered by
 USDT dislocations where the USDC route is simultaneously
 non-executable, at $-38.7\bps$ each.
+True-positive windows carry a mean USDC basis of 344\,bps, while
+false-positive windows carry just 0.56\,bps and exhibit \emph{higher}
+average bid depth ($72{,}805$ vs.\ $59{,}961$ BTC units), ruling out
+thin books as the main failure.
 The remaining gap splits into timing error (40--80\,bps from entering
 1--2 minutes late in a declining depth regime) and sizing error
 (40--100\,bps as depth depletion shrinks the executable fraction from
 2.88\% at \$10K to 1.62\% at \$50K).
-
-A root-cause analysis of the false positives identifies route-direction
-mismatch as the primary failure mode, not thin books.
-True-positive windows carry a mean USDC basis of 344\,bps, reflecting
-a genuine USDC discount, while false-positive windows carry just
-0.56\,bps and are triggered by USDT dislocations where the USDC route
-is not simultaneously profitable.
-Crucially, false-positive windows exhibit \emph{higher} average bid
-depth ($72{,}805$ vs.\ $59{,}961$ BTC units) than true positives.
-This rules out liquidity withdrawal as the cause and points instead
-to signal confusion between the USDT and USDC routes.
-In short: the price rule reacts to USDT dislocations even when USDC
-is not moving, and those windows offer no profit on the USDC route
-the strategy uses.
 Meta-labeling's approximately 51\% hit rate versus 6\% for the price
 rule shows that cross-mechanism training substantially reduces
 route-direction mismatch, though a 49\% false-positive rate and
@@ -1069,6 +1167,28 @@ Terra/LUNA (cross-mech.) & $+82.5$  & 397 &  51.0\%\\
 Calm-control (baseline)  & $\phantom{+}0.0$ &   0 &   0.0\%\\
 \bottomrule
 \multicolumn{4}{l}{\footnotesize Primary signal $|b_{\text{USDC}}|{>}10\bps$; threshold calibrated on validation.}\\
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Mechanism-diverse transfer results
+  (\task{basis\_usdc\_1m\_gt10bps}, \texttt{price\_plus\_book}).}
+\label{tab:transfer_results}
+\setlength{\tabcolsep}{3pt}
+{\small
+\begin{tabular}{lp{1.5cm}rrrp{1.6cm}}
+\toprule
+\textbf{Training source} & \textbf{Mechanism} & \textbf{Net bps} & \textbf{Trades} & \textbf{Oracle cap.} & \textbf{Interpretation}\\
+\midrule
+Calm control & none & $0.0$ & 0 & 0.0\% & no stress positives\\
+Terra/LUNA & algorithmic & $+78.5$ & 123 & 48.4\% & depth withdrawal transfers\\
+Celsius/3AC & exchange credit & $+79.7$ & 221 & 49.1\% & liquidity-contagion signal\\
+FTX & exchange credit & $+36.5$ & 1 & 22.5\% & low intensity\\
+BUSD & regulatory & --- & --- & --- & pooled-only stress source\\
+Pooled four-event & multi-mechanism & $+83.7$ & 163 & 51.6\% & diversity stabilises transfer\\
+\bottomrule
 \end{tabular}
 }
 \end{table}
