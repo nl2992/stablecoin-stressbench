@@ -1,8 +1,8 @@
 split,rows,source,notes
-test,15839,dataset.parquet,
-train,20125,dataset.parquet,
-validation,11523,dataset.parquet,
-total,47487,dataset.parquet,125 columns (100 label cols)
+test,15832,dataset.parquet,
+train,28776,dataset.parquet,
+validation,11526,dataset.parquet,
+total,56134,dataset.parquet,125 columns (100 label cols)
 bronze.aggTrades,2182116,pipeline_row_counts.csv,Binance Vision archive 2024-01-15 (5 symbols × 24 hours)
 bronze.klines,7200,pipeline_row_counts.csv,Binance Vision 1-minute klines 2024-01-15 (5 symbols × 24 hours)
 silver.aggTrades,220254497,pipeline_row_counts.csv,Normalized trade rows (all event windows)

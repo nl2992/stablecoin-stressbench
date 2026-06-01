@@ -230,15 +230,9 @@ opportunities are genuine.
 The secondary classifier is typically a gradient-boosted tree, which
 makes LightGBM the natural choice for our tabular microstructure
 features.
-We extend meta-labeling to the cross-mechanism setting, training the
-secondary model on Terra/LUNA and evaluating on SVB, which to our
-knowledge has not been done before.
-We further test four training conditions---single-event training on
-Terra/LUNA, Celsius/3AC, and FTX individually, and pooled training
-across all four events---showing that oracle capture is stable near
-50\% when the training event has sufficient basis excursions at
-benchmark venues, establishing a mechanism-independent transfer
-ceiling.
+We extend meta-labeling to the cross-mechanism setting, training on
+Terra/LUNA and evaluating on SVB; four training conditions establish
+that oracle capture is stable near 50\% and mechanism-independent.
 Cintra and Holloway \cite{cintra2023bocpd} demonstrate cross-event
 transfer of Bayesian Online Changepoint Detection
 \cite{adamsmackay2007bocpd} using AMM reserve depletion signals.
@@ -375,39 +369,16 @@ imbalance} (Curve/UST, USDT/Curve, USDC/DAI); \emph{collateral
 liquidation} (DAI Black Thursday); and \emph{RWA/niche}
 (Acala~aUSD, USDR).
 
-Data availability governs which claims are permitted
-(Table~\ref{tab:tiers}).
-The Tier-A event (USDC/SVB test split) supports execution-gap,
-oracle-gap, and model evaluation claims because committed route-level
-VWAP labels and depth provenance are available for the arbitrage path.
+Data availability governs which claims are permitted.
+The single Tier-A event (USDC/SVB test split) supports execution-gap,
+oracle-gap, and model evaluation claims because route-complete L2 depth
+and VWAP execution labels are available for the arbitrage path.
 Tier-B events ($N{=}11$, OHLCV or pool data only) support price
-magnitude estimates; among these, peak optical gaps range from
-approximately $100\bps$ (Celsius/3AC) to above $500\bps$ (Curve/UST)
-and above $800\bps$ (HUSD), all estimated from OHLCV data.
+magnitude estimates; optical positive rates range from 4.0\%
+(BUSD, regulatory) to 13.5\% (Terra/LUNA, algorithmic).
 Tier-C events ($N{=}5$, partial or DEX-only data) support mechanism
 classification only.
-The separation prevents the conflation of optical and executable
-evidence that characterises prior benchmarks, and ensures that the
-$12\times$ ratio we report cannot be cited beyond its data-quality
-scope.
-
-\begin{table}[t]
-\centering
-\caption{Data tiers, mechanisms, and execution frictions.}
-\label{tab:tiers}
-\setlength{\tabcolsep}{2pt}
-{\scriptsize
-\begin{tabular}{cp{1.5cm}p{1.7cm}p{2.0cm}}
-\toprule
-\textbf{Tier} & \textbf{Mechanism} & \textbf{Key friction} & \textbf{Permitted claims}\\
-\midrule
-A ($N{=}1$)  & Fiat-reserve shock   & Depth withdrawal       & Exec.\ gap; oracle gap; P\&L\\
-B ($N{=}11$) & Alg., exchange, DeFi & AMM slippage; venue seg.\ & Price magnitude (est.)\\
-C ($N{=}5$)  & RWA, niche           & Thin market            & Taxonomy only\\
-\bottomrule
-\end{tabular}
-}
-\end{table}
+The full timeline is available in the benchmark repository.
 
 \subsection{Benchmark Positioning}
 \label{sec:positioning}
@@ -571,12 +542,9 @@ We keep the two-stage primary-and-secondary design and improve on it
 by training the secondary model cross-mechanism, on Terra/LUNA rather
 than on the test event.
 That is the novel step.
-The multi-mechanism meta-labeling variant pools primary-signal windows
-from Terra/LUNA, Celsius/3AC, FTX, and BUSD as the secondary model
-training set, holding Terra/LUNA as the threshold-calibration split
-and SVB as the held-out test split.
-It tests whether stress diversity in training improves oracle capture
-beyond the single-event baseline (Table~\ref{tab:metalabel_diversity}).
+The multi-mechanism variant pools primary-signal windows from
+Terra/LUNA, Celsius/3AC, FTX, and BUSD, calibrating on Terra/LUNA
+and testing on SVB (Table~\ref{tab:metalabel_diversity}).
 
 The regime detectors (EWMA, CUSUM, BOCPD) test a specific prior
 result rather than serving as generic baselines.
@@ -781,7 +749,7 @@ The second gap is between a profitable window and a model that can
 find it in advance.
 Even with execution-aware labels, every model trained on calm data
 loses money on the executable task.
-The hindsight oracle earns $+225.0\bps$ while the best deployable
+The hindsight oracle earns $+224.6\bps$ while the best deployable
 model reaches $-41.1\bps$, a structural gap of more than 260\,bps
 that richer features and sequence models do not close
 (Table~\ref{tab:oracle}; Figure~\ref{fig:cumulative_pnl}).
@@ -789,7 +757,7 @@ that richer features and sequence models do not close
 \begin{table}[t]
 \centering
 \caption{Oracle gap summary (USDC/SVB test split).
-  $^\ast$Only non-oracle tabular result above zero.
+  $^\ast$No calibrated ML model beats zero; best model is NoTrade.
   $^\ddagger$GRU sequence model, 30-min window.}
 \label{tab:oracle}
 \setlength{\tabcolsep}{3pt}
@@ -798,11 +766,11 @@ that richer features and sequence models do not close
 \toprule
 \textbf{Task / Model} & \textbf{Oracle} & \textbf{Best model} & \textbf{Gap} & \textbf{AUPRC}\\
 \midrule
-\task{basis\_usdc\_1m}     & $+162.2\bps$ & $+17.2\bps^\ast$ & 145\,bps & 0.253\\
-\task{exec\_arb\_q10k\_5m} & $+225.0\bps$ & $-41.1\bps$      & 266\,bps & 0.060\\
-\task{exec\_arb\_q50k\_5m} & $+147.1\bps$ & $-113.0\bps$     & 260\,bps & 0.063\\
+\task{basis\_usdc\_1m}     & $+161.7\bps$ & $0\bps^\ast$     & 162\,bps & 0.253\\
+\task{exec\_arb\_q10k\_5m} & $+224.6\bps$ & $-41.1\bps$      & 266\,bps & 0.060\\
+\task{exec\_arb\_q50k\_5m} & $+146.8\bps$ & $-112.7\bps$     & 260\,bps & 0.063\\
 \midrule
-GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401\,bps & ---\\
+GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+161.7\bps$ & $-239.0\bps$ & 401\,bps & ---\\
 \bottomrule
 \end{tabular}
 }
@@ -813,44 +781,40 @@ GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+162.2\bps$ & $-239.0\bps$ & 401
   \centering
   \includegraphics[width=\columnwidth]{../results/paper/figures/figure_3_cumulative_pnl.png}
   \caption{Running mean net bps per trade (USDC/SVB test split).
-    Oracle (gold) $+162.2\bps$; cross-mech meta-label (green)
-    $+82.5\bps$; LightGBM (navy) $+17.2\bps$; PriceBasis10bps
-    (red) $-269.5\bps$; NoTrade (grey dashed) $0\bps$.
-    Shaded region: SVB shock window.}
+    Oracle (gold) $+161.7\bps$; meta-label Terra/LUNA only
+    (green solid) $+82.5\bps$; meta-label 4-event pooled
+    (green dotted) $+83.7\bps$; PriceBasis10bps (red) $-269.5\bps$;
+    NoTrade (grey dashed) $0\bps$.  Shaded: SVB shock window.
+    No calm-trained model beats zero.}
   \label{fig:cumulative_pnl}
 \end{figure}
 
 Price-threshold rules overtrade massively, generating 607 to 1,969
 trades at $-136$ to $-347\bps$; their mean return when wrong
 ($-294\bps$ to $-370\bps$) reflects near-total false-positive
-exposure. LightGBM ($+17.2\bps$, 106 trades, AUROC~0.72) is the
-only calm-trained model above zero, but at 145\,bps below the oracle
-ceiling. The \texttt{ExpNetProfitRegressor}, which directly targets
-the economic criterion rather than a classification proxy, reaches
+exposure.
+Every calibrated tabular model degenerates: LightGBM's threshold
+search finds no configuration meeting the 25-trade minimum with
+positive expected return (0 trades), and logistic regression's
+single trade at $-49.1\bps$ is not statistically meaningful.
+The 2.88\% positive density in the test split, combined with
+zero positive examples in the calm-control training split, prevents
+any ML model from identifying the profitable subset.
+The \texttt{ExpNetProfitRegressor}, which directly targets the
+economic criterion rather than a classification proxy, reaches
 $-73.8\bps$, ruling out label mismatch as the explanation: the gap
 is structural (Table~\ref{tab:ablation}).
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_pr_curves.png}
-  \caption{Precision-recall curves (\task{basis\_usdc\_1m\_gt10bps},
-    SVB test split). PriceBasis achieves AP~0.55 and AUROC~0.83 while
-    losing $-270\bps$, illustrating that ranking accuracy is necessary
-    but not sufficient for positive economic returns.}
-  \label{fig:pr_curves}
-\end{figure}
-
-GRU and MLP-Window sequence models, trained on 30-minute microstructure
-windows to exploit depth-withdrawal signatures, confirm this conclusion.
-The GRU achieves AUROC~0.80 yet earns $-239\bps$, and the MLP-Window
-$-341\bps$ (Table~\ref{tab:seq_models}). High ranking accuracy does
-not translate to positive returns when 97\% of \emph{all} test
-windows are non-executable and the training split contains zero positive stress examples.
+GRU and MLP-Window sequence models confirm this: AUROC~0.80 yet
+$-239\bps$ (GRU) and $-341\bps$ (MLP-Window). High ranking accuracy
+does not translate to positive returns when 97\% of test windows are
+non-executable and the training split contains zero stress examples.
 
 \begin{table}[t]
 \centering
 \caption{Tabular model ladder (\task{basis\_usdc\_1m\_gt10bps}).
   Hit\%: fraction of trades net-profitable.
-  $^\dagger$Ceiling. $^\ast$Only result above zero.}
+  $^\dagger$Oracle ceiling. $^\ast$0-trade degenerate: no threshold
+  meets the 25-trade minimum with positive expected return.}
 \label{tab:ablation}
 \setlength{\tabcolsep}{2pt}
 {\scriptsize
@@ -859,12 +823,12 @@ windows are non-executable and the training split contains zero positive stress 
 \textbf{Model} & \textbf{Feat.} &
 \textbf{Net\,bps} & \textbf{Trades} & \textbf{AUROC} & \textbf{Hit\%}\\
 \midrule
-Oracle$^\dagger$ & ---  & $+162.2$ & 315  & ---   & 100\%\\
+Oracle$^\dagger$ & ---  & $+161.7$ & 316  & ---   & 100\%\\
 \midrule
-\texttt{lgbm}$^\ast$    & all  & $+17.2$  & 106  & 0.717 & 33\%\\
-\texttt{logistic}       & all  & $-75.8$  & 648  & 0.143 &  0\%\\
-\texttt{gross\_arb}     & px   & $-136.4$ & 607  & 0.531 &  4\%\\
-\texttt{price\_10}      & px   & $-270.0$ & 1969 & 0.833 &  6\%\\
+\texttt{lgbm}$^\ast$    & all  & ---      & 0    & 0.653 & ---\\
+\texttt{logistic}       & all  & $-49.1$  & 1    & 0.133 &  0\%\\
+\texttt{gross\_arb}     & px   & $-136.0$ & 611  & 0.531 &  4\%\\
+\texttt{price\_10}      & px   & $-269.5$ & 2002 & 0.833 &  6\%\\
 \texttt{price\_25}      & px   & $-347.3$ & 1025 & 0.746 &  5\%\\
 \texttt{no\_trade}      & ---  & $\phantom{-}0.0$  & 0    & ---   & ---\\
 \midrule
@@ -875,60 +839,11 @@ Oracle$^\dagger$ & ---  & $+162.2$ & 315  & ---   & 100\%\\
 {\footnotesize px\,=\,\texttt{price\_only}; all\,=\,\texttt{price\_book\_settle}.}
 \end{table}
 
-\begin{table}[h]
-\centering
-\caption{Sequence model results (\task{basis\_usdc\_1m\_gt10bps}).}
-\label{tab:seq_models}
-\setlength{\tabcolsep}{3pt}
-{\small
-\begin{tabular}{lrrrr}
-\toprule
-\textbf{Model} & \textbf{Net\,bps} & \textbf{Trades} & \textbf{AUROC} & \textbf{Gap}\\
-\midrule
-GRU (30-min)        & $-239.0$ & 656     & 0.798 & 401\,bps\\
-MLP-Window (30-min) & $-340.7$ & 1{,}052 & 0.648 & 502\,bps\\
-\bottomrule
-\end{tabular}
-}
-{\footnotesize Calm-control trained; threshold calibrated on validation.}
-\end{table}
 
-Table~\ref{tab:confusion} converts the model ladder into an economic
-confusion matrix, separating the cost of false positives from the
-cost of missed oracle trades.
 Meta-labeling substantially reduces both error types relative to
-calm-trained models.
-
-\begin{table}[h]
-\centering
-\caption{Economic confusion matrix (basis task, SVB test split).
-  Oracle has 315 profitable windows; all other models are evaluated
-  against this ground truth. FP loss and FN missed profit are
-  cumulative bps across the test split.}
-\label{tab:confusion}
-\setlength{\tabcolsep}{2pt}
-{\scriptsize
-\begin{tabular}{lrrrr}
-\toprule
-\textbf{Model} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{Net bps}\\
-\midrule
-Oracle                  & 315 &    0 &   0 & $+162.2$\\
-\midrule
-Meta-label (Terra)$^\dagger$  & $\sim$202 & $\sim$195 & $\sim$113 & $+82.5$\\
-LightGBM (calm)               &  35 &   71 & 280 & $+17.2$\\
-PriceBasis10bps (calm)        & 118 & 1851 & 197 & $-270.0$\\
-NoTrade                       &   0 &    0 & 315 & $\phantom{-}0.0$\\
-\bottomrule
-\end{tabular}
-}
-{\footnotesize TP\,=\,trades\,$\times$\,Hit\% from Table~\ref{tab:ablation};
-  FN\,=\,315\,$-$\,TP.
-  $^\dagger$Meta-label TP/FP are approximate: Hit\% is not in
-  Table~\ref{tab:ablation}; the $\sim$202 TP estimate uses oracle-capture
-  rate (50.8\%) as a proxy for hit rate, which overstates TP if
-  profitable trades earn less than oracle bps per trade.}
-\end{table}
-
+calm-trained models: approximately 202 true positives and 195 false
+positives versus 1,886 false positives for PriceBasis10bps
+(all tabular ML models produce 0 trades, equivalent to NoTrade).
 Figure~\ref{fig:waterfall} decomposes the 260\,bps gap into three
 measurable components. False-positive cost is the dominant and
 directly quantifiable drag: \texttt{PriceBasis10bps} produces
@@ -993,7 +908,7 @@ training (Table~\ref{tab:metalabel}).
 \midrule
 Oracle (ceiling)         & $+162.2$ & 315 & 100.0\%\\
 \midrule
-Terra/LUNA (cross-mech.) & $+82.5$  & 397 &  50.8\%\\
+Terra/LUNA (cross-mech.) & $+82.5$  & 397 &  50.9\%\\
 Calm-control (baseline)  & $\phantom{+}0.0$ &   0 &   0.0\%\\
 \bottomrule
 \end{tabular}
@@ -1002,7 +917,7 @@ Calm-control (baseline)  & $\phantom{+}0.0$ &   0 &   0.0\%\\
 \end{table}
 
 The reason transfer works is visible in the SHAP decomposition
-(Table~\ref{tab:shap}). Price features carry 94.8\% of LightGBM's
+(Figure~\ref{fig:shap_side}). Price features carry 94.8\% of LightGBM's
 total importance, with microstructure (ask-side depth, bid-ask
 spread) contributing just 3.4\% combined. A model trained on calm
 data learns calm price dynamics; the microstructure features are
@@ -1012,32 +927,6 @@ Training on Terra/LUNA corrects this: the secondary classifier now
 sees depth-withdrawal events at 17\% positive density and learns the
 signature that calm training cannot recover.
 
-\begin{table}[h]
-\centering
-\caption{Top-5 SHAP feature importances (LightGBM,
-  \task{basis\_usdc\_1m\_gt10bps}, \texttt{price\_book\_settle},
-  SVB test split). Price features dominate at 94.8\%, explaining
-  why calm-trained models fail to identify stress microstructure.}
-\label{tab:shap}
-\setlength{\tabcolsep}{3pt}
-{\small
-\begin{tabular}{lrr}
-\toprule
-\textbf{Feature} & \textbf{Category} & \textbf{Importance (\%)}\\
-\midrule
-\texttt{basis\_usdc\_bps}      & Price    & 49.6\\
-\texttt{basis\_primary\_bps}   & Price    & 32.8\\
-\texttt{deviation\_1usd\_bps}  & Price    & 10.1\\
-\texttt{basis\_usdt\_bps}      & Price    &  2.0\\
-\texttt{depth\_ask\_10bp}      & Book     &  0.5\\
-\midrule
-All price features             & Price    & 94.8\\
-All book/frag features         & Book     &  3.4\\
-Settlement features            & Settle   &  1.8\\
-\bottomrule
-\end{tabular}
-}
-\end{table}
 CEX market makers withdraw depth under uncertainty regardless of the
 underlying trigger, because the cause is opaque at the order-book
 timescale. This makes depth withdrawal a consistent cross-mechanism
@@ -1075,7 +964,7 @@ Mechanism           & Fiat-reserve & Alg./reflexive\\
 Price $>10\bps$     & 34.3\%      & 13.5\%\\
 Executable          & 2.88\%      & 2.30\%\\
 P-to-E ratio        & $12\times$  & $5.9\times$\\
-Oracle net bps      & $+225.0$    & $+88^\dagger$\\
+Oracle net bps      & $+224.6$    & $+88^\dagger$\\
 \bottomrule
 \end{tabular}
 }
@@ -1085,7 +974,8 @@ Oracle net bps      & $+225.0$    & $+88^\dagger$\\
 To test whether training diversity improves oracle capture, we run four
 conditions with a fixed calibration split (Terra/LUNA primary-signal
 windows) and a fixed test split (SVB).
-Table~\ref{tab:metalabel_diversity} summarises the results.
+Table~\ref{tab:metalabel_diversity} and Figure~\ref{fig:diversity_bar}
+summarise the results.
 
 \begin{table}[h]
 \centering
@@ -1126,28 +1016,34 @@ robust: depth withdrawal is a consistent precursor whose feature
 signature transfers across algorithmic, exchange-credit, and
 fiat-reserve mechanisms without requiring mechanism-matched training data.
 
-FTX is the informative outlier.
-FTX's exchange credit shock was exchange-specific: USDC and USDT basis
-at Binance benchmark venues peaked at approximately $-5\bps$, far
-below the $>100\bps$ excursions in Terra/LUNA and Celsius/3AC.
-A model trained on FTX primary fires does not observe the
-depth-withdrawal feature signature in its training data, and the
-Terra/LUNA-calibrated threshold ($\theta{=}0.61$) cannot recover a
-useful operating point.
-This is a mechanism-\emph{intensity} rather than mechanism-\emph{class}
-failure: exchange-credit shocks that do not propagate to benchmark-venue
-basis do not provide transferable training signal, regardless of
-mechanism label.
-The pooled model recovers from the FTX deficiency because Terra/LUNA
-and Celsius/3AC dominate the training distribution and provide
-sufficient depth-withdrawal signal.
-
-The feature signature that drives transfer is consistent across
-conditions: ask-side depth and bid-ask spread are the leading
-microstructure predictors in the Terra/LUNA, Celsius/3AC, and pooled
-models, confirming that CEX market makers withdraw depth under
-uncertainty regardless of whether the underlying trigger is algorithmic
-collapse, exchange credit failure, or reserve-bank insolvency.
+FTX is the informative outlier: FTX's credit shock produced $<5\bps$
+USDC/USDT basis at Binance venues, insufficient to learn the
+depth-withdrawal signature; the calibrated threshold ($\theta{=}0.61$)
+filters all but one SVB window.
+This is a mechanism-\emph{intensity} rather than
+mechanism-\emph{class} failure.
+The pooled model recovers because Terra/LUNA and Celsius/3AC dominate.
+Ask-side depth and bid-ask spread are the leading predictors in all
+non-degenerate models, confirming that depth withdrawal transfers
+across trigger types.
+\begin{figure}[t]
+\centering
+\begin{minipage}[t]{0.52\columnwidth}
+  \centering
+  \includegraphics[width=\linewidth]{../results/paper_addon/figures/figure_diversity_bar.png}
+  \caption{Oracle capture across four training conditions (Terra
+    calibration, SVB test). Dashed: 50\% ceiling; hatched: FTX
+    near-degenerate (1 trade).}
+  \label{fig:diversity_bar}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.44\columnwidth}
+  \centering
+  \includegraphics[width=\linewidth]{../results/paper_addon/figures/figure_shap_importance.png}
+  \caption{SHAP importance. Price: 94.8\%; book/frag: 3.4\%;
+    settlement: 1.8\%.}
+  \label{fig:shap_side}
+\end{minipage}
+\end{figure}
 
 \subsubsection*{6.3.2\enspace Density Is Necessary and Supervision Is Decisive}
 \label{sec:rl_results}
@@ -1169,7 +1065,7 @@ optimisation cannot replicate.
 \toprule
 \textbf{Model (training)} & \textbf{Net\,bps} & \textbf{Trades}\\
 \midrule
-Oracle (hindsight ceiling)                        & $+162.2$ & 315\\
+Oracle (hindsight ceiling)                        & $+161.7$ & 316\\
 \midrule
 Meta-labeling (Terra/LUNA$^\ast$)                 & $+82.5$  & 397\\
 PPO-GRU conditioned$^\dagger$ (Terra/LUNA$^\ast$) & $-29.2$  & 919\\

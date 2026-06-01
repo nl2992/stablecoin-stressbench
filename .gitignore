@@ -44,3 +44,9 @@ leaderboard.csv
 .DS_Store
 .idea/
 .vscode/
+install-bin-unix.sh
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg

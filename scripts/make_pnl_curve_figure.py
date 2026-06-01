@@ -129,27 +129,10 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
     price_bps = -269.46
     price_trades = 2002
 
-    # ---- Best LightGBM variant ----
-    # Paper Table 7: lgbm@all features, basis_usdc_1m_gt10bps, +17.2 bps, 106 trades
-    # (from experiments_addon/all_results.csv — the addon run with full feature sets)
-    ADDON_RESULTS = REPO / "results" / "experiments_addon" / "all_results.csv"
-    lgbm_bps = 17.24
-    lgbm_trades = 106
-    if ADDON_RESULTS.exists():
-        addon_rows = load_results(ADDON_RESULTS)
-        lgbm_candidates = [
-            r
-            for r in addon_rows
-            if r["task"] == TASK
-            and r["model"] == "lgbm"
-            and r.get("n_trades", "0") not in ("", "0", "nan")
-        ]
-        if lgbm_candidates:
-            best = max(
-                lgbm_candidates, key=lambda r: float(r.get("net_bps_captured") or -999)
-            )
-            lgbm_bps = float(best["net_bps_captured"])
-            lgbm_trades = int(best["n_trades"])
+    # ---- Pooled four-event meta-labeling (from multi_event_diversity_results.csv) ----
+    # All four events (Terra/LUNA + Celsius/3AC + FTX + BUSD), calibrated on Terra/LUNA
+    pooled_bps = 83.7
+    pooled_trades = 163
 
     # ---- Cross-mechanism meta-labeling (Paper Table 8) ----
     # Trained on Terra/LUNA, evaluated on SVB; +82.5 bps, 397 trades
@@ -184,14 +167,14 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
         / price_trades
     )
 
-    lgbm_cum = simulate_pnl(
-        lgbm_trades,
-        lgbm_bps,
+    pooled_cum = simulate_pnl(
+        pooled_trades,
+        pooled_bps,
         N_MINUTES,
         rng,
         cluster_around=[(SVB_START, SVB_END)],
         noise_scale=0.0,
-    ) / max(lgbm_trades, 1)
+    ) / max(pooled_trades, 1)
 
     meta_cum = simulate_pnl(
         meta_trades,
@@ -252,16 +235,18 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
         color=C_META,
         lw=2.0,
         ls="-.",
-        label=f"Cross-mech meta-label (Terra/LUNA train, {meta_trades} trades)",
+        label=f"Meta-label, Terra/LUNA only ({meta_trades} trades, +{meta_bps:.1f} bps)",
         zorder=4,
     )
     ax.plot(
         x,
-        lgbm_cum,
-        color=C_LGBM,
-        lw=1.8,
-        label=f"LightGBM best (calm train, {lgbm_trades} trades)",
-        zorder=3,
+        pooled_cum,
+        color=C_META,
+        lw=1.6,
+        ls=":",
+        alpha=0.7,
+        label=f"Meta-label, 4-event pooled ({pooled_trades} trades, +{pooled_bps:.1f} bps)",
+        zorder=4,
     )
     ax.plot(
         x,
@@ -285,8 +270,8 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
     pad = N_MINUTES * 0.01
     for cum, color, label in [
         (oracle_cum, C_ORACLE, f"{oracle_cum[-1]:+.1f} bps/trade"),
-        (meta_cum, C_META, f"{meta_cum[-1]:+.1f} bps/trade"),
-        (lgbm_cum, C_LGBM, f"{lgbm_cum[-1]:+.1f} bps/trade"),
+        (meta_cum, C_META, f"{meta_cum[-1]:+.1f} bps (Terra only)"),
+        (pooled_cum, C_META, f"{pooled_cum[-1]:+.1f} bps (pooled)"),
         (price_cum, C_PRICE, f"{price_cum[-1]:+.1f} bps/trade"),
     ]:
         ax.annotate(
