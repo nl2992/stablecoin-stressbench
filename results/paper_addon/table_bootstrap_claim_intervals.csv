@@ -1,0 +1,8 @@
+claim,point,ci_low,ci_high,unit,method
+Optical rate,34.329206670035376,31.173533872598586,37.537897928246586,%,"60-min block bootstrap, SVB test split"
+Executable rate,2.8802425467407784,1.4715449722081861,4.585807225871652,%,"60-min block bootstrap, SVB test split"
+Optical/executable ratio,11.918859649122808,7.558953789390395,22.974899539921957,x,"60-min block bootstrap, SVB test split"
+Oracle mean net bps,259.89005199964254,213.88565663425817,304.15214387454625,bps,"60-min block bootstrap, SVB test split"
+Terra meta-labeling,82.5,,,bps,trade-level decision trace not stored; interval pending
+Pooled four-event,83.7,,,bps,trade-level decision trace not stored; interval pending
+PPO-GRU conditioned,-29.2,,,bps,trade-level decision trace not stored; interval pending
