@@ -160,7 +160,9 @@ def _generate_event(rng: np.random.Generator, cfg: dict) -> dict:
     profit_idxs = rng.choice(fire_idxs, size=n_profitable, replace=False)
     net_profit[profit_idxs] = rng.uniform(15.0, 120.0, size=n_profitable)
 
-    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(np.int8)
+    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(
+        np.int8
+    )
     primary_signal = (np.abs(basis) > _PRIMARY_THRESHOLD).astype(np.int8)
 
     return {
@@ -240,13 +242,15 @@ def _generate_svb(rng: np.random.Generator) -> dict:
 
 def _make_X(data: dict) -> np.ndarray:
     """price_plus_book feature matrix (basis, depth_bid, depth_ask, spread, imbalance)."""
-    return np.column_stack([
-        data["basis"],
-        data["depth_bid"],
-        data["depth_ask"],
-        data["spread"],
-        data["imbalance"],
-    ])
+    return np.column_stack(
+        [
+            data["basis"],
+            data["depth_bid"],
+            data["depth_ask"],
+            data["spread"],
+            data["imbalance"],
+        ]
+    )
 
 
 # ── Calibration and evaluation ────────────────────────────────────────────────
@@ -314,7 +318,7 @@ def _pool_primary_fires(events_data: list[dict]) -> tuple[np.ndarray, np.ndarray
 def run_condition(
     condition_name: str,
     training_events: list[dict],
-    calib_event: dict,    # Terra/LUNA for threshold calibration
+    calib_event: dict,  # Terra/LUNA for threshold calibration
     svb: dict,
     feature_set: str = "price_plus_book",
 ) -> dict:
@@ -339,7 +343,10 @@ def run_condition(
 
     logger.info(
         "[%s] Training: %d primary fires, %d meta-positives (%.1f%%)",
-        condition_name, n_primary_train, n_meta_pos_train, 100.0 * meta_pos_rate,
+        condition_name,
+        n_primary_train,
+        n_meta_pos_train,
+        100.0 * meta_pos_rate,
     )
 
     # Fit secondary meta-classifier
@@ -348,10 +355,19 @@ def run_condition(
         primary_signal_col=0,  # basis is column 0
     )
     primary_signal_all_ones = np.ones(n_primary_train, dtype=np.int8)
-    model.fit(_make_X({"basis": X_train[:, 0], "depth_bid": X_train[:, 1],
-                       "depth_ask": X_train[:, 2], "spread": X_train[:, 3],
-                       "imbalance": X_train[:, 4]}),
-              primary_signal_all_ones, y_meta_train)
+    model.fit(
+        _make_X(
+            {
+                "basis": X_train[:, 0],
+                "depth_bid": X_train[:, 1],
+                "depth_ask": X_train[:, 2],
+                "spread": X_train[:, 3],
+                "imbalance": X_train[:, 4],
+            }
+        ),
+        primary_signal_all_ones,
+        y_meta_train,
+    )
 
     # Calibrate threshold on Terra/LUNA primary-signal windows
     calib_mask = calib_event["primary_signal"].astype(bool)
@@ -375,7 +391,9 @@ def run_condition(
 
     logger.info(
         "[%s] SVB: n_trades=%d  net_bps=%.1f  oracle_capture=%.1f%%",
-        condition_name, metrics["n_trades"], metrics["net_bps"],
+        condition_name,
+        metrics["n_trades"],
+        metrics["net_bps"],
         100.0 * metrics["oracle_capture_pct"],
     )
 
@@ -387,8 +405,13 @@ def run_condition(
         ),
         "n_events_train": len(training_events),
         "mechanism_classes": ", ".join(
-            sorted(set(_EVENTS[ev["_event_key"]]["mechanism"] for ev in training_events
-                       if "_event_key" in ev))
+            sorted(
+                set(
+                    _EVENTS[ev["_event_key"]]["mechanism"]
+                    for ev in training_events
+                    if "_event_key" in ev
+                )
+            )
         ),
         "n_primary_fires_train": n_primary_train,
         "n_meta_positive_train": n_meta_pos_train,
@@ -415,16 +438,18 @@ def _optical_table(events_data: dict[str, dict]) -> list[dict]:
         prim_rate = cfg["primary_rate"]
         exec_rate = cfg["exec_rate"]
         prim_exec_pct = exec_rate / max(prim_rate, 1e-9)
-        rows.append({
-            "event": key,
-            "display": cfg["display"],
-            "mechanism": cfg["mechanism"],
-            "n_minutes": n,
-            "pct_above_10bps": round(100.0 * prim_rate, 1),
-            "pct_executable": round(100.0 * exec_rate, 2),
-            "positive_rate_in_primaries": round(100.0 * prim_exec_pct, 1),
-            "data_tier": "B (kline-proxy)",
-        })
+        rows.append(
+            {
+                "event": key,
+                "display": cfg["display"],
+                "mechanism": cfg["mechanism"],
+                "n_minutes": n,
+                "pct_above_10bps": round(100.0 * prim_rate, 1),
+                "pct_executable": round(100.0 * exec_rate, 2),
+                "positive_rate_in_primaries": round(100.0 * prim_exec_pct, 1),
+                "data_tier": "B (kline-proxy)",
+            }
+        )
     return rows
 
 
@@ -432,7 +457,9 @@ def _optical_table(events_data: dict[str, dict]) -> list[dict]:
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Multi-event training diversity experiment.")
+    p = argparse.ArgumentParser(
+        description="Multi-event training diversity experiment."
+    )
     p.add_argument("--output-dir", default="results/experiments_addon")
     p.add_argument("--paper-output-dir", default="results/paper_addon")
     p.add_argument("--seed", type=int, default=42)
@@ -456,9 +483,12 @@ def main() -> None:
         events_data[key] = data
         logger.info(
             "  %s: n=%d  primary=%d (%.1f%%)  exec=%d (%.1f%%)",
-            key, cfg["n"],
-            data["n_primary_fires"], 100.0 * data["n_primary_fires"] / cfg["n"],
-            data["n_meta_positive"], 100.0 * data["n_meta_positive"] / cfg["n"],
+            key,
+            cfg["n"],
+            data["n_primary_fires"],
+            100.0 * data["n_primary_fires"] / cfg["n"],
+            data["n_meta_positive"],
+            100.0 * data["n_meta_positive"] / cfg["n"],
         )
 
     svb = _generate_svb(rng)
@@ -468,40 +498,40 @@ def main() -> None:
 
     # ── Four training conditions ──────────────────────────────────────────────
     conditions = [
-        ("A_terra_only",    ["terra_luna"]),
-        ("B_celsius_only",  ["celsius_3ac"]),
-        ("C_ftx_only",      ["ftx"]),
-        ("D_all_four",      ["terra_luna", "celsius_3ac", "ftx", "busd"]),
+        ("A_terra_only", ["terra_luna"]),
+        ("B_celsius_only", ["celsius_3ac"]),
+        ("C_ftx_only", ["ftx"]),
+        ("D_all_four", ["terra_luna", "celsius_3ac", "ftx", "busd"]),
     ]
 
     results = []
     for cond_name, event_keys in conditions:
         train_evs = [events_data[k] for k in event_keys]
         row = run_condition(cond_name, train_evs, terra, svb)
-        row["display_training"] = " + ".join(
-            _EVENTS[k]["display"] for k in event_keys
-        )
+        row["display_training"] = " + ".join(_EVENTS[k]["display"] for k in event_keys)
         row["event_keys"] = ",".join(event_keys)
         results.append(row)
 
     # Oracle row
-    results.append({
-        "condition": "Oracle_ceiling",
-        "feature_set": "price_plus_book",
-        "training_events": "hindsight",
-        "n_events_train": 0,
-        "mechanism_classes": "—",
-        "n_primary_fires_train": _ORACLE_TRADES_SVB,
-        "n_meta_positive_train": _ORACLE_TRADES_SVB,
-        "meta_pos_rate_pct": 100.0,
-        "calib_theta": float("nan"),
-        "test_n_trades": _ORACLE_TRADES_SVB,
-        "test_net_bps": _ORACLE_NET_BPS_SVB,
-        "test_hit_rate": 1.0,
-        "oracle_capture_pct": 1.0,
-        "display_training": "Oracle (hindsight ceiling)",
-        "event_keys": "",
-    })
+    results.append(
+        {
+            "condition": "Oracle_ceiling",
+            "feature_set": "price_plus_book",
+            "training_events": "hindsight",
+            "n_events_train": 0,
+            "mechanism_classes": "—",
+            "n_primary_fires_train": _ORACLE_TRADES_SVB,
+            "n_meta_positive_train": _ORACLE_TRADES_SVB,
+            "meta_pos_rate_pct": 100.0,
+            "calib_theta": float("nan"),
+            "test_n_trades": _ORACLE_TRADES_SVB,
+            "test_net_bps": _ORACLE_NET_BPS_SVB,
+            "test_hit_rate": 1.0,
+            "oracle_capture_pct": 1.0,
+            "display_training": "Oracle (hindsight ceiling)",
+            "event_keys": "",
+        }
+    )
 
     # Write full results CSV
     out_path = out_dir / "multi_event_diversity_results.csv"
@@ -515,27 +545,31 @@ def main() -> None:
     paper_table_rows = []
     for row in results:
         if row["condition"] == "Oracle_ceiling":
-            paper_table_rows.append({
-                "training_set": "Oracle ceiling",
-                "n_events": "—",
-                "mechanism_classes": "—",
-                "net_bps": f"+{_ORACLE_NET_BPS_SVB}",
-                "n_trades": _ORACLE_TRADES_SVB,
-                "oracle_capture_pct": "100.0%",
-            })
+            paper_table_rows.append(
+                {
+                    "training_set": "Oracle ceiling",
+                    "n_events": "—",
+                    "mechanism_classes": "—",
+                    "net_bps": f"+{_ORACLE_NET_BPS_SVB}",
+                    "n_trades": _ORACLE_TRADES_SVB,
+                    "oracle_capture_pct": "100.0%",
+                }
+            )
             continue
         cap = row["oracle_capture_pct"]
         cap_pct = f"{100.0 * cap:.1f}%" if not math.isnan(cap) else "—"
         nb = row["test_net_bps"]
         nb_str = f"+{nb:.1f}" if nb >= 0 else f"{nb:.1f}"
-        paper_table_rows.append({
-            "training_set": row["display_training"],
-            "n_events": row["n_events_train"],
-            "mechanism_classes": row["mechanism_classes"],
-            "net_bps": nb_str,
-            "n_trades": row["test_n_trades"],
-            "oracle_capture_pct": cap_pct,
-        })
+        paper_table_rows.append(
+            {
+                "training_set": row["display_training"],
+                "n_events": row["n_events_train"],
+                "mechanism_classes": row["mechanism_classes"],
+                "net_bps": nb_str,
+                "n_trades": row["test_n_trades"],
+                "oracle_capture_pct": cap_pct,
+            }
+        )
 
     paper_table_path = paper_dir / "table_crossmech_diversity.csv"
     with open(paper_table_path, "w", newline="") as fh:
@@ -566,7 +600,9 @@ def main() -> None:
             lbl = row["display_training"]
             nb = row["test_net_bps"]
             cap = 100.0 * row["oracle_capture_pct"]
-            print(f"{lbl:<40} {'—':>7} {f'+{nb:.1f}':>9} {row['test_n_trades']:>7} {f'{cap:.1f}%':>12}")
+            print(
+                f"{lbl:<40} {'—':>7} {f'+{nb:.1f}':>9} {row['test_n_trades']:>7} {f'{cap:.1f}%':>12}"
+            )
             continue
         lbl = row.get("display_training", row["condition"])
         nb = row["test_net_bps"]
