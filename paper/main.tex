@@ -764,17 +764,18 @@ The \texttt{ExpNetProfitRegressor}, which directly targets the
 economic criterion rather than a classification proxy, reaches
 $-73.8\bps$, ruling out label mismatch as the explanation. The gap
 is structural (Table~\ref{tab:ablation}).
-GRU and MLP-Window sequence models confirm this, with AUROC~0.80 yet
-$-239\bps$ (GRU) and $-341\bps$ (MLP-Window). High ranking accuracy
-does not translate to positive returns when 97\% of test windows are
-non-executable and the training split contains zero stress examples.
+GRU and MLP-Window sequence models confirm this. The GRU achieves
+AUROC~0.80---the highest ranking accuracy of any calm-trained
+model---yet earns $-239\bps$, illustrating the central disconnect:
+high ranking accuracy does not translate to positive returns when
+97\% of test windows are non-executable and the training split
+contains zero stress examples. The MLP-Window reaches $-341\bps$.
 
 \begin{table}[t]
 \centering
 \caption{Tabular model ladder (\task{basis\_usdc\_1m\_gt10bps}).
-  Hit\%: fraction of trades net-profitable.
-  $^\dagger$Oracle ceiling. $^\ast$0-trade degenerate: no threshold
-  meets the 25-trade minimum with positive expected return.}
+  Hit\%: fraction of executable trades.
+  $^\dagger$Oracle ceiling. $^\ast$0-trade degenerate.}
 \label{tab:ablation}
 \setlength{\tabcolsep}{2pt}
 {\scriptsize
@@ -792,9 +793,13 @@ Oracle$^\dagger$ & ---  & $+161.7$ & 316  & ---   & 100\%\\
 \texttt{price\_25}      & px   & $-347.3$ & 1025 & 0.746 &  5\%\\
 \texttt{no\_trade}      & ---  & $\phantom{-}0.0$  & 0    & ---   & ---\\
 \midrule
-\texttt{ExpNetProfit}   & px   & $-73.8$  & 537  & ---   &  3\%\\
+\texttt{ExpNet\_lgbm}   & px   & $-73.8$  & 537  & ---   &  6\%\\
+\texttt{ExpNet\_xgb}    & px   & $-57.2$  &  70  & ---   &  9\%\\
 \bottomrule
-\multicolumn{6}{l}{\footnotesize px\,=\,\texttt{price\_only}; all\,=\,\texttt{price\_book\_settle}.}\\
+\multicolumn{6}{l}{\footnotesize px\,=\,\texttt{price\_only};
+  all\,=\,\texttt{price\_book\_settle}.}\\
+\multicolumn{6}{l}{\footnotesize Class-balanced (lgbm/xgb/rf): all
+  degenerate to 0 executable trades.}\\
 \end{tabular}
 }
 \end{table}
