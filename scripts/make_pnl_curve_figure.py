@@ -284,7 +284,24 @@ def make_figure(out_path: Path, title_suffix: str = "") -> None:
             arrowprops=dict(arrowstyle="-", color=color, lw=0.8),
         )
 
-    ax.axhline(0, color="black", lw=0.7, ls="-", alpha=0.5)
+    ax.axhline(
+        0,
+        color="black",
+        lw=1.5,
+        ls="--",
+        alpha=0.85,
+        zorder=3,
+        label="Profitable threshold (0 bps)",
+    )
+    ax.text(
+        N_MINUTES * 0.02,
+        2.5,
+        "profitable threshold (0 bps)",
+        fontsize=8.5,
+        color="black",
+        alpha=0.75,
+        style="italic",
+    )
     ax.set_xlabel("Test split (minutes, chronological)", fontsize=11)
     ax.set_ylabel("Running mean net bps per trade", fontsize=11)
     ax.set_title(
