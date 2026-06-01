@@ -1,0 +1,6 @@
+training_set,n_events,mechanism_classes,net_bps,n_trades,oracle_capture_pct
+Terra/LUNA May 2022,1,algorithmic_reflexive,+78.5,123,48.4%
+Celsius/3AC Jun 2022,1,exchange_credit_liquidity,+79.7,221,49.1%
+FTX Nov 2022,1,exchange_credit_liquidity,+36.5,1,22.5%
+Terra/LUNA May 2022 + Celsius/3AC Jun 2022 + FTX Nov 2022 + BUSD Feb 2023,4,"algorithmic_reflexive, exchange_credit_liquidity, regulatory_winddown",+83.7,163,51.6%
+Oracle ceiling,—,—,+162.2,315,100.0%

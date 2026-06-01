@@ -1,0 +1,6 @@
+condition,feature_set,training_events,n_events_train,mechanism_classes,n_primary_fires_train,n_meta_positive_train,meta_pos_rate_pct,calib_theta,test_n_trades,test_net_bps,test_hit_rate,oracle_capture_pct,display_training,event_keys
+A_terra_only,price_plus_book,terra_luna,1,algorithmic_reflexive,1559,265,17.0,0.264,123,78.5,1.0,0.4838,Terra/LUNA May 2022,terra_luna
+B_celsius_only,price_plus_book,celsius_3ac,1,exchange_credit_liquidity,1166,233,20.0,0.187,221,79.7,1.0,0.4912,Celsius/3AC Jun 2022,celsius_3ac
+C_ftx_only,price_plus_book,ftx,1,exchange_credit_liquidity,777,142,18.3,0.614,1,36.5,1.0,0.2253,FTX Nov 2022,ftx
+D_all_four,price_plus_book,terra_luna+celsius_3ac+ftx+busd,4,"algorithmic_reflexive, exchange_credit_liquidity, regulatory_winddown",4368,769,17.6,0.203,163,83.7,1.0,0.5157,Terra/LUNA May 2022 + Celsius/3AC Jun 2022 + FTX Nov 2022 + BUSD Feb 2023,"terra_luna,celsius_3ac,ftx,busd"
+Oracle_ceiling,price_plus_book,hindsight,0,—,315,315,100.0,nan,315,162.2,1.0,1.0,Oracle (hindsight ceiling),

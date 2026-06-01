@@ -1,0 +1,5 @@
+event,display,mechanism,n_minutes,pct_above_10bps,pct_executable,positive_rate_in_primaries,data_tier
+terra_luna,Terra/LUNA May 2022,algorithmic_reflexive,11526,13.5,2.3,17.0,B (kline-proxy)
+celsius_3ac,Celsius/3AC Jun 2022,exchange_credit_liquidity,12960,9.0,1.8,20.0,B (kline-proxy)
+ftx,FTX Nov 2022,exchange_credit_liquidity,12960,6.0,1.1,18.3,B (kline-proxy)
+busd,BUSD Feb 2023,regulatory_winddown,21600,4.0,0.6,15.0,B (kline-proxy)
