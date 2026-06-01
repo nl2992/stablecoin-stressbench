@@ -64,13 +64,13 @@ events:
     mechanism: "MIM/Wonderland confidence shock; Sifu (Wonderland treasury manager) pseudonymous identity revealed; TIME/wMEMO collateral pressure"
     start: "2022-01-27T00:00:00Z"
     end: "2022-02-03T23:59:59Z"
-    data_tier: B
+    data_tier: C
     data_sources:
       - coingecko_ohlcv
       - curve_mim_3pool_reserves
       - abracadabra_onchain
-    empirical_use: "Taxonomy context only; price-basis claims only if confirmed"
-    coverage_score: 0.50
+    empirical_use: "Taxonomy context only; no benchmark tasks"
+    coverage_score: 0.25
     max_depeg_bps_est: -300
     duration_class: days
     verification_status: needs_source
