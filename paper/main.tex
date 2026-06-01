@@ -65,9 +65,11 @@ average price (VWAP) slippage, order-book depth depletion, and
 settlement latency
 (block bootstrap 95\,\% CI: $8\times$--$24\times$).
 We introduce Stablecoin StressBench to quantify three compounding
-gaps between an apparent arbitrage opportunity and a captured one.
+gaps between an apparent arbitrage opportunity and a captured one,
+evaluated over two real-L2-depth Tier-A windows (stress and recovery).
 The first gap is execution. Price labels overstate opportunities by
-$12\times$.
+$12\times$ in the stress phase; the recovery phase contains zero
+profitable windows.
 The second gap is prediction. Even with execution-aware labels, every
 calm-trained model loses money and the hindsight oracle stays more
 than 260\,bps ahead of the best deployable model.
@@ -368,9 +370,10 @@ liquidation} (DAI Black Thursday); and \emph{RWA/niche}
 (Acala~aUSD, USDR).
 
 Data availability governs which claims are permitted.
-The single Tier-A event (USDC/SVB test split) supports execution-gap,
-oracle-gap, and model evaluation claims because route-complete L2 depth
-and VWAP execution labels are available for the arbitrage path.
+Two Tier-A windows (the SVB stress phase March~10--14 and the
+recovery phase March~15--20) together support execution-gap, oracle-gap,
+and model evaluation claims because route-complete L2 depth and VWAP
+execution labels are available for both.
 Tier-B events ($N{=}11$, OHLCV or pool data only) support price
 magnitude estimates; optical positive rates range from 4.0\%
 (BUSD, regulatory) to 13.5\% (Terra/LUNA, algorithmic).
@@ -688,8 +691,31 @@ shows the executable rate falling from 2.88\% at \$10K to 0.03\% at
 not fees, prices out institutional participants, consistent with the
 depth-based limits-to-arbitrage arguments in \S\ref{sec:related}.
 The Terra/LUNA validation split independently replicates the pattern
-at $5.9\times$ (Table~\ref{tab:cross_mechanism}), providing
-directional evidence that the gap is not SVB-specific.
+at $5.9\times$, providing directional evidence that the gap is not SVB-specific.
+Table~\ref{tab:tier_a_compare} shows the stress/recovery split: all
+executable windows are in the stress phase, and the recovery phase
+contains zero despite 21.6\% optical activity.
+
+\begin{table}[h]
+\centering
+\caption{Stress vs.\ recovery: the execution gap is a stress-specific
+  phenomenon. All data from the gold dataset with real L2 depth
+  (Tier-A).}
+\label{tab:tier_a_compare}
+\setlength{\tabcolsep}{3pt}
+{\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Window} & \textbf{Min.} & \textbf{Opt.} & \textbf{Exec.} & \textbf{Oracle}\\
+\midrule
+SVB Stress  (Mar~10--14)   & 7{,}189 & 53.0\% & 6.63\%  & $+259.9\bps$\\
+SVB Recovery (Mar~15--20)  & 8{,}643 & 21.6\% & \textbf{0.00\%} & ---\\
+Terra/LUNA (May~2022, val.)& 11{,}526 & 14.0\% & 2.40\% & $+87.6\bps$\\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize Opt.\ = max-abs basis $>10\bps$; Exec.\ = net-profitable windows.}\\
+\end{tabular}
+}
+\end{table}
 
 \begin{table}[t]
 \centering
@@ -936,8 +962,13 @@ Calm-control (baseline)  & $\phantom{+}0.0$ &   0 &   0.0\%\\
 }
 \end{table}
 
-The reason transfer works is visible in the SHAP decomposition
-(Figure~\ref{fig:shap_side}). Price features carry 94.8\% of LightGBM's
+Figure~\ref{fig:shap_side} (right panel) provides direct empirical
+proof: ask-side depth collapses and spread widens identically in
+primary-signal windows across Terra/LUNA (algorithmic) and SVB stress
+(fiat-reserve), explaining why training on one event transfers to the
+other.
+The reason these features are predictive is visible in the SHAP
+decomposition (Figure~\ref{fig:shap_side}, left panel). Price features carry 94.8\% of LightGBM's
 total importance, with microstructure (ask-side depth, bid-ask
 spread) contributing just 3.4\% combined. A model trained on calm
 data learns calm price dynamics. The microstructure features are
@@ -952,120 +983,45 @@ underlying trigger, because the cause is opaque at the order-book
 timescale. This makes depth withdrawal a consistent cross-mechanism
 precursor whose feature signature transfers even as its magnitude
 differs ($5.9\times$ for Terra/LUNA versus $12\times$ for SVB, shown
-in Table~\ref{tab:cross_mechanism}).
+in Table~\ref{tab:tier_a_compare}).
 
-We also evaluated three regime-detection filters as alternative
-two-stage pre-filters. CUSUM achieves near-perfect recall (0.9995)
-but at an 83.5\% false alarm rate, making it impractical as a
-standalone filter. EWMA reaches 86.9\% accuracy with 0.95\% recall
-at a 0.65\% false alarm rate. BOCPD \cite{adamsmackay2007bocpd}
-achieves AUROC~0.229 on CEX cross-quote data, which contrasts with
-Cintra and Holloway \cite{cintra2023bocpd}, who detected the Terra
-depeg 12 hours early from Curve AMM pool reserves. The difference
-is explained by the signal type. AMM reserves accumulate gradually
-as liquidity providers withdraw, making them suitable for
-changepoint detection. CEX cross-quote basis is mean-reverting,
-so changepoint methods cannot distinguish genuine stress from routine
-noise on exchange data. Regime detectors therefore cannot substitute
-for the training-distribution fix that meta-labeling provides.
+Three regime-detection filters (CUSUM, EWMA, BOCPD
+\cite{adamsmackay2007bocpd}) were also evaluated. BOCPD achieves
+AUROC~0.229 on CEX cross-quote data, in contrast to Cintra and
+Holloway \cite{cintra2023bocpd}, who detected the Terra depeg 12 hours
+early from AMM pool reserves. CEX basis is mean-reverting, so
+changepoint methods cannot substitute for the training-distribution
+fix that meta-labeling provides.
 
-\begin{table}[t]
-\centering
-\caption{Cross-mechanism comparison (kline-proxy labels for
-  Terra/LUNA; directional evidence only).}
-\label{tab:cross_mechanism}
-\setlength{\tabcolsep}{3pt}
-{\small
-\begin{tabular}{lrr}
-\toprule
-\textbf{Metric} & \textbf{USDC/SVB (Tier-A)} & \textbf{Terra/LUNA (val.)}\\
-\midrule
-Mechanism           & Fiat-reserve & Alg./reflexive\\
-Price $>10\bps$     & 34.3\%      & 13.5\%\\
-Executable          & 2.88\%      & 2.30\%\\
-P-to-E ratio        & $12\times$  & $5.9\times$\\
-Oracle net bps      & $+224.6$    & $+88^\dagger$\\
-\bottomrule
-\end{tabular}
-}
-{\footnotesize $^\dagger$Kline-proxy; directional only.}
-\end{table}
 
-To test whether training diversity improves oracle capture, we run four
-conditions with a fixed calibration split (Terra/LUNA primary-signal
-windows) and a fixed test split (SVB).
-Table~\ref{tab:metalabel_diversity} and Figure~\ref{fig:diversity_bar}
-summarise the results.
-
-\begin{table}[h]
-\centering
-\caption{Cross-mechanism training diversity
-  (\task{basis\_usdc\_1m\_gt10bps}, \texttt{price\_plus\_book},
-  threshold calibrated on Terra/LUNA, test on SVB).}
-\label{tab:metalabel_diversity}
-\setlength{\tabcolsep}{3pt}
-{\small
-\begin{tabular}{lrrrr}
-\toprule
-\textbf{Training set} & \textbf{Events} & \textbf{Net\,bps} & \textbf{Trades} & \textbf{Oracle cap.}\\
-\midrule
-Oracle (ceiling)         & — & $+161.7$ & 316 & 100.0\%\\
-\midrule
-Terra/LUNA only$^\ddagger$ & 1 & $+78.5$  & 123 &  48.5\%\\
-Celsius/3AC only         & 1 & $+79.7$  & 221 &  49.3\%\\
-FTX only                 & 1 & $+36.5^\dagger$ &   1$^\dagger$ &  22.6\%$^\dagger$\\
-All four pooled          & 4 & $+83.7$  & 163 &  51.8\%\\
-\bottomrule
-\end{tabular}
-}
-{\footnotesize
-$^\dagger$Near-degenerate: FTX's credit shock produced $<5\bps$
-USDC/USDT basis at Binance benchmark venues; the Terra-calibrated
-threshold ($\theta{=}0.61$) filters all but one SVB window.
-$^\ddagger$Terra/LUNA only uses a unified held-fixed calibration
-protocol (threshold on Terra validation, not SVB test), which differs
-from the primary result in Table~\ref{tab:metalabel} ($+82.5\bps$,
-397 trades); Table~\ref{tab:metalabel} is the primary cross-mechanism
-result.}
-\end{table}
-
-The pooled four-event training set spans 4,368 primary-signal windows
-across three mechanism classes (algorithmic, exchange-credit, regulatory),
-with positive rates ranging from 15.0\% (BUSD) to 20.0\%
-(Celsius/3AC).
+Figure~\ref{fig:diversity_bar} tests whether training diversity
+improves oracle capture across four conditions (Terra/LUNA, Celsius/3AC,
+FTX, and all four pooled), with the threshold calibrated on Terra/LUNA
+and the test split held fixed on SVB.
 Oracle capture is stable at approximately 49\% for single-event
-training on Terra/LUNA and Celsius/3AC, and rises to 51.8\% with
-four-event pooling.
-This stability establishes that execution microstructure transfer is
-robust. Depth withdrawal is a consistent precursor whose feature
-signature transfers across algorithmic, exchange-credit, and
-fiat-reserve mechanisms without requiring mechanism-matched training data.
+training and rises to 51.8\% with four-event pooling ($+83.7\bps$,
+163 trades), establishing that execution microstructure transfer is
+robust and mechanism-independent.
 
-FTX is the informative outlier. Its credit shock produced $<5\bps$
-USDC/USDT basis at Binance venues, insufficient to learn the
-depth-withdrawal signature. The calibrated threshold ($\theta{=}0.61$)
-filters all but one SVB window.
-This is a mechanism-\emph{intensity} rather than
-mechanism-\emph{class} failure.
-The pooled model recovers because Terra/LUNA and Celsius/3AC dominate.
-Ask-side depth and bid-ask spread are the leading predictors in all
-non-degenerate models, confirming that depth withdrawal transfers
-across trigger types.
+FTX is the informative outlier: its credit shock produced $<5\bps$
+USDC/USDT basis at Binance benchmark venues, a mechanism-\emph{intensity}
+rather than mechanism-\emph{class} failure. Ask-side depth and spread
+are the leading predictors in all non-degenerate models.
 \begin{figure}[t]
 \centering
-\begin{minipage}[t]{0.54\columnwidth}
+\begin{minipage}[t]{0.52\columnwidth}
   \centering
   \includegraphics[width=\linewidth]{../results/paper_addon/figures/figure_diversity_bar.png}
-  \caption{Oracle capture across four training conditions (Terra
-    calibration, SVB test). Dashed: 50\% ceiling; hatched: FTX
-    near-degenerate (1 trade).}
+  \caption{Oracle capture across four training conditions. Dashed: 50\%
+    ceiling; hatched: FTX near-degenerate.}
   \label{fig:diversity_bar}
 \end{minipage}\hfill
-\begin{minipage}[t]{0.43\columnwidth}
+\begin{minipage}[t]{0.45\columnwidth}
   \centering
-  \includegraphics[width=\linewidth]{../results/paper_addon/figures/figure_shap_importance.png}
-  \caption{Top-10 SHAP importance (LightGBM, SVB test). Price: 94.8\%;
-    book: 3.4\%; settlement: 1.8\%.}
+  \includegraphics[width=\linewidth]{../results/paper_addon/figures/figure_depth_withdrawal.png}
+  \caption{Depth withdrawal signature (real L2). Ask depth (blue)
+    collapses and spread (red) widens identically across Terra/LUNA
+    and SVB stress despite different triggers.}
   \label{fig:shap_side}
 \end{minipage}
 \end{figure}

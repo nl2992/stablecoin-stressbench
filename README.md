@@ -88,7 +88,7 @@ Stablecoin stress is a recurring phenomenon across multiple failure modes. The b
 | Mechanism class | Representative event | Tier | N |
 |---|---|---|---|
 | Algorithmic / Reflexive | Terra/UST May 2022 | B | 5 |
-| **Fiat-Reserve Bank Shock** | **USDC/SVB Mar 2023** | **A** | **1** |
+| **Fiat-Reserve Bank Shock** | **USDC/SVB Mar 2023 (stress + recovery)** | **A** | **2** |
 | Regulatory / Issuer Winddown | BUSD Feb 2023 | B | 2 |
 | Exchange Credit / Liquidity | FTX Nov 2022 | B | 3 |
 | DeFi Pool Imbalance | USDT/Curve Jun 2023 | B | 3 |
