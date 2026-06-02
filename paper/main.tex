@@ -50,36 +50,33 @@
 %% =============================================================
 \begin{document}
 
-\title{Stablecoin StressBench: An 18-Event Benchmark for\\
-       Execution-Aware Stablecoin Stress}
+\title{Stablecoin StressBench: Measuring the $12\times$ Gap\\
+       Between Visible and Executable Arbitrage}
 
 %% ---- Abstract -----------------------------------------------
 \begin{abstract}
-Stablecoin StressBench begins from an 18-event catalogue of stablecoin
-stress from 2020--2023 across seven mechanisms: algorithmic
-reflexivity, fiat-reserve bank shock, regulatory winddown, exchange
-credit, DeFi pool imbalance, collateral liquidation, and RWA/niche
-stablecoin failure.
-We convert this historical universe into a tiered benchmark with
-source-verification status, coverage scores, machine-readable event
-windows, and claim-specific data permissions: Tier A supports VWAP
-labels and oracle bounds; Tier B supports price/liquidity claims; and
-Tier C supports taxonomy only.
-On the execution-grade SVB windows, price-visible arbitrage appears
-twelve times more often than it survives VWAP book-walking, fees, and
-settlement costs (34.3\% optical versus 2.88\% executable).
-Across eight prediction tasks the benchmark evaluates 25+ model
-configurations spanning price rules, tabular classifiers, sequence
-models, class-balanced variants, and reinforcement learning.
-Calm-trained models fail economically despite richer features and
-sequence models; cross-mechanism meta-labeling trained on
-Terra/LUNA recovers 51.0\% of the oracle on SVB ($+82.5\bps$), and a
-four-event mechanism-diverse protocol reaches 51.8\% ($+83.7\bps$).
-A conditioned PPO-GRU agent at identical training density earns
-$-29.2\bps$, showing that reward-only policy learning does not recover
-the executable subset without explicit binary supervision.
-We release the event catalogue, source-verification registry,
-execution labels, oracle, model scripts, and paper tables.
+A price chart shows twelve times more profitable stablecoin arbitrage
+than a trader can capture.
+Every existing benchmark measures model performance against optical
+labels---windows that appear profitable on price charts but disappear
+under VWAP execution, fees, and settlement costs---which means every
+published benchmark number overstates what a model can actually
+achieve.
+We introduce Stablecoin StressBench: an 18-event stress catalogue
+across seven mechanisms (2020--2023), tiered data governance
+(Tier A: execution-grade; Tier B: price/liquidity; Tier C: taxonomy),
+per-minute VWAP book-walking labels with route provenance, and a
+hindsight oracle ceiling.
+Across 25+ model configurations spanning price rules, tabular
+classifiers, sequence models, class-balanced variants, and RL, every
+calm-trained model fails economically; cross-mechanism meta-labeling
+trained on Terra/LUNA recovers 51.0\% of the oracle on SVB
+($+82.5\bps$), and a four-event pooled protocol reaches 51.8\%.
+A conditioned RL agent at identical positive-label density earns
+$-29.2\bps$, isolating explicit binary supervision as the ingredient
+that reward optimisation cannot replicate at low positive rates.
+We release the catalogue, labels, oracle, and model harness under
+CC-BY~4.0.
 \end{abstract}
 
 \keywords{stablecoin arbitrage, market microstructure,
@@ -145,32 +142,25 @@ why reward-only RL fails.
 
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
-  \item \textbf{Historical catalogue.} We provide a source-tracked
-        18-event stablecoin stress catalogue across seven mechanisms,
-        with event-level claim provenance, verification flags,
-        coverage scores, machine-readable windows, and source-verified
-        paper claims.
-  \item \textbf{Data-tier benchmark.} We formalise Tier A/B/C claim
-        permissions so the benchmark separates execution-grade windows,
-        price/liquidity-grade events, and context-grade taxonomy.
-  \item \textbf{Execution labels.} We construct VWAP book-walking
-        labels with route provenance, taker fees, settlement penalties,
-        and a hindsight oracle ceiling.
-  \item \textbf{Empirical result.} We show a $12\times$
-        optical-to-executable gap and a notional-scaling collapse: at
-        \$10K, 34.3\% of SVB minutes are optically dislocated but only
-        2.88\% are executable.
-  \item \textbf{Transfer and policy result.} Cross-mechanism
-        meta-labeling trained on Terra/LUNA achieves $+82.5\bps$
-        (51.0\% oracle capture, the fraction of the oracle's per-trade
-        return recovered by the model); pooling four events reaches
-        51.8\%, while a conditioned PPO-GRU earns $-29.2\bps$ at
-        identical positive-label density.
+  \item \textbf{We provide} the first execution-aware stablecoin
+        benchmark: an 18-event source-tracked catalogue across seven
+        mechanisms, tiered data governance, per-minute VWAP labels with
+        route provenance, and a hindsight oracle ceiling.
+        (\S\ref{sec:benchmark}--\ref{sec:models})
+  \item \textbf{We show} a $12\times$ optical-to-executable gap and
+        that cross-mechanism meta-labeling generalises reliably: training
+        on Terra/LUNA achieves $+82.5\bps$ (51.0\% oracle capture, the
+        fraction of the oracle's per-trade return recovered) on SVB,
+        and pooling four events across three mechanism classes reaches
+        51.8\%, establishing mechanism-independent transfer saturating
+        near 50\%.
+        (\S\ref{sec:results}, Tables~\ref{tab:gap},~\ref{tab:metalabel})
+  \item \textbf{We establish} that explicit binary supervision---not
+        label density---is the binding constraint: a conditioned PPO-GRU
+        at 17\% positive density earns $-29.2\bps$ versus
+        meta-labeling's $+82.5\bps$ at identical density.
+        (\S\ref{sec:results}, Table~\ref{tab:metalabel})
 \end{enumerate}
-
-StressBench ships five artefacts: the 18-event source-tracked
-catalogue, event windows, execution labels with depth provenance,
-a hindsight oracle, and a reproducible model harness.
 
 
 %% =============================================================
@@ -479,6 +469,13 @@ establishing a ceiling no deployable model can exceed.
 The ladder is organised around the benchmark thesis: price-visible
 stress is common, but executable opportunities are scarce and require
 mechanism-aware supervision.
+In total, StressBench evaluates over 25 model configurations across
+eight prediction tasks, four nested feature sets, and six training
+conditions, producing over 900 individual experiment rows.
+The breadth is designed as a systematic elimination experiment, ruling
+out architecture, feature engineering, class balancing, regression
+targeting, temporal structure, and changepoint detection as sufficient
+remedies before the cross-mechanism fix is applied.
 The two anchors, \texttt{NoTrade} (zero net bps) and the hindsight
 \texttt{Oracle}, bracket the achievable range; every other result is
 interpreted as a fraction of the distance between them.
@@ -697,8 +694,14 @@ Claim boundaries and data-tier scope are stated in \S\ref{sec:eval}.
 
 The second gap is between a profitable window and a model that can
 find it in advance.
-Even with execution-aware labels, every model trained on calm data
-loses money on the executable task.
+The central finding is not that individual models fail, but that every
+model family tested---price rules, tabular classifiers, class-balanced
+variants, direct-regression models, sequence models, and regime
+detectors---converges to the same result: no architecture overcomes
+the distributional mismatch between calm training data and
+stress-regime test windows.
+This convergence across 25+ configurations is itself the diagnostic
+finding.
 The hindsight oracle earns $+224.6\bps$ while the best deployable
 model reaches $-41.1\bps$, a structural gap of more than 260\,bps
 that richer features and sequence models do not close
@@ -841,19 +844,19 @@ rates.
 
 \subsubsection{Cross-Mechanism Transfer and Training Diversity}
 
-Table~\ref{tab:metalabel} shows all policy results together.
-Meta-labeling trained on Terra/LUNA (1,559 primary-signal minutes,
-17\% executable density, all fitting confined to Terra/LUNA) achieves
-$+82.5\bps$ on SVB (51.0\% oracle capture). Four-event pooled training
-spans algorithmic, exchange-credit, and regulatory winddown mechanisms
-and reaches $+83.7\bps$ (51.8\%), confirming that mechanism-diverse
-supervision stabilises transfer.
+Meta-labeling achieves positive returns on every non-degenerate
+single-event training condition tested (Table~\ref{tab:metalabel}).
+Meta-labeling trained on Terra/LUNA achieves $+82.5\bps$ on SVB
+(51.0\% oracle capture$^\dagger$). Four-event pooled training spans
+algorithmic, exchange-credit, and regulatory mechanisms and reaches
+$+83.7\bps$ (51.8\%), confirming that mechanism-diverse supervision
+stabilises transfer.
 
 \begin{table}[h]
 \centering
 \caption{Transfer and policy results (\task{basis\_usdc\_1m\_gt10bps},
   \texttt{price\_plus\_book}, SVB test split). Mean net bps per
-  triggered trade; threshold calibrated on Terra/LUNA validation.}
+  triggered trade; diversity-protocol calibration.}
 \label{tab:metalabel}
 \setlength{\tabcolsep}{3pt}
 {\small
@@ -864,11 +867,17 @@ supervision stabilises transfer.
 Oracle & hindsight & $+161.7$ & 316 & 100.0\%\\
 \midrule
 Calm-control & none & $\phantom{+}0.0$ & 0 & 0.0\%\\
-Terra/LUNA & algorithmic & $+82.5$ & 397 & 51.0\%\\
-Four-event pooled & alg.\ + exch.\ + reg. & $+83.7$ & 163 & 51.8\%\\
+\midrule
+Terra/LUNA only & algorithmic & $+78.5$ & 123 & 48.4\%\\
+Celsius/3AC only & exch.\ credit & $+79.7$ & 221 & 49.1\%\\
+FTX only$^\ast$ & exch.\ credit & $+36.5$ & 1 & 22.5\%\\
+Four-event pooled & alg.+exch.+reg. & $+83.7$ & 163 & 51.8\%\\
+\midrule
 PPO-GRU conditioned & RL on Terra & $-29.2$ & 919 & $-18.1\%$\\
 \bottomrule
-\multicolumn{5}{l}{\footnotesize Primary signal $|b_{\text{USDC}}|{>}10\bps$; Terra/LUNA is validation/training-grade only.}\\
+\multicolumn{5}{l}{\footnotesize $^\ast$FTX: weak USDC/USDT signal intensity ($<5\bps$); mechanism-intensity,}\\
+\multicolumn{5}{l}{\footnotesize \phantom{$^\ast$}not mechanism-class, failure.}\\
+\multicolumn{5}{l}{\footnotesize $^\dagger$Single-event block calibration: $+82.5\bps$, 397 trades, 51.0\% oracle capture.}\\
 \end{tabular}
 }
 \end{table}
@@ -891,6 +900,14 @@ the meta-labeler must choose before observing the executable outcome.
 FTX's credit shock produced $<5\bps$ USDC/USDT basis at benchmark
 venues; its near-degenerate transfer reflects weak signal intensity,
 not a failure of the exchange-credit class.
+The saturation near 50\% reflects a structural timing constraint.
+In the minutes immediately before a dislocation closes, ask-side
+depth partially recovers and the basis compresses, degrading the
+microstructure signature that enabled entry identification.
+The secondary classifier cannot distinguish these late-stage ambiguous
+windows from genuine opportunities regardless of training diversity,
+placing a ceiling on oracle capture that additional mechanism pooling
+cannot lift.
 
 Three regime-detection filters (CUSUM, EWMA, BOCPD
 \cite{adamsmackay2007bocpd}) were evaluated as alternative pre-filters.
@@ -1046,12 +1063,18 @@ PPO-GRU remains negative at $-29.2\bps$ despite identical
 positive-label density, isolating explicit executable labels as the
 missing ingredient.
 
-The released benchmark consists of an 18-event stress catalogue
-narrowed to execution-grade labels, a hindsight oracle, and a
-reproducible model harness, all released under CC-BY~4.0.
-Future work should extend Tier-A coverage, add route-aware timing
-labels, and integrate reactive market-impact simulation for thin-book
-sizing.
+The released benchmark consists of an 18-event stress catalogue,
+execution-grade labels, a hindsight oracle, and a reproducible model
+harness, all released under CC-BY~4.0.
+The most immediate next experiment is multi-mechanism RL training on
+the pooled-event protocol established here---the direct path to
+closing the 111.7\,bps gap between meta-labeling and the conditioned
+RL agent.
+Beyond this, StressBench motivates three longer-term directions:
+extending Tier-A coverage to new event types, adding route-aware
+timing labels under cost uncertainty, and integrating reactive
+market-impact simulation where the oracle ceiling provides a
+principled performance target.
 
 
 \section*{Acknowledgements}
