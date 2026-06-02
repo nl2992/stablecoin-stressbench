@@ -66,8 +66,9 @@ governance, per-minute VWAP (volume-weighted average price) book-walking
 labels with route provenance,
 and a hindsight oracle ceiling.
 The $12\times$ optical-to-executable gap persists across all cost
-parameters and widens to near-zero at institutional scale.
-Across 25+ model configurations every calm-trained approach fails
+parameters and widens further at institutional scale, where the
+executable rate falls to near-zero.
+Across every model family we tested, every calm-trained approach fails
 economically, confirming the gap is not closable by architecture or
 feature choices alone.
 Cross-mechanism meta-labeling trained on Terra/LUNA recovers
@@ -115,12 +116,11 @@ The $12\times$ ratio is measured at the 10\,bps threshold and
 and collapses to near-zero at \$500K, so the headline number understates
 the constraint for institutional participants.
 
-The execution-grade analysis centers on one event: the USDC/SVB stress
-window of March 2023.
-The 18-event catalogue situates that event in a broader stress universe
-and motivates cross-mechanism training by showing that
-depth-withdrawal and spread-widening recur across mechanistically
-distinct triggers.
+The execution-grade labels centre on one event: USDC/SVB, March 2023.
+The finding, however, replicates across two mechanistically independent
+events. SVB shows a $12\times$ gap ($2.88\%$ executable). Terra/LUNA
+independently shows a $5.9\times$ gap ($2.40\%$ executable). The
+phenomenon is not SVB-specific; the Tier-A labels are.
 
 Gap~1 is not a model problem. It is a measurement problem. Price labels
 overstate tradeable performance by a factor of twelve.
@@ -636,8 +636,10 @@ Table~\ref{tab:tier_a_compare} shows the stress/recovery split.
 All executable windows fall in the SVB stress phase. The recovery
 phase contains zero executable windows despite 21.6\% optical
 activity, confirming that depth returns before the basis closes.
-Terra/LUNA validation independently replicates the gap at $5.9\times$,
-providing directional evidence that the finding is not SVB-specific.
+Terra/LUNA independently replicates the gap at $5.9\times$ ($2.40\%$
+executable of $14.0\%$ optical), confirming that the optical-to-executable
+phenomenon is not specific to reserve-bank shocks. The Tier-A
+execution-grade labels are one event; the underlying finding is two.
 
 \begin{table}[h]
 \centering
@@ -678,7 +680,8 @@ moves the executable rate between 2.84\% and 3.66\%.
 The central finding is not that individual models fail, but that all
 six families converge to the same result: no architecture overcomes
 the distributional mismatch between calm training and stress test.
-This convergence across 25+ configurations is itself the diagnostic.
+This convergence across every model family tested is itself the
+diagnostic: the failure is structural, not a gap in model coverage.
 Table~\ref{tab:ablation} shows the tabular model results on
 \task{basis\_usdc\_1m\_gt10bps}; oracle gap values map to
 Table~\ref{tab:master}.
