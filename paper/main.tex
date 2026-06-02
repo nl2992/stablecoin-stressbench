@@ -392,6 +392,14 @@ each signal layer.
 \bottomrule
 \end{tabular}\label{tab:features}}
 
+\noindent The fragmentation metrics are:
+$I_{\sigma}(t)=\sigma_{\text{mid}}(t)$ (bps std.\ of mid-prices
+across venues) and $I_{\Delta}(t)=\max_v p_v(t)-\min_v p_v(t)$
+(bps range).
+Settlement proxies are on-chain minute-level USDC transfer counts and
+gas estimates; for the SVB and Terra/LUNA windows these are kline-proxy
+approximations (Tier~B).
+
 
 %% =============================================================
 \section{Execution-Aware Labels}
@@ -455,7 +463,16 @@ The profit threshold is $c{=}10\bps$, taker fee $4\bps$ per side,
 and $\delta{=}5\bps$.
 Equations~\eqref{eq:net} and~\eqref{eq:yarb} define the primary
 economic task \task{executable\_arb\_q10000\_5m}.
-The hindsight oracle takes every minute where $\text{net}(q,t) > c$,
+\begin{equation}
+  \text{Oracle}(q) \;=\; \frac{1}{|\mathcal{T}^+|}
+    \sum_{t \in \mathcal{T}^+} \!\text{net}(q,t),\qquad
+  \mathcal{T}^+ = \bigl\{t : \text{net}(q,t) > c\bigr\}
+  \label{eq:oracle}
+\end{equation}
+Oracle capture $\kappa_M = \bar{r}_M / \text{Oracle}(q)$ is the
+fraction of the oracle's per-trade return recovered by model~$M$,
+where $\bar{r}_M$ is the model's mean net bps per triggered trade.
+The oracle takes every minute in $\mathcal{T}^+$,
 establishing a ceiling no deployable model can exceed.
 
 
@@ -488,6 +505,19 @@ changepoint structure substitutes for stress training.
 Meta-labeling \cite{lopezdeprado2018} and PPO-GRU
 \cite{moallemi2022rl,ning2021ddql} then isolate supervision format:
 same Terra/LUNA density, explicit binary labels versus sparse reward.
+The cross-mechanism extension of meta-labeling operates in three steps:
+\begin{enumerate}[leftmargin=*,itemsep=1pt,topsep=2pt]
+  \item \textbf{Primary filter:} flag $t$ if
+        $|b_{\text{USDC}}(t)|>\tau_1$ ($\tau_1{=}10\bps$).
+  \item \textbf{Secondary classifier:} fit $f_\theta$ on
+        $\{(x_t,\,y_{\text{arb}}(t))\}_{t\in\mathcal{E}_{\text{train}}}$,
+        where $\mathcal{E}_{\text{train}}$ is a mechanistically distinct
+        stress event (Terra/LUNA or pooled).
+  \item \textbf{Entry:} signal at $t$ iff primary fires
+        \emph{and} $f_\theta(x_t)>\theta^*$, where
+        $\theta^* = \arg\max_\theta \sum_{i:\hat{p}_i>\theta}
+        \text{net}(q,t_i)$ on the held-out Terra/LUNA calibration block.
+\end{enumerate}
 
 Under calm training, richer feature sets do not rescue P\&L; all four
 sets produce negative net bps because the training split contains zero
@@ -510,6 +540,14 @@ The state $s_t$ is the 30-minute look-back window of
 delivers meaningful microstructure lift over price-only signals.
 This feature set is available in real time without
 settlement-latency dependency.
+Formally, the MDP is $(\mathcal{S},\mathcal{A},\mathcal{R},T,\gamma)$:
+\begin{align}
+  s_t &= [x_{t-29},\ldots,x_t]\in\mathbb{R}^{30\times d},\quad
+         d=|\texttt{price\_plus\_book}|=12 \label{eq:mdp_s}\\
+  a_t &\in\{\texttt{enter},\,\texttt{wait}\}\\
+  r_t &= \begin{cases}\text{net}(q,t) & a_t=\texttt{enter}\\ 0 & a_t=\texttt{wait}\end{cases}\\
+  T   &= 15{,}832\text{ min (SVB test window)}
+\end{align}
 We train a PPO agent with a GRU policy network (one hidden layer,
 64 units, 30-step look-back) using the cross-mechanism protocol,
 training on Terra/LUNA stress windows only and evaluating on the
@@ -530,9 +568,9 @@ For cross-mechanism meta-labeling, Terra/LUNA is treated as a blocked
 training-and-calibration event: the secondary classifier is fit on the
 training block, the decision threshold is selected on the calibration
 block, and SVB remains untouched until final evaluation.
-The primary metrics are mean net bps per triggered trade and oracle capture percentage,
-defined as model mean net bps divided by oracle mean net bps (the fraction of
-the oracle's per-trade return that a model recovers).
+The primary metrics are mean net bps per triggered trade and oracle
+capture $\kappa_M$ (Eq.~\eqref{eq:oracle}): the fraction of the
+oracle's per-trade return recovered by model~$M$.
 Secondary metrics are AUROC (area under the ROC curve) and AUPRC
 (area under the precision-recall curve).
 \texttt{NoTrade} at $0\bps$ is the economic floor.
@@ -889,10 +927,10 @@ recur across stress triggers even when the trigger itself differs.
 Figure~\ref{fig:shap_side} provides direct empirical proof: ask-side
 depth collapses and spread widens identically in primary-signal windows
 across Terra/LUNA (algorithmic) and SVB stress (fiat-reserve). SHAP
-analysis confirms the two-stage structure: price-basis features supply
-the candidate signal (94.8\% of importance), while ask-side depth and
-spread act as execution-relevant filters (3.4\%) once the model has
-seen stress-regime depth withdrawal in Terra/LUNA.
+analysis (Figure~\ref{fig:shap}) confirms the two-stage structure:
+price-basis features supply the candidate signal (94.8\% of importance),
+while ask-side depth and spread act as execution-relevant filters (3.4\%)
+once the model has seen stress-regime depth withdrawal in Terra/LUNA.
 Figure~\ref{fig:diversity_bar} shows oracle capture across all four
 training conditions. Capturing 51.0--51.8\% of the oracle is
 economically meaningful because the oracle trades with hindsight, while
@@ -916,20 +954,26 @@ mean-reverting, so changepoint methods cannot substitute for the
 training-distribution fix that meta-labeling provides.
 \begin{figure}[t]
 \centering
-\begin{minipage}[t]{0.52\columnwidth}
+\begin{minipage}[t]{0.34\columnwidth}
   \centering
   \includegraphics[width=\linewidth]{../results/paper_addon/figures/figure_diversity_bar.png}
-  \caption{Oracle capture across four training conditions. Dashed: 50\%
-    ceiling; hatched: FTX near-degenerate.}
+  \caption{Oracle capture (\%) across four training conditions.
+    Dashed: 50\% ceiling; hatched: FTX near-degenerate.}
   \label{fig:diversity_bar}
 \end{minipage}\hfill
-\begin{minipage}[t]{0.45\columnwidth}
+\begin{minipage}[t]{0.30\columnwidth}
   \centering
   \includegraphics[width=\linewidth]{../results/paper_addon/figures/figure_depth_withdrawal.png}
-  \caption{Depth withdrawal signature (real L2). Ask depth (blue)
-    collapses and spread (red) widens identically across Terra/LUNA
-    and SVB stress despite different triggers.}
+  \caption{Depth withdrawal. Ask depth collapses and spread widens
+    identically across Terra/LUNA and SVB.}
   \label{fig:shap_side}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.30\columnwidth}
+  \centering
+  \includegraphics[width=\linewidth]{../results/paper_addon/figures/figure_shap_importance.png}
+  \caption{SHAP importance. Basis features (94.8\%) supply the
+    primary signal; ask depth and spread act as filters (3.4\%).}
+  \label{fig:shap}
 \end{minipage}
 \end{figure}
 
