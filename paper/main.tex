@@ -320,34 +320,23 @@ held mechanistically distinct from the Tier-A SVB test event.
 \subsection{Event Universe Empirics}
 \label{sec:event_empirics}
 
-The 18 events span four years and seven mechanism classes, with
-maximum depegs ranging from $+150\bps$ (DAI/ETH collateral stress,
-above-peg) to full collapse (IRON/TITAN, USDR).
-Figure~\ref{fig:event_universe} shows two complementary views.
-Panel~(a) plots the full event universe as a bubble timeline:
-mechanism class on the vertical axis, date on the horizontal,
-and bubble area proportional to $|$max depeg$|$.
-The Tier-A events (dark navy) cluster in March 2023; Tier-B events
-(blue) span the entire 2022 wave; Tier-C events (grey) fill
-structural gaps in the taxonomy.
-Panel~(b) shows real, per-minute basis time series for the two
-events with measured data: Terra/UST's algorithmic spiral (Tier~B)
-peaks quickly and collapses within days, while USDC/SVB's
-reserve-bank shock opens sharply but recovers over a week.
-The two fingerprints are structurally distinct, yet the
+The 18 events span four years and seven mechanism classes
+(Figure~\ref{fig:event_universe}), with max depegs from $+150\bps$
+(DAI above-peg collateral stress) to full collapse (IRON/TITAN, USDR).
+Tier-A events (navy) anchor the execution benchmark;
+Tier-B (blue) supply the transfer training pool;
+Tier-C (grey) complete the taxonomy.
+Despite distinct triggers, all mechanism classes share one
 microstructural signature---ask-side depth withdrawal and spread
-widening---is shared across both (Figure~\ref{fig:shap_side}), which
-is why cross-mechanism transfer succeeds.
+widening---which is why Terra/LUNA trains transfer to SVB
+(Figure~\ref{fig:shap_side}).
 
-\begin{figure}[t]
+\begin{figure}[h]
   \centering
-  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_event_universe.png}
-  \caption{(a)~18-event stress universe: each bubble is one event;
-    area $\propto |$max depeg$|$; gold edge = above-peg stress.
-    (b)~Real basis time series (per-minute, measured data only):
-    algorithmic spiral (Terra/UST, Tier~B) vs.\ reserve-bank shock
-    (USDC/SVB, Tier~A). Distinct temporal fingerprints; shared
-    microstructural signature (depth withdrawal) enables transfer.}
+  \includegraphics[width=\columnwidth]{../results/paper/figures/figure_event_universe_compact.png}
+  \caption{18-event stress universe: each bubble is one event;
+    area~$\propto$~$|$max depeg$|$; gold edge~=~above-peg stress.
+    Tier~A (navy); Tier~B (blue); Tier~C (grey).}
   \label{fig:event_universe}
 \end{figure}
 
@@ -616,38 +605,17 @@ shows the executable rate falling from 2.88\% at \$10K to 0.03\% at
 not fees, prices out institutional participants, consistent with the
 depth-based limits-to-arbitrage arguments in \S\ref{sec:related}.
 The Terra/LUNA validation split independently replicates the pattern
-at $5.9\times$, providing directional evidence that the gap is not SVB-specific.
-Table~\ref{tab:tier_a_compare} shows the stress/recovery split: all
-executable windows are in the stress phase, and the recovery phase
-contains zero despite 21.6\% optical activity.
-
-\begin{table}[h]
-\centering
-\caption{Optical and executable diagnostics for SVB execution-grade
-  windows and the Terra/LUNA validation window. SVB stress/recovery
-  are Tier-A execution-grade; Terra/LUNA is validation/training-grade
-  and is not used for final execution-grade claims.}
-\label{tab:tier_a_compare}
-\setlength{\tabcolsep}{3pt}
-{\small
-\begin{tabular}{lrrrr}
-\toprule
-\textbf{Window} & \textbf{Min.} & \textbf{Opt.} & \textbf{Exec.} & \textbf{Oracle}\\
-\midrule
-SVB Stress  (Mar~10--14)   & 7{,}189 & 53.0\% & 6.63\%  & $+259.9\bps$\\
-SVB Recovery (Mar~15--20)  & 8{,}643 & 21.6\% & \textbf{0.00\%} & ---\\
-Terra/LUNA (May~2022, val.)& 11{,}526 & 14.0\% & 2.40\% & $+87.6\bps$\\
-\bottomrule
-\multicolumn{5}{l}{\footnotesize Opt.\ = max-abs basis $>10\bps$; Exec.\ = net-profitable windows.}\\
-\multicolumn{5}{l}{\footnotesize Terra/LUNA labels are used for cross-mechanism training and calibration only.}\\
-\end{tabular}
-}
-\end{table}
+at $5.9\times$, providing directional evidence that the gap is not
+SVB-specific. Critically, all SVB executable windows fall in the
+stress phase (Mar~10--14: 6.63\% executable, oracle $+259.9\bps$);
+the recovery phase (Mar~15--20) contains zero executable windows
+despite 21.6\% optical activity, confirming that depth returns
+before basis closes.
 
 The catalogue shows that price-visible stress is not confined to
 reserve-bank shocks. All seven mechanism classes contain documented
 peg, liquidity, redemption, or collateral stress episodes
-(Table~\ref{tab:taxonomy}). The $12\times$ execution gap is verified
+(Table~\ref{tab:catalogue}). The $12\times$ execution gap is verified
 only for Tier-A events with route-complete L2 depth.
 
 \begin{table}[t]
@@ -704,29 +672,19 @@ Claim boundaries and data-tier scope are stated in \S\ref{sec:eval}.
 \label{sec:ladder}
 
 \textbf{Systematic elimination.}
-The model ladder is a sequential elimination experiment: we rule out
-six families of remedies before applying the cross-mechanism fix.
-(1)~\textit{Architecture}: GRU and MLP-Window sequence models fail
-despite achieving high AUROC (§\ref{sec:ladder}).
-(2)~\textit{Feature engineering}: all four nested feature sets produce
-negative returns---adding microstructure, fragmentation, and settlement
-signals does not help when the training split contains zero stress-regime
-examples.
-(3)~\textit{Class balancing}: cost-sensitive weighting and
-oversampling cannot synthesise stress dynamics from calm data.
-(4)~\textit{Regression targeting}: \texttt{ExpNetProfitRegressor}
-directly optimises the economic criterion and still reaches $-73.8\bps$,
-ruling out label mismatch as the explanation.
-(5)~\textit{Regime detection}: BOCPD, CUSUM, and EWMA all fail because
-CEX basis is mean-reverting, not change-point structured (BOCPD achieves
-AUROC~0.229).
-(6)~\textit{RL reward optimisation}: a conditioned PPO-GRU at identical
-positive-label density earns $-29.2\bps$ versus meta-labeling's
-$+82.5\bps$, isolating supervision format as the binding variable.
-Every family fails for the same structural reason: distributional
-mismatch between calm training and stress test.
-The cross-mechanism fix is not one of many options---it is the only one
-that works.
+Before applying cross-mechanism supervision, we rule out six remedy
+families in sequence.
+(1)~Architecture: GRU/MLP-Window fail despite high AUROC.
+(2)~Feature engineering: all four nested sets produce negative returns.
+(3)~Class balancing: reweighting cannot synthesise stress dynamics.
+(4)~Regression targeting: \texttt{ExpNetProfitRegressor} reaches
+$-73.8\bps$, ruling out label mismatch.
+(5)~Regime detection: BOCPD/CUSUM/EWMA fail (CEX basis is
+mean-reverting; BOCPD AUROC~0.229).
+(6)~RL reward optimisation: PPO-GRU at identical density earns
+$-29.2\bps$ vs.\ meta-labeling's $+82.5\bps$.
+Every family fails for the same reason: distributional mismatch
+between calm training and stress test.
 
 The second gap is between a profitable window and a model that can
 find it in advance.
@@ -738,33 +696,12 @@ the distributional mismatch between calm training data and
 stress-regime test windows.
 This convergence across 25+ configurations is itself the diagnostic
 finding.
-The hindsight oracle earns $+224.6\bps$ while the best deployable
-model reaches $-41.1\bps$, a structural gap of more than 260\,bps
-that richer features and sequence models do not close
-(Table~\ref{tab:oracle}; Figure~\ref{fig:cumulative_pnl}).
-
-\begin{table}[t]
-\centering
-\caption{Oracle gap and best-model net bps (USDC/SVB test split).
-  $^\ast$Best calibrated model is NoTrade (zero trades).
-  $^\ddagger$30-min GRU window.}
-\label{tab:oracle}
-\setlength{\tabcolsep}{3pt}
-{\small
-\begin{tabular}{lrrrr}
-\toprule
-\textbf{Task / Model} & \textbf{Oracle} & \textbf{Best model} & \textbf{Gap} & \textbf{AUPRC}\\
-\midrule
-\task{basis\_usdc\_1m}     & $+161.7\bps$ & $0\bps^\ast$     & 162\,bps & 0.253\\
-\task{exec\_arb\_q10k\_5m} & $+224.6\bps$ & $-41.1\bps$      & 266\,bps & 0.060\\
-\task{exec\_arb\_q50k\_5m} & $+146.8\bps$ & $-112.7\bps$     & 260\,bps & 0.063\\
-\midrule
-GRU (seq)$^\ddagger$, \task{basis\_usdc\_1m} & $+161.7\bps$ & $-239.0\bps$ & 401\,bps & ---\\
-\bottomrule
-\end{tabular}
-}
-{\footnotesize Kline-proxy buy leg; 20\% haircut sensitivity in \S\ref{sec:gap}.}
-\end{table}
+The hindsight oracle earns $+224.6\bps$ on \task{exec\_arb\_q10k\_5m}
+while the best deployable model reaches $-41.1\bps$ (266\,bps gap);
+on \task{basis\_usdc\_1m} the oracle is $+161.7\bps$ and the best
+model is NoTrade at $0\bps$ (162\,bps gap, AUPRC~0.253).
+Richer features and sequence models do not close either gap
+(Figure~\ref{fig:cumulative_pnl}).
 
 \begin{figure}[t]
   \centering
@@ -986,34 +923,26 @@ signal of imminent dislocation regardless of on-chain mechanics.
 
 \begin{table}[h]
 \centering
-\caption{Top-10 SHAP feature importances for the meta-labeling secondary
-  classifier (LightGBM, Terra$\to$SVB). Importance = mean$|$SHAP$|$
-  normalised to 100\%. Price/basis features dominate; book features
+\caption{Top SHAP importances, meta-labeling secondary classifier
+  (LightGBM, Terra$\to$SVB). Price/basis dominates; book features
   filter execution quality within primary-signal windows.}
 \label{tab:shap}
 \setlength{\tabcolsep}{3pt}
 {\scriptsize
-\begin{tabular}{rlrr}
+\begin{tabular}{lrr}
 \toprule
-\textbf{Rank} & \textbf{Feature} & \textbf{Importance} & \textbf{Group}\\
+\textbf{Feature / Group} & \textbf{Imp.} & \textbf{Group}\\
 \midrule
-1 & USDC cross-quote basis    & 49.6\% & price\\
-2 & Primary basis             & 32.8\% & price\\
-3 & Deviation from \$1        & 10.1\% & price\\
-4 & USDT cross-quote basis    &  2.0\% & price\\
+USDC cross-quote basis    & 49.6\% & price\\
+Primary basis             & 32.8\% & price\\
+Deviation from \$1        & 10.1\% & price\\
+USDT cross-quote basis    &  2.0\% & price\\
+Ask depth (10\,bp)        &  0.5\% & book/frag\\
+Bid-ask spread            &  0.5\% & book/frag\\
 \midrule
-5 & Ask depth (10\,bp)        &  0.5\% & book/frag\\
-6 & Bid-ask spread            &  0.5\% & book/frag\\
-7 & Order imbalance           &  0.5\% & book/frag\\
-8 & Trade volume (1\,min)     &  0.4\% & book/frag\\
-\midrule
-9 & Transfer volume (1\,min)  &  0.5\% & settlement\\
-10& Block-lag proxy           &  0.3\% & settlement\\
-\midrule
-\multicolumn{2}{l}{\textit{Group totals}} & & \\
-\multicolumn{2}{l}{\quad Price/basis} & 94.8\% & \\
-\multicolumn{2}{l}{\quad Book/fragmentation} & 3.4\% & \\
-\multicolumn{2}{l}{\quad Settlement} & 1.8\% & \\
+\textit{Price/basis total}        & 94.8\% & \\
+\textit{Book/frag total}          &  3.4\% & \\
+\textit{Settlement total}         &  1.8\% & \\
 \bottomrule
 \end{tabular}
 }
