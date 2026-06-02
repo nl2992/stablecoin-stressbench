@@ -97,20 +97,35 @@ RWA failures (USDR, Acala).
 Every prior stablecoin stress study examines at most one of these
 mechanisms and none provide per-minute executable labels.
 
-The paper follows one spine.
-Price charts show profitable arbitrage that vanishes under execution
-(Gap~1, $12\times$).
-The surviving executable windows cannot be found by any calm-trained
-model (Gap~2).
-Only cross-mechanism supervision bridges Gap~2, and even then
-performance saturates near 50\% of what a hindsight oracle achieves.
+To make this concrete.
+When USDC slipped below \$1 during the March 2023 SVB crisis, Bitcoin
+bought with USDC looked cheaper than the same Bitcoin priced in real
+dollars.
+On a price chart, buying the cheap version and selling the expensive
+one is free money.
+In practice it rarely is.
+By the time an order fills, the discount has narrowed, and trading
+fees and settlement delay consume what remains.
+StressBench measures two things: how often this apparent profit
+survives execution (Gap~1, roughly one minute in twelve), and whether
+a model can flag the surviving minutes before they close (Gap~2, but
+only if it has first been trained on a different kind of crisis).
+
+The paper's argument has three layers.
+Layer~1 is what the price chart shows.
+Layer~2 is what a trader can actually capture after walking through
+the order book, paying fees, and settling the transfer.
+Layer~3 is what a model can predict in advance.
+Gap~1 is the distance from Layer~1 to Layer~2. Gap~2 is the distance
+from Layer~2 to Layer~3.
+We call dislocations that belong to Layer~1 but not Layer~2
+\textbf{\emph{optical}}: real on the chart, illusory in the order book.
+The windows that survive to Layer~2 we call \textbf{\emph{executable}}.
+Basis points (bps) are hundredths of a percent (100\,bps $=$ 1\%).
+
 Figure~\ref{fig:framework} shows all three layers for the SVB test
 window and traces one representative false-positive minute from
 apparent profit to net loss.
-
-We call dislocations visible on charts but absent in execution
-\textbf{\emph{optical}}, and surviving windows \textbf{\emph{executable}}.
-Basis points (bps) are hundredths of a percent (100\,bps $=$ 1\%).
 The $12\times$ ratio is measured at the 10\,bps threshold and
 \$10K notional. It rises to $14\times$ under a 20\% depth haircut
 and collapses to near-zero at \$500K, so the headline number understates
@@ -135,7 +150,8 @@ minority in a stress regime it has never seen.
         classes, tiered data governance (Tier A: VWAP labels and oracle
         for USDC/SVB; Tier B: price/liquidity; Tier C: taxonomy),
         per-minute VWAP book-walking labels with route provenance, and
-        a hindsight oracle ceiling.
+        a hindsight oracle ceiling (the best return a trader could
+        achieve knowing in advance exactly which minutes would pay off).
         (\S\ref{sec:benchmark}--\ref{sec:models})
   \item \textbf{$12\times$ gap and cross-mechanism transfer.}
         Gap~1: 34.3\% optical vs.\ 2.88\% executable at \$10K.
@@ -409,7 +425,10 @@ false-positive minute through the full cost stack, showing why
 \subsection{Cross-Quote Basis and Labels}
 \label{sec:basis}
 
-Three equations define the label construction.
+The cross-quote basis is the percentage gap between BTC priced in
+a stablecoin (e.g., BTC-USDC) and BTC priced in real dollars
+(BTC-USD on Coinbase). A non-zero basis signals an apparent
+dislocation. Three equations define the label construction.
 \begin{align}
   b_{\text{USDC}}(t)  &\;=\; 10{,}000 \times
       \frac{P_{\text{BTC/USDC}}(t) - P_{\text{BTC/USD}}(t)}
@@ -499,9 +518,10 @@ A conditioned PPO-GRU at 17\% primary-signal density earns
 $-29.2\bps$. The reward signal is not a substitute for explicit
 labels even when positive-example density is matched.
 
-The cross-mechanism extension of meta-labeling (a two-stage approach
-where a primary signal generates candidates and a secondary classifier
-filters them \cite{lopezdeprado2018}) operates in three steps.
+The cross-mechanism extension of meta-labeling operates in three steps.
+Meta-labeling \cite{lopezdeprado2018} is a two-step filter: a cheap
+rule flags candidate minutes, then a learned classifier keeps only the
+ones likely to survive execution.
 \begin{enumerate}[leftmargin=*,itemsep=1pt,topsep=2pt]
   \item \textbf{Primary filter.} Flag $t$ if
         $|b_{\text{USDC}}(t)|>\tau_1$ ($\tau_1{=}10\bps$).
@@ -640,6 +660,10 @@ Terra/LUNA independently replicates the gap at $5.9\times$ ($2.40\%$
 executable of $14.0\%$ optical), confirming that the optical-to-executable
 phenomenon is not specific to reserve-bank shocks. The Tier-A
 execution-grade labels are one event; the underlying finding is two.
+
+If only one minute in twelve is tradeable even with perfect hindsight,
+the next question is whether any model can find those minutes in
+advance.
 
 \begin{table}[h]
 \centering
@@ -785,8 +809,10 @@ substantially reduces route-direction mismatch, though a 49\%
 false-positive rate and roughly 113 missed profitable windows confine
 net returns to $+82.5\bps$.
 The prediction gap is not a model-selection problem.
-It is a training-distribution problem, and the only empirically
-validated solution is cross-mechanism supervision.
+It is a training-distribution problem.
+No calm-trained model can bridge it. The only thing that works is
+letting the model see a different crisis first, which is where
+cross-mechanism transfer enters.
 
 \begin{table}[h]
 \centering
@@ -822,10 +848,13 @@ Regime detection &
 \subsection{Cross-Mechanism Transfer}
 \label{sec:diagnostics}
 
-Cross-mechanism meta-labeling trained on Terra/LUNA is the only
-method that crosses zero, earning $+82.5\bps$ (51.0\% oracle capture
-on the \task{basis\_usdc\_1m} task, oracle $+161.7\bps$ from
-Table~\ref{tab:master}).
+Cross-mechanism transfer means training on one type of crisis and
+testing on a completely different one. Here, the filter trained on
+Terra/LUNA's algorithmic collapse is applied unchanged to SVB's
+reserve-bank shock.
+This approach is the only method that crosses zero, earning
+$+82.5\bps$ (51.0\% oracle capture on the \task{basis\_usdc\_1m}
+task, oracle $+161.7\bps$ from Table~\ref{tab:master}).
 A reinforcement learning agent given the same 17\% primary-signal
 density earns $-29.2\bps$.
 The 111.7\,bps gap points to explicit binary labels as the ingredient
