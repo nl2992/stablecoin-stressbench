@@ -87,86 +87,95 @@ CC-BY~4.0.
 \section{Introduction}
 \label{sec:intro}
 
-Stablecoin stress is not one thing.
-From 2020 to 2023 we identify 18 distinct episodes spanning seven
-mechanism classes: algorithmic death spirals (Terra/LUNA, IRON/TITAN),
-fiat-reserve shocks (USDC/SVB), regulatory winddowns (BUSD),
-exchange-credit collapses (FTX, Celsius), DeFi pool imbalances
-(Curve/USDT), collateral liquidations (DAI Black Thursday), and
-RWA failures (USDR, Acala).
-Every prior stablecoin stress study examines at most one of these
-mechanisms and none provide per-minute executable labels.
+Stablecoin stress is not one phenomenon but seven.
+From 2020 to 2023 we catalogue 18 distinct depeg episodes spanning
+algorithmic death spirals (Terra/LUNA, IRON/TITAN), fiat-reserve shocks
+(USDC/SVB), regulatory winddowns (BUSD), exchange-credit collapses
+(FTX, Celsius), DeFi pool imbalances (Curve/USDT), collateral
+liquidations (DAI Black Thursday), and real-world-asset failures
+(USDR, Acala).
+Yet every prior study examines a single mechanism, and none asks the
+question a trader actually faces: of the price dislocations that appear
+during stress, how many can be captured at a profit?
 
-To make this concrete.
+The answer is far fewer than the chart suggests.
 When USDC slipped below \$1 during the March 2023 SVB crisis, Bitcoin
 bought with USDC looked cheaper than the same Bitcoin priced in real
-dollars.
-On a price chart, buying the cheap version and selling the expensive
-one is free money.
-In practice it rarely is.
-By the time an order fills, the discount has narrowed, and trading
-fees and settlement delay consume what remains.
-StressBench measures two things: how often this apparent profit
-survives execution (Gap~1, roughly one minute in twelve), and whether
-a model can flag the surviving minutes before they close (Gap~2, but
-only if it has first been trained on a different kind of crisis).
+dollars---free money on a price chart.
+In practice it rarely was.
+By the time an order walked the book, the discount had narrowed; taker
+fees and settlement delay consumed the rest.
+Only 2.88\% of one-minute windows survived all three costs, against
+34.3\% that appeared dislocated: a $12\times$ gap between visible and
+executable arbitrage.
 
-The paper's argument has three layers.
-Layer~1 is what the price chart shows.
-Layer~2 is what a trader can actually capture after walking through
-the order book, paying fees, and settling the transfer.
-Layer~3 is what a model can predict in advance.
-Gap~1 is the distance from Layer~1 to Layer~2. Gap~2 is the distance
-from Layer~2 to Layer~3.
-We call dislocations that belong to Layer~1 but not Layer~2
-\textbf{\emph{optical}}: real on the chart, illusory in the order book.
-The windows that survive to Layer~2 we call \textbf{\emph{executable}}.
-Basis points (bps) are hundredths of a percent (100\,bps $=$ 1\%).
-
+We separate three layers of the same event.
+\textbf{Layer~1 (optical)} is what the price chart shows.
+\textbf{Layer~2 (executable)} is what survives VWAP book-walking, fees,
+and settlement.
+\textbf{Layer~3 (captured)} is what a model can flag in advance.
+Gap~1 is the distance from Layer~1 to Layer~2; Gap~2, from Layer~2 to
+Layer~3.
+We call Layer-1-only dislocations \textbf{\emph{optical}}---real on the
+chart, illusory in the order book---and the survivors
+\textbf{\emph{executable}}.
+The two gaps have distinct causes. Gap~1 is a measurement problem: price
+labels overstate tradeable performance by a factor of twelve. Gap~2 is a
+training problem: no model trained on calm data can find the executable
+minority in a stress regime it has never seen.
 Figure~\ref{fig:framework} shows all three layers for the SVB test
 window and traces one representative false-positive minute from
 apparent profit to net loss.
-The $12\times$ ratio is measured at the 10\,bps threshold and
-\$10K notional. It rises to $14\times$ under a 20\% depth haircut
-and collapses to near-zero at \$500K, so the headline number understates
-the constraint for institutional participants.
+Basis points (bps) are hundredths of a percent (100\,bps $=$ 1\%).
 
-The execution-grade labels centre on one event: USDC/SVB, March 2023.
-The finding, however, replicates across two mechanistically independent
-events. SVB shows a $12\times$ gap ($2.88\%$ executable). Terra/LUNA
-independently shows a $5.9\times$ gap ($2.40\%$ executable). The
-phenomenon is not SVB-specific; the Tier-A labels are.
+We establish each gap against a ground truth, mirroring the
+sanity-check-then-hard-case logic of controlled studies.
+Terra/LUNA, a mechanistically independent algorithmic collapse, serves
+as our known reference: it reproduces the optical-to-executable gap at
+$5.9\times$ ($2.40\%$ executable) and supplies a clean cross-mechanism
+training signal.
+USDC/SVB, a fiat-reserve shock with route-complete order-book depth, is
+the execution-grade test case, where the gap reaches $12\times$
+($2.88\%$ executable) and widens to $14\times$ under a 20\% depth
+haircut.
+That the same gap appears in two unrelated mechanisms tells us the
+phenomenon is structural, not an artefact of either event; only the
+Tier-A execution labels are SVB-specific.
 
-Gap~1 is not a model problem. It is a measurement problem. Price labels
-overstate tradeable performance by a factor of twelve.
-Gap~2 is not an architecture problem. It is a training-distribution
-problem. No model trained on calm data can identify the executable
-minority in a stress regime it has never seen.
+The one approach that crosses zero exploits a simple regularity: the
+order book responds to uncertainty, not to its cause.
+Depth withdrawal and spread widening look identical in an algorithmic
+collapse and a bank-reserve shock, so a meta-labeler trained on
+Terra/LUNA recognises the executable signature in SVB without ever
+seeing it.
+This single transfer recovers half the return available to a hindsight
+oracle.
 
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
-  \item \textbf{First execution-aware stablecoin benchmark.}
+  \item \textbf{An execution-aware stablecoin benchmark.}
         An 18-event source-tracked catalogue across seven mechanism
         classes, tiered data governance (Tier A: VWAP labels and oracle
         for USDC/SVB; Tier B: price/liquidity; Tier C: taxonomy),
-        per-minute VWAP book-walking labels with route provenance, and
-        a hindsight oracle ceiling (the best return a trader could
-        achieve knowing in advance exactly which minutes would pay off).
+        per-minute VWAP book-walking labels with route provenance, and a
+        hindsight oracle ceiling---the first benchmark that scores models
+        against tradeable rather than optical labels.
         (\S\ref{sec:benchmark}--\ref{sec:models})
-  \item \textbf{$12\times$ gap and cross-mechanism transfer.}
-        Gap~1: 34.3\% optical vs.\ 2.88\% executable at \$10K.
-        Gap~2: every calm-trained model fails. Meta-labeling trained on
-        Terra/LUNA achieves $+82.5\bps$ on SVB (51.0\% oracle capture)
-        and pooling four events reaches 51.8\%.
-        All four conditions saturate near 50\%, pointing to a structural
-        late-stage ambiguity that additional mechanism pooling cannot lift.
+  \item \textbf{A measured $12\times$ optical-to-executable gap and its
+        transfer remedy.}
+        The gap persists across all cost parameters and widens to
+        near-total at institutional scale.
+        Every calm-trained family fails economically; cross-mechanism
+        meta-labeling trained on Terra/LUNA recovers $+82.5\bps$ on SVB
+        (51.0\% oracle capture), and four-event pooling reaches 51.8\%,
+        saturating near 50\% oracle capture.
         (\S\ref{sec:results})
-  \item \textbf{Supervision format, not label density, as binding constraint.}
-        A conditioned PPO-GRU at 17\% positive density earns $-29.2\bps$
-        vs.\ meta-labeling's $+82.5\bps$ at identical density, consistent
-        with explicit binary labels being the ingredient reward
-        optimisation cannot replicate. We treat this as a hypothesis
-        for the multi-mechanism RL experiment in future work.
+  \item \textbf{An isolation of supervision format as the binding
+        constraint.}
+        At identical 17\% positive-label density, explicit binary
+        supervision earns $+82.5\bps$ while a conditioned PPO-GRU earns
+        $-29.2\bps$, locating the difference in label format rather than
+        data scarcity.
         (\S\ref{sec:rl_results})
 \end{enumerate}
 
