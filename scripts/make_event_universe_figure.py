@@ -61,9 +61,13 @@ def load_events() -> pd.DataFrame:
 
 
 def load_real_basis() -> dict[str, pd.DataFrame]:
-    panel = pd.read_parquet(
-        ROOT / "results/experiments_addon/historical_event_panel.parquet"
-    )
+    panel_path = ROOT / "results/experiments_addon/historical_event_panel.parquet"
+    if not panel_path.exists():
+        # Right-panel data unavailable in this checkout. The paper crops the
+        # right panel out (trim in \includegraphics), so the left bubble panel
+        # is what matters; return empty so the figure still builds.
+        return {}
+    panel = pd.read_parquet(panel_path)
     basis_col = "cross_quote_basis_usdc_bps"
     out = {}
     for ev in ["terra_ust_2022", "usdc_svb_2023"]:
@@ -96,23 +100,35 @@ def make_figure() -> None:
             color=colour, edgecolors=edge, linewidths=0.7,
             alpha=0.88, zorder=3,
         )
-        # Label key events
-        if row["event_id"] in ("usdc_svb_2023", "terra_ust_2022",
-                               "ftx_collapse_2022", "busd_regulatory_2023",
-                               "dai_black_thursday_2020"):
+        # Label key events. Offsets are per-event and horizontal-only
+        # (va="center") so each label sits on its own row centreline and
+        # never overlaps the mechanism rows above or below it.
+        LABEL_OFFSETS = {
+            "dai_black_thursday_2020": (9, 0),
+            "terra_ust_2022":          (9, 0),
+            "ftx_collapse_2022":       (9, 0),
+            "busd_regulatory_2023":    (9, 0),
+            "usdc_svb_2023":           (10, 0),
+        }
+        if row["event_id"] in LABEL_OFFSETS:
             ax.annotate(
                 row["display_name"].replace(" (PRIMARY)", "").replace(
                     "USDC/SVB Stress", "USDC/SVB"
-                ).replace("Terra/UST Collapse", "Terra/UST"),
+                ).replace("Terra/UST Collapse", "Terra/UST"
+                ).replace("BUSD Regulatory Winddown", "BUSD Winddown"),
                 xy=(row["year_frac"], row["mech_idx"]),
-                xytext=(5, 3), textcoords="offset points",
-                fontsize=4.8, color="#333333",
+                xytext=LABEL_OFFSETS[row["event_id"]],
+                textcoords="offset points",
+                fontsize=4.8, color="#333333", ha="left", va="center",
             )
 
     ax.set_yticks(range(len(MECH_ORDER)))
     ax.set_yticklabels([MECH_LABELS[m] for m in MECH_ORDER], fontsize=5.5)
     ax.set_xlabel("Year", fontsize=7)
-    ax.set_xlim(2019.7, 2024.2)
+    # Extra right-side whitespace so event labels (placed to the right of their
+    # bubbles) sit well inside the axis and survive the LaTeX trim crop that
+    # removes the right panel.
+    ax.set_xlim(2019.7, 2025.4)
     ax.set_xticks([2020, 2021, 2022, 2023, 2024])
     ax.set_xticklabels(["2020","2021","2022","2023","2024"], fontsize=6)
     ax.tick_params(left=False, labelsize=6)
@@ -129,11 +145,20 @@ def make_figure() -> None:
         mpatches.Patch(facecolor="white", edgecolor=GOLD, linewidth=0.9,
                        label="Above-peg stress"),
     ]
-    ax.legend(handles=leg, fontsize=5, loc="lower right",
+    ax.legend(handles=leg, fontsize=5, loc="upper left",
               framealpha=0.85, edgecolor="none", ncol=2)
 
     # ── Right panel: real basis fingerprints ─────────────────────────────────
     ax2 = axes[1]
+
+    if not basis:
+        # Parquet absent in this checkout; paper crops this panel out anyway.
+        ax2.axis("off")
+        for out_path in [OUT / "figure_event_universe.png",
+                         PAPER / "figure_event_universe.png"]:
+            fig.savefig(out_path, dpi=200, bbox_inches="tight")
+        print("Saved figure_event_universe.png (left panel only; parquet absent)")
+        return
 
     terra = basis["terra_ust_2022"]
     svb   = basis["usdc_svb_2023"]
@@ -238,7 +263,7 @@ def make_latex_table() -> None:
 \end{table}"""
 
     out_path = ROOT / "results" / "paper_addon" / "table_catalogue_latex.tex"
-    out_path.write_text(latex)
+    out_path.write_text(latex, encoding="utf-8")
     print(f"Saved {out_path}")
 
 

@@ -96,50 +96,54 @@ ax.tick_params(bottom=True)
 ax.spines["bottom"].set_visible(True)
 ax.set_xlabel("Fraction of 15,832 test minutes", fontsize=7)
 
-# ── Panel B: worked example ────────────────────────────────────────────────────
+# ── Panel B: worked example as a cost-stack waterfall ─────────────────────────
+# One representative false-positive minute (Mar 11 2023). The chart shows a
+# +112 bps USDT spike, but the tradeable USDC route starts near peg and the
+# execution-cost stack pushes it to a net loss. A waterfall reads far more
+# cleanly than a text dump: each grey bar is one cost, the red bar is the net.
 ax2 = axes[1]
-ax2.axis("off")
 
-# Box showing one window
-title_y = 0.96
-lines = [
-    ("11:54 PM, Mar 11 2023 -- a typical false positive", 7.0, NAVY, "bold"),
-    ("", 4, "white", "normal"),
-    ("USDT basis:     +112 bps  (chart shows opportunity)", 6.3, GOLD, "normal"),
-    ("USDC basis:       +1 bps  (actual route: near zero)", 6.3, MGREY, "normal"),
-    ("", 3, "white", "normal"),
-    ("Why the USDC route fails:", 6.3, "#333333", "bold"),
-    ("  Primary filter fires on max-abs basis (USDT spike)", 6.0, "#555555", "normal"),
-    ("  BTC-USDC book: thin at $24,810; VWAP walk = $24,819", 6.0, "#555555", "normal"),
-    ("  BTC-USD (sell): $24,812", 6.0, "#555555", "normal"),
-    ("  Gross USDC margin: (24812-24819)/24810 x 10000 = -2.8 bps", 6.0, "#555555", "normal"),
-    ("  Taker fees (4+4): -8 bps", 6.0, "#555555", "normal"),
-    ("  Settlement latency: -5 bps", 6.0, "#555555", "normal"),
-    ("", 3, "white", "normal"),
-    ("Net result:  -15.8 bps  (not executable)", 6.8, RED, "bold"),
-    ("", 3, "white", "normal"),
-    ("Root cause: route-direction mismatch.", 6.0, "#333333", "normal"),
-    ("USDT dislocated; USDC route stays near peg.", 6.0, "#333333", "normal"),
+steps = [
+    ("USDC route gross",   -2.8),
+    ("Taker fees (4+4 bps)", -8.0),
+    ("Settlement latency",  -5.0),
 ]
+y_pos   = [3, 2, 1]
+bar_h_b = 0.58
+cum     = 0.0
+for (label, delta), y in zip(steps, y_pos):
+    left  = cum
+    cum  += delta
+    ax2.barh(y, delta, height=bar_h_b, left=left, color=MGREY,
+             edgecolor="white", linewidth=0.5, zorder=3)
+    ax2.text(cum - 0.5, y, f"{delta:+.1f}", ha="right", va="center",
+             fontsize=6.0, color="#333333")
+    ax2.text(0.5, y, label, ha="left", va="center", fontsize=6.0,
+             color="#333333")
 
-y_cur = title_y
-line_h = 0.068
-for text, fs, color, weight in lines:
-    if text == "":
-        y_cur -= fs / 200
-        continue
-    ax2.text(0.04, y_cur, text, transform=ax2.transAxes,
-             fontsize=fs, color=color, fontweight=weight,
-             va="top", ha="left", fontfamily="monospace" if "bps" in text and "$" not in text else "serif")
-    y_cur -= line_h * (fs / 6.5)
+net = cum  # -15.8
+ax2.barh(0, net, height=bar_h_b, left=0, color=RED, zorder=3)
+ax2.text(net - 0.5, 0, f"{net:+.1f} bps", ha="right", va="center",
+         fontsize=6.4, color=RED, fontweight="bold")
+ax2.text(0.5, 0, "Net (not executable)", ha="left", va="center",
+         fontsize=6.0, color=RED, fontweight="bold")
 
-ax2.set_title("(b) Worked example: optical != executable", fontsize=7.5, pad=4)
-# Border box
-rect = mpatches.FancyBboxPatch((0.0, 0.0), 1.0, 1.0,
-    boxstyle="round,pad=0.015", linewidth=0.8,
-    edgecolor=NAVY, facecolor="#FAFAFA",
-    transform=ax2.transAxes, zorder=0)
-ax2.add_patch(rect)
+ax2.axvline(0, color="#888888", lw=0.7, zorder=1)
+ax2.set_xlim(-20, 9)
+ax2.set_ylim(-0.6, 3.95)
+ax2.set_yticks([])
+ax2.set_xlabel("Net basis points", fontsize=7)
+ax2.tick_params(labelsize=6)
+for sp in ("top", "right", "left"):
+    ax2.spines[sp].set_visible(False)
+
+# Context line: the chart signal that triggered the (false) entry
+ax2.text(0.5, 1.04,
+         r"Chart: USDT $+112$ bps; tradeable USDC route $+1$ bps",
+         transform=ax2.transAxes, ha="center", va="bottom",
+         fontsize=5.8, color=GOLD, fontweight="bold")
+ax2.set_title(r"(b) One false-positive minute: optical $\neq$ executable",
+              fontsize=7.5, pad=16)
 
 fig.tight_layout(pad=0.5)
 out = OUT / "figure_framework.png"
