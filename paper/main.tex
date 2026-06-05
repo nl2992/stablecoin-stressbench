@@ -50,36 +50,39 @@
 %% =============================================================
 \begin{document}
 
-\title{Stablecoin StressBench: Measuring the $12\times$ Gap\\
-       Between Visible and Executable Arbitrage}
+\title{Stablecoin StressBench: Cross-Mechanism Transfer Learning\\
+       for Executable Arbitrage Under a $12\times$ Optical Gap}
 
 %% ---- Abstract -----------------------------------------------
 \begin{abstract}\sloppy
-Price charts show twelve times more profitable stablecoin arbitrage
-than a trader can capture.
-No prior benchmark provides per-minute executable labels, route-level
-depth provenance, or a hindsight oracle ceiling, so every published
-model score measures performance against windows that cannot be traded.
-We introduce Stablecoin StressBench: an 18-event source-tracked
-catalogue across seven mechanism classes (2020--2023), tiered data
-governance, per-minute VWAP (volume-weighted average price) book-walking
-labels with route provenance,
-and a hindsight oracle ceiling.
-The $12\times$ optical-to-executable gap persists across all cost
-parameters and widens further at institutional scale, where the
-executable rate falls to near-zero.
-Across every model family we tested, every calm-trained approach fails
-economically, confirming the gap is not closable by architecture or
-feature choices alone.
-Cross-mechanism meta-labeling trained on Terra/LUNA recovers
-$+82.5\bps$ on the SVB test split (51.0\% oracle capture), and
-pooling four events across three mechanism classes reaches 51.8\%.
-We release the catalogue, labels, oracle, and model harness under
-CC-BY~4.0.
+Price charts show twelve times more profitable stablecoin arbitrage than
+a trader can capture, so a model that scores well on price labels can
+still lose money on every trade.
+We study when a learned trading model transfers across financial crises,
+using stablecoin depegs as the testbed.
+The central obstacle is distributional: a model trained on calm or
+single-regime data cannot identify the executable minority in a stress
+regime it has never seen, and every calm-trained family we test---tabular
+classifiers, sequence models, reinforcement learning, and changepoint
+detectors---fails economically despite high AUROC.
+Our main result is that \emph{cross-mechanism transfer} solves this:
+a meta-labeling classifier trained on an algorithmic collapse
+(Terra/LUNA) and applied unchanged to a bank-reserve shock (USDC/SVB)
+recovers $+82.5\bps$ (51.0\% of a hindsight oracle), because depth
+withdrawal and spread widening are mechanism-invariant---the order book
+responds to uncertainty, not its cause.
+We further isolate \emph{supervision format} as the binding constraint:
+at identical positive-label density, explicit binary labels earn
+$+82.5\bps$ while reward optimisation (PPO-GRU) earns $-29.2\bps$.
+To support these findings we release Stablecoin StressBench: an 18-event
+catalogue across seven mechanism classes, per-minute VWAP
+(volume-weighted average price) book-walking labels with route
+provenance, and a hindsight oracle ceiling, under CC-BY~4.0.
 \end{abstract}
 
-\keywords{stablecoin arbitrage, market microstructure,
-  execution-aware labels, financial benchmarks, cryptocurrency}
+\keywords{transfer learning, meta-labeling, reinforcement learning,
+  execution-aware labels, market microstructure, stablecoin arbitrage,
+  financial benchmarks}
 
 \maketitle
 
@@ -153,30 +156,34 @@ oracle.
 
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
-  \item \textbf{An execution-aware stablecoin benchmark.}
-        An 18-event source-tracked catalogue across seven mechanism
-        classes, tiered data governance (Tier A: VWAP labels and oracle
-        for USDC/SVB; Tier B: price/liquidity; Tier C: taxonomy),
-        per-minute VWAP book-walking labels with route provenance, and a
-        hindsight oracle ceiling---the first benchmark that scores models
-        against tradeable rather than optical labels.
-        (\S\ref{sec:benchmark}--\ref{sec:models})
-  \item \textbf{A measured $12\times$ optical-to-executable gap and its
-        transfer remedy.}
-        The gap persists across all cost parameters and widens to
-        near-total at institutional scale.
-        Every calm-trained family fails economically; cross-mechanism
-        meta-labeling trained on Terra/LUNA recovers $+82.5\bps$ on SVB
-        (51.0\% oracle capture), and four-event pooling reaches 51.8\%,
-        saturating near 50\% oracle capture.
-        (\S\ref{sec:results})
-  \item \textbf{An isolation of supervision format as the binding
+  \item \textbf{Cross-mechanism transfer for executable arbitrage.}
+        A meta-labeling classifier trained on one crisis type and applied
+        unchanged to another recovers $+82.5\bps$ on SVB (51.0\% oracle
+        capture); four-event pooling reaches 51.8\%. Transfer succeeds
+        because the microstructure stress signature---depth withdrawal,
+        spread widening---is mechanism-invariant, which SHAP attribution
+        and matched depth-withdrawal curves confirm.
+        (\S\ref{sec:diagnostics})
+  \item \textbf{Supervision format, not label density, as the binding
         constraint.}
         At identical 17\% positive-label density, explicit binary
-        supervision earns $+82.5\bps$ while a conditioned PPO-GRU earns
-        $-29.2\bps$, locating the difference in label format rather than
-        data scarcity.
-        (\S\ref{sec:rl_results})
+        supervision earns $+82.5\bps$ while reward optimisation
+        (a conditioned PPO-GRU) earns $-29.2\bps$, locating the
+        difference in how the learning signal is delivered rather than in
+        data scarcity. Every other calm-trained family---tabular,
+        sequence, class-balanced, regression, and changepoint---also
+        fails, ruling out architecture and features as the remedy.
+        (\S\ref{sec:ladder},~\ref{sec:rl_results})
+  \item \textbf{An execution-aware benchmark that makes these claims
+        measurable.}
+        StressBench supplies the apparatus: an 18-event source-tracked
+        catalogue across seven mechanism classes, per-minute VWAP
+        book-walking labels with route provenance, and a hindsight oracle
+        ceiling. It exposes a $12\times$ optical-to-executable gap, so a
+        model scored on price labels overstates tradeable performance by
+        roughly twelve times---an evaluation-integrity result for any AI
+        trading model on this data.
+        (\S\ref{sec:benchmark}--\ref{sec:models},~\ref{sec:gap})
 \end{enumerate}
 
 
