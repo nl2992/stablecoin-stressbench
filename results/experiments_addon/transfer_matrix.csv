@@ -1,0 +1,5 @@
+training_event,test_event,training_mechanism,data_provenance,n_primary_fires_train,n_meta_positive_train,meta_positive_rate_pct,theta_calibrated,n_trades,net_bps,hit_rate,oracle_capture_pct,transfer_positive
+terra_ust_2022,usdc_svb_2023,algorithmic_loop_collapse,synthetic_fallback,1557,265,17.0,0.05,436,81.97,0.9954,0.5054,True
+celsius_3ac_2022,usdc_svb_2023,exchange_credit,synthetic_fallback,726,100,13.8,0.66,10,-40.9,0.0,-0.2522,False
+ftx_2022,usdc_svb_2023,exchange_collapse,synthetic_fallback,480,48,10.0,0.065,171,19.56,0.4561,0.1206,True
+calm_control,usdc_svb_2023,no_stress,synthetic_fallback,150,1,0.7,0.5,0,,,,False
