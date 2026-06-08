@@ -1081,6 +1081,15 @@ in SVB even when the timing does not match.
 \section{Limitations}
 \label{sec:limitations}
 
+\textbf{Single test-event destination.}
+Although the cross-mechanism transfer finding is validated across three independent training mechanisms (Terra/LUNA algorithmic, Celsius/3AC exchange-credit, and four-event pooled), all transfer results share a single test destination: USDC/SVB.
+This is not a design choice but a data constraint: Tier-A execution-grade VWAP labels (route-complete with a hindsight oracle) currently exist only for USDC/SVB.
+Three defences mitigate but do not eliminate this concern.
+First, the three independent training sources (Terra $+82.5\bps$, Celsius $+79.7\bps$, pooled $+83.7\bps$) all yield positive SVB results across three distinct crisis mechanisms, confirming the transfer is not a Terra-specific artefact.
+Second, the DGP bootstrap (500 seeds, resampling the training set) keeps every lower confidence bound strictly positive across all three training conditions, ruling out a lucky training draw.
+Third, SHAP mechanism invariance ($\rho_{\text{Spearman}}=1.0$ across features) confirms the model learns the same underlying microstructure patterns regardless of training mechanism.
+Extending to a second test destination (e.g., a future DeFi-native depeg with route-complete L2 archives) remains the primary open validation requirement.
+
 \textbf{Tier-A coverage.}
 VWAP execution labels (Tier A, meaning route-complete with a hindsight
 oracle) currently exist only for USDC/SVB and its recovery window.
