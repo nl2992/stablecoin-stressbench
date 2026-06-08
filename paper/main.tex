@@ -876,16 +876,21 @@ Calm-control & none & $\phantom{+}0.0$ & 0 & 0\%\\
 \midrule
 Terra/LUNA only & algorithmic & $+82.5$ & 397 & 51.0\%\\
 Celsius/3AC only & exch.\ credit & $+79.7$ & 221 & 49.1\%\\
-FTX only$^\ast$ & exch.\ credit & $+36.5$ & 1 & 22.5\%\\
+FTX only$^{\ast\ast}$ & exch.\ credit & $+36.5$ & 1 & 22.5\%\\
 Four-event pooled & alg.+exch.+reg. & $+83.7$ & 163 & 51.8\%\\
 \midrule
 PPO-GRU conditioned & RL on Terra & $-29.2$ & 919 & $-18\%^\ddagger$\\
 \bottomrule
-\multicolumn{5}{l}{\footnotesize $^\ast$FTX signal intensity $<5\bps$, one trade is not interpretable as a transfer result.}\\
+\multicolumn{5}{l}{\footnotesize $^{\ast\ast}$FTX: signal too weak ($<5\bps$ intensity), single trade --- excluded from multi-source claim.}\\
 \multicolumn{5}{l}{\footnotesize $^\ddagger$Negative capture means the agent loses money relative to the NoTrade (0 bps) floor.}\\
 \end{tabular}
 }
 \end{table}
+
+Two of the three single-source conditions produce interpretable transfer results.
+Terra/LUNA ($+82.5\bps$, $n=397$ trades) and Celsius/3AC ($+79.7\bps$, $n=221$ trades) both recover approximately 50\% of the oracle ceiling through a completely different training mechanism, confirming that the result is not a Terra-specific artefact.
+FTX alone produces only one trade at 36.5\,bps, which is insufficient signal; it is excluded from the multi-source claim.
+The two-source replication, together with the four-event pooled condition ($+83.7\bps$), constitutes the multi-mechanism evidence base for transfer.
 
 Cross-mechanism training succeeds because depth withdrawal, spread
 widening, and route mismatch recur across stress triggers even when

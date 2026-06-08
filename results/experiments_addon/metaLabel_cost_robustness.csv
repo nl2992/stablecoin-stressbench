@@ -1,0 +1,10 @@
+fee_multiplier,depth_haircut_pct,scenario,training_event,test_event,data_provenance,oracle_net_bps_adjusted,theta_calibrated,n_trades,net_bps,hit_rate,oracle_capture_pct,net_bps_positive
+1.0,0,fee=1.0x_haircut=0pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,84.79,0.05,442,84.31,0.9977,0.9943,True
+1.0,20,fee=1.0x_haircut=20pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,82.76,0.05,442,82.29,0.9977,0.9943,True
+1.0,40,fee=1.0x_haircut=40pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,80.72,0.05,442,80.26,0.9977,0.9943,True
+1.5,0,fee=1.5x_haircut=0pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,81.29,0.05,442,80.81,0.9977,0.9941,True
+1.5,20,fee=1.5x_haircut=20pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,79.26,0.05,442,78.79,0.9977,0.9941,True
+1.5,40,fee=1.5x_haircut=40pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,77.22,0.05,442,76.76,0.9977,0.994,True
+2.0,0,fee=2.0x_haircut=0pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,77.79,0.05,442,77.31,0.9977,0.9938,True
+2.0,20,fee=2.0x_haircut=20pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,75.76,0.05,442,75.29,0.9977,0.9938,True
+2.0,40,fee=2.0x_haircut=40pct,terra_ust_2022,usdc_svb_2023,synthetic_fallback,73.72,0.05,442,73.26,0.9977,0.9937,True

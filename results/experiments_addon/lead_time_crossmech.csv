@@ -1,0 +1,8 @@
+lead_time_minutes,signal_retention_alpha,n_trades,net_bps,hit_rate,oracle_capture_pct,theta_calibrated,positive_return
+1,0.944,458,79.3,0.9672,48.89,0.01,True
+2,0.889,444,81.52,0.9865,50.26,0.01,True
+5,0.722,401,79.52,0.9676,49.03,0.01,True
+10,0.444,162,69.37,0.9383,42.77,0.01,True
+15,0.167,25,43.72,0.64,26.96,0.01,True
+30,0.05,1,68.78,1.0,42.4,0.5,True
+60,0.05,10,-18.98,0.2,-11.7,0.01,False

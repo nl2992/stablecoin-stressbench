@@ -1,0 +1,21 @@
+{
+  "model": "cross_mechanism_meta_labeler",
+  "training_event": "terra_ust_2022",
+  "test_event": "usdc_svb_2023",
+  "data_provenance": "synthetic_fallback",
+  "n_bootstrap_resamples": 2000,
+  "block_length_minutes": 60,
+  "calibrated_threshold": 0.05,
+  "n_trades": 442,
+  "net_bps_mean": 84.31,
+  "oracle_capture_pct": 51.98,
+  "bootstrap_95ci_low_bps": 79.52,
+  "bootstrap_95ci_high_bps": 87.71,
+  "p_one_sided_positive": 1.0,
+  "pct_positive_replicates": 100.0,
+  "sharpe_mean": 42.5302,
+  "sharpe_95ci_low": 40.0849,
+  "sharpe_95ci_high": 45.0047,
+  "oracle_net_bps_svb": 162.2,
+  "interpretation": "CI excludes zero \u2014 statistically significant positive result"
+}

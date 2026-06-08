@@ -1,0 +1,15 @@
+{
+  "pearson_r": 0.8807,
+  "pearson_p": 0.0,
+  "n_minutes_compared": 120,
+  "data_provenance": "synthetic_fallback",
+  "terra_baseline_depth": 50000.0,
+  "svb_baseline_depth": 80000.0,
+  "terra_mean_norm_depth_post": 0.4138,
+  "svb_mean_norm_depth_post": 0.6488,
+  "terra_min_norm_depth": 0.1095,
+  "svb_min_norm_depth": 0.2921,
+  "both_show_depth_withdrawal": true,
+  "mechanism_invariance_visual": true,
+  "analysis_window_minutes": 120
+}
