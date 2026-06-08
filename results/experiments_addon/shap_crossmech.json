@@ -1,0 +1,48 @@
+{
+  "model": "cross_mechanism_meta_labeler",
+  "training_event": "terra_ust_2022",
+  "test_event": "usdc_svb_2023",
+  "data_provenance": "synthetic_fallback",
+  "feature_names": [
+    "basis",
+    "depth_bid",
+    "depth_ask",
+    "spread",
+    "imbalance"
+  ],
+  "terra_mean_abs_shap": [
+    0.021655,
+    0.7753,
+    0.732068,
+    1.43685,
+    1.174749
+  ],
+  "svb_mean_abs_shap": [
+    0.02069,
+    0.806806,
+    0.743077,
+    1.400287,
+    1.160947
+  ],
+  "terra_rank_by_importance": [
+    "spread",
+    "imbalance",
+    "depth_bid",
+    "depth_ask",
+    "basis"
+  ],
+  "svb_rank_by_importance": [
+    "spread",
+    "imbalance",
+    "depth_bid",
+    "depth_ask",
+    "basis"
+  ],
+  "terra_n_fires": 1559,
+  "svb_n_fires": 1979,
+  "spearman_rho": 1.0,
+  "jaccard_top3": 1.0,
+  "jaccard_top5": 1.0,
+  "top3_features_align": true,
+  "mechanism_invariance_confirmed": true
+}

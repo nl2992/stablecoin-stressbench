@@ -1,0 +1,5 @@
+supervision_format,description,training_event,test_event,data_provenance,positive_label_density,n_trades,net_bps,hit_rate,auroc,oracle_capture_pct,bootstrap_ci_low,bootstrap_ci_high,theta_calibrated,net_bps_positive
+binary_classification,cross-entropy LightGBM,terra_ust_2022,usdc_svb_2023,synthetic_fallback,0.17,454,83.46,0.989,0.9996,0.5145,79.8,87.14,0.018,True
+ordinal_regression,3-level ordinal LightGBM,terra_ust_2022,usdc_svb_2023,synthetic_fallback,0.17,454,83.46,0.989,0.9996,0.5145,79.82,87.22,0.018,True
+expected_profit_regression,net-bps regression LightGBM,terra_ust_2022,usdc_svb_2023,synthetic_fallback,0.17,462,81.29,0.9719,0.9976,0.5012,77.29,85.0,-6.547,True
+rl_policy_gradient,REINFORCE logistic policy,terra_ust_2022,usdc_svb_2023,synthetic_fallback,0.17,1583,-6.73,0.2337,0.4283,-0.0415,-9.53,-4.24,0.715,False
