@@ -1,0 +1,6 @@
+event,label,n_clean_rows,n_optical_primary_fires,n_amm_executable,executable_among_optical_pct,optical_to_executable_gap_x,median_abs_basis_bps,median_pool_slippage_bps
+usdt_curve_2023,USDT/Curve (Jun 2023),1378,697,697,100.0,1.0,11.07,2.27
+usdc_svb_2023,USDC/SVB (Mar 2023),934,257,257,100.0,1.0,0.48,0.82
+terra_luna_2022,Terra/LUNA (May 2022),740,549,549,100.0,1.0,196.98,2.01
+ftx_2022,FTX (Nov 2022),358,353,353,100.0,1.0,522.4,5.51
+busd_2023,BUSD (Feb 2023),790,766,766,100.0,1.0,170.66,1.74

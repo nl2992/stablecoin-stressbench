@@ -1,0 +1,27 @@
+{
+  "event": "usdt_curve_2023",
+  "venue": "curve_3pool_onchain",
+  "fee_bps": 1.0,
+  "primary_threshold_bps": 10.0,
+  "max_plausible_bps": 1000.0,
+  "n_onchain_rows_raw": 1528,
+  "n_bad_ticks_dropped": 150,
+  "n_clean_rows": 1378,
+  "median_pool_slippage_bps": 2.271,
+  "median_abs_basis_bps": 11.072,
+  "p95_abs_basis_bps": 818.722,
+  "n_optical_primary_fires": 697,
+  "n_amm_executable": 697,
+  "executable_among_optical_pct": 100.0,
+  "optical_to_executable_gap_x": 1.0,
+  "executable_by_phase": {
+    "pre": 365,
+    "post": 162,
+    "recovery": 114,
+    "panic": 52,
+    "onset": 4
+  },
+  "cex_svb_gap_x_for_comparison": 12.0,
+  "cex_svb_executable_pct_for_comparison": 2.88,
+  "interpretation": "On-chain AMM execution shows a near-1x optical-to-executable gap: the Curve pool dislocation, net of bounded slippage and the 1bp swap fee, is almost always capturable. This contrasts sharply with the 12x CEX order-book gap, showing the optical-to-executable gap is a property of CEX microstructure (thin depth, taker fees, settlement delay), not of stablecoin depegs per se."
+}

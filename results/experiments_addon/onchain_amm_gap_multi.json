@@ -1,0 +1,74 @@
+{
+  "n_events": 5,
+  "fee_bps": 1.0,
+  "primary_threshold_bps": 10.0,
+  "amm_gap_x_min": 1.0,
+  "amm_gap_x_max": 1.0,
+  "amm_gap_x_median": 1.0,
+  "amm_exec_pct_min": 100.0,
+  "cex_svb_gap_x": 12.0,
+  "cex_svb_executable_pct": 2.88,
+  "per_event": [
+    {
+      "n_clean_rows": 1378,
+      "n_bad_ticks_dropped": 150,
+      "median_pool_slippage_bps": 2.27,
+      "median_abs_basis_bps": 11.07,
+      "n_optical_primary_fires": 697,
+      "n_amm_executable": 697,
+      "executable_among_optical_pct": 100.0,
+      "optical_to_executable_gap_x": 1.0,
+      "event": "usdt_curve_2023",
+      "label": "USDT/Curve (Jun 2023)"
+    },
+    {
+      "n_clean_rows": 934,
+      "n_bad_ticks_dropped": 242,
+      "median_pool_slippage_bps": 0.82,
+      "median_abs_basis_bps": 0.48,
+      "n_optical_primary_fires": 257,
+      "n_amm_executable": 257,
+      "executable_among_optical_pct": 100.0,
+      "optical_to_executable_gap_x": 1.0,
+      "event": "usdc_svb_2023",
+      "label": "USDC/SVB (Mar 2023)"
+    },
+    {
+      "n_clean_rows": 740,
+      "n_bad_ticks_dropped": 141,
+      "median_pool_slippage_bps": 2.01,
+      "median_abs_basis_bps": 196.98,
+      "n_optical_primary_fires": 549,
+      "n_amm_executable": 549,
+      "executable_among_optical_pct": 100.0,
+      "optical_to_executable_gap_x": 1.0,
+      "event": "terra_luna_2022",
+      "label": "Terra/LUNA (May 2022)"
+    },
+    {
+      "n_clean_rows": 358,
+      "n_bad_ticks_dropped": 360,
+      "median_pool_slippage_bps": 5.51,
+      "median_abs_basis_bps": 522.4,
+      "n_optical_primary_fires": 353,
+      "n_amm_executable": 353,
+      "executable_among_optical_pct": 100.0,
+      "optical_to_executable_gap_x": 1.0,
+      "event": "ftx_2022",
+      "label": "FTX (Nov 2022)"
+    },
+    {
+      "n_clean_rows": 790,
+      "n_bad_ticks_dropped": 74,
+      "median_pool_slippage_bps": 1.74,
+      "median_abs_basis_bps": 170.66,
+      "n_optical_primary_fires": 766,
+      "n_amm_executable": 766,
+      "executable_among_optical_pct": 100.0,
+      "optical_to_executable_gap_x": 1.0,
+      "event": "busd_2023",
+      "label": "BUSD (Feb 2023)"
+    }
+  ],
+  "interpretation": "Across all five stablecoin depeg episodes, on-chain AMM execution shows a near-1x optical-to-executable gap (executable ~ optical), versus 12x on the CEX order book for the same SVB event. The optical-to-executable barrier is therefore a property of CEX order-book microstructure, not of stablecoin depegs: a visible AMM dislocation is almost always capturable because execution cost is the bounded slippage of the pool invariant."
+}

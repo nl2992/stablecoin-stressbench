@@ -50,3 +50,13 @@ paper/*.log
 paper/*.out
 paper/*.bbl
 paper/*.blg
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.out
+*.log
+*.synctex.gz
+*.fdb_latexmk
+*.fls
