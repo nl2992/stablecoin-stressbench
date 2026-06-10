@@ -1,0 +1,19 @@
+{
+  "n_seeds": 5,
+  "seeds": [
+    42,
+    7,
+    13,
+    23,
+    2025
+  ],
+  "net_bps_mean": -45.88,
+  "net_bps_std": 5.16,
+  "net_bps_min": -51.21,
+  "net_bps_max": -37.55,
+  "auroc_mean": 0.358,
+  "auroc_std": 0.197,
+  "shaped_net_bps": -35.6,
+  "shaped_auroc": 0.383,
+  "oracle_bps": 162.2
+}

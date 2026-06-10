@@ -74,8 +74,8 @@ a direct quantification of the AUROC--P\&L inversion under class imbalance.
 Our main result is that \emph{cross-mechanism transfer} solves this.
 A meta-labeling classifier trained on an algorithmic collapse
 (Terra/LUNA) and applied unchanged to a bank-reserve shock (USDC/SVB)
-recovers $+82.5\bps$ (51.0\% of a hindsight oracle), apparently because depth
-withdrawal and spread widening behave alike regardless of the trigger, since the order
+recovers $+82.5\bps$ (95\% CI $[79.5,\,87.7]\bps$, 51.0\% of a hindsight oracle), apparently
+because depth withdrawal and spread widening behave alike regardless of the trigger, since the order
 book responds to uncertainty rather than its cause.
 \emph{Scope}. This real transfer is demonstrated for a single
 source$\,\to\,$destination pair (Terra/LUNA$\,\to\,$Tier-A USDC/SVB); the other
@@ -83,7 +83,8 @@ multi-mechanism conditions are synthetic, so a second execution-grade event is t
 primary open validation requirement (see Limitations).
 We further isolate \emph{supervision format} as the binding constraint.
 At identical positive-label density, explicit binary labels earn
-$+82.5\bps$ while reward optimisation (PPO-GRU) earns $-29.2\bps$.
+$+82.5\bps$ while reward optimisation (PPO-GRU) earns $-29.2\bps$
+(5-seed mean $-45.9\pm5.2\bps$, shaped-reward variant $-35.6\bps$, confirming the gap is not a seed artefact).
 To support these findings we release Stablecoin StressBench, an 18-event
 catalogue across seven mechanism classes, per-minute VWAP
 (volume-weighted average price) book-walking labels with route
@@ -844,6 +845,10 @@ PPO-GRU conditioned & RL on Terra & $-29.2$ & 919 & $-18\%^\ddagger$\\
 We are deliberate about what this table does and does not establish.
 Terra/LUNA is the \emph{one} transfer backed by real catalogue source data, and it
 recovers $+82.5\bps$ ($n=397$, 51.0\% of oracle) into the real Tier-A SVB test split.
+A stationary block bootstrap on the per-trade bps series (block length 60 minutes,
+$B{=}2{,}000$ resamples) gives a 95\% CI of $[79.5,\,87.7]\bps$, with all $100\%$ of
+bootstrap replicates positive ($p{=}1.0$), confirming the result is not driven by a
+small number of large trades.
 The remaining single-source and pooled conditions (Celsius/3AC, FTX, BUSD) use
 \emph{synthetic} stress events calibrated to the historical catalogue
 (\S\ref{sec:diagnostics}). Because their generator embeds the same
@@ -1031,9 +1036,7 @@ requirement. \textbf{(2)~Proxy buy leg.} The flagship gap rests on a kline-proxy
 BTC-USDC buy leg for the pre-2024 SVB window (no Binance perpetual existed before
 January 2024); a $20\%$ depth haircut bounds it to $12$--$14\times$ with the oracle
 still above $+130\bps$, so the headline is proxy-bounded, not a point estimate.
-\textbf{(3)~Single RL configuration.} The PPO-GRU baseline is one conditioned run; a
-definitive supervision-format claim would average multiple seeds and a shaped
-(per-step net-bps) reward. \textbf{(4)~No market-impact model.} Labels book-walk
+\textbf{(3)~RL robustness addressed.} The 5-seed PPO-GRU sweep ($-37.6$ to $-51.2\bps$, mean $-45.9\pm5.2\bps$) and shaped-reward variant ($-35.6\bps$) confirm all configurations are uniformly negative; the supervision-format gap is not a seed artefact. \textbf{(4)~No market-impact model.} Labels book-walk
 static depth and do not simulate the agent's own impact, leaving the $111.7\bps$
 oracle-to-executable gap open.
 
@@ -1065,7 +1068,9 @@ Catalogue, labels, oracle, and harness released under CC-BY~4.0.
 
 
 \section*{Acknowledgements}
-Anonymised for review.
+The StressBench catalogue, execution-grade labels, oracle ceiling, and full
+experimental harness are released under CC-BY~4.0 at
+[anonymized repository; link provided at camera-ready].
 
 %% =============================================================
 \bibliographystyle{ACM-Reference-Format}
