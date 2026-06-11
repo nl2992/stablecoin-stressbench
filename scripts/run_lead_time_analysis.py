@@ -25,8 +25,11 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 from _synthetic_crossmech import (
-    generate_terra, generate_svb_with_lead_time, make_features,
+    generate_svb_with_lead_time,
+    generate_terra,
+    make_features,
 )
+
 from stressbench.common.logging import get_logger
 from stressbench.models.meta_labeling import MetaLabelingFilter
 
@@ -38,7 +41,9 @@ _SEED = 42
 _HORIZONS_MINUTES = [1, 2, 5, 10, 15, 30, 60]
 
 
-def _calibrate(proba: np.ndarray, net_profit: np.ndarray, min_trades: int = 10) -> float:
+def _calibrate(
+    proba: np.ndarray, net_profit: np.ndarray, min_trades: int = 10
+) -> float:
     best_t, best_total = 0.5, -np.inf
     for t in np.linspace(0.01, 0.95, 80):
         sig = proba > t
@@ -66,11 +71,16 @@ def main() -> None:
     terra = generate_terra(rng_train)
 
     X_train = make_features(terra)
-    model = MetaLabelingFilter(primary_threshold_bps=_PRIMARY_THRESHOLD, primary_signal_col=0)
+    model = MetaLabelingFilter(
+        primary_threshold_bps=_PRIMARY_THRESHOLD, primary_signal_col=0
+    )
     model.fit(X_train, terra["primary_signal"], terra["meta_label"])
-    logger.info("Trained: %d primary, %d meta-positive (%.1f%%)",
-                model.n_primary_fires_train, model.n_meta_positive_train,
-                100 * model.n_meta_positive_train / max(model.n_primary_fires_train, 1))
+    logger.info(
+        "Trained: %d primary, %d meta-positive (%.1f%%)",
+        model.n_primary_fires_train,
+        model.n_meta_positive_train,
+        100 * model.n_meta_positive_train / max(model.n_primary_fires_train, 1),
+    )
 
     rows = []
     for k in _HORIZONS_MINUTES:
@@ -101,15 +111,21 @@ def main() -> None:
             "n_trades": n_trades,
             "net_bps": round(net_bps, 2) if not np.isnan(net_bps) else None,
             "hit_rate": round(hit_rate, 4) if not np.isnan(hit_rate) else None,
-            "oracle_capture_pct": round(oracle_cap * 100, 2) if not np.isnan(oracle_cap) else None,
+            "oracle_capture_pct": (
+                round(oracle_cap * 100, 2) if not np.isnan(oracle_cap) else None
+            ),
             "theta_calibrated": round(theta, 3),
             "positive_return": net_bps > 0 if not np.isnan(net_bps) else False,
         }
         rows.append(row)
-        logger.info("k=%2d min (alpha=%.2f): n_trades=%d, net_bps=%s, oracle=%s%%",
-                    k, svb_k["alpha"], n_trades,
-                    f"{net_bps:.1f}" if not np.isnan(net_bps) else "nan",
-                    f"{oracle_cap * 100:.1f}" if not np.isnan(oracle_cap) else "nan")
+        logger.info(
+            "k=%2d min (alpha=%.2f): n_trades=%d, net_bps=%s, oracle=%s%%",
+            k,
+            svb_k["alpha"],
+            n_trades,
+            f"{net_bps:.1f}" if not np.isnan(net_bps) else "nan",
+            f"{oracle_cap * 100:.1f}" if not np.isnan(oracle_cap) else "nan",
+        )
 
     out_df = pd.DataFrame(rows)
     out_path = out_dir / "lead_time_crossmech.csv"
@@ -121,6 +137,7 @@ def main() -> None:
 
     # Figure
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -131,20 +148,45 @@ def main() -> None:
     fig, ax1 = plt.subplots(figsize=(7, 4))
     ax2 = ax1.twinx()
 
-    ax1.plot(ks, caps, "o-", color="#2166ac", linewidth=2, markersize=7, label="Oracle capture (%)")
-    ax2.plot(ks, bps_vals, "s--", color="#d6604d", linewidth=1.5, markersize=5, label="Net bps")
+    ax1.plot(
+        ks,
+        caps,
+        "o-",
+        color="#2166ac",
+        linewidth=2,
+        markersize=7,
+        label="Oracle capture (%)",
+    )
+    ax2.plot(
+        ks,
+        bps_vals,
+        "s--",
+        color="#d6604d",
+        linewidth=1.5,
+        markersize=5,
+        label="Net bps",
+    )
     ax1.axhline(0, color="black", linewidth=0.8, linestyle=":")
     ax2.axhline(0, color="#d6604d", linewidth=0.6, linestyle=":")
 
     if breakeven_k > 0:
-        ax1.axvline(breakeven_k, color="#1a9641", linewidth=1.5, linestyle="--", alpha=0.8,
-                    label=f"Break-even: {breakeven_k} min")
+        ax1.axvline(
+            breakeven_k,
+            color="#1a9641",
+            linewidth=1.5,
+            linestyle="--",
+            alpha=0.8,
+            label=f"Break-even: {breakeven_k} min",
+        )
 
     ax1.set_xlabel("Lead time k (minutes)", fontsize=11)
     ax1.set_ylabel("Oracle capture (%)", color="#2166ac", fontsize=10)
     ax2.set_ylabel("Net bps", color="#d6604d", fontsize=10)
-    ax1.set_title("Early-Warning Lead Time: Cross-Mechanism Meta-Labeler\n"
-                  "(Terra→SVB, depth-withdrawal signal retention model)", fontsize=10)
+    ax1.set_title(
+        "Early-Warning Lead Time: Cross-Mechanism Meta-Labeler\n"
+        "(Terra→SVB, depth-withdrawal signal retention model)",
+        fontsize=10,
+    )
 
     lines1, lbl1 = ax1.get_legend_handles_labels()
     lines2, lbl2 = ax2.get_legend_handles_labels()
@@ -159,14 +201,22 @@ def main() -> None:
     logger.info("Saved figure to %s", fig_path)
 
     print(f"\n=== Lead Time Analysis (Plan D) ===")
-    print(f"{'k (min)':>8} {'alpha':>7} {'n_trades':>10} {'net_bps':>10} {'oracle%':>10} {'pos?':>6}")
+    print(
+        f"{'k (min)':>8} {'alpha':>7} {'n_trades':>10} {'net_bps':>10} {'oracle%':>10} {'pos?':>6}"
+    )
     print("-" * 58)
     for row in rows:
         bps_s = f"{row['net_bps']:.1f}" if row["net_bps"] is not None else "nan"
-        cap_s = f"{row['oracle_capture_pct']:.1f}" if row["oracle_capture_pct"] is not None else "nan"
-        print(f"{row['lead_time_minutes']:>8} {row['signal_retention_alpha']:>7.2f} "
-              f"{row['n_trades']:>10} {bps_s:>10} {cap_s:>10} "
-              f"{'YES' if row['positive_return'] else 'NO':>6}")
+        cap_s = (
+            f"{row['oracle_capture_pct']:.1f}"
+            if row["oracle_capture_pct"] is not None
+            else "nan"
+        )
+        print(
+            f"{row['lead_time_minutes']:>8} {row['signal_retention_alpha']:>7.2f} "
+            f"{row['n_trades']:>10} {bps_s:>10} {cap_s:>10} "
+            f"{'YES' if row['positive_return'] else 'NO':>6}"
+        )
     print(f"\nBreak-even horizon: {breakeven_k} minutes")
     print(f"Useful warning window: up to {breakeven_k} minutes ahead of execution")
 

@@ -8,48 +8,54 @@ Produces:
 """
 
 from __future__ import annotations
+
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-ROOT   = Path(__file__).parent.parent
-OUT    = ROOT / "results" / "paper_addon" / "figures"
-PAPER  = ROOT / "results" / "paper" / "figures"
+ROOT = Path(__file__).parent.parent
+OUT = ROOT / "results" / "paper_addon" / "figures"
+PAPER = ROOT / "results" / "paper" / "figures"
 OUT.mkdir(parents=True, exist_ok=True)
 PAPER.mkdir(parents=True, exist_ok=True)
 
 # ── Colours ──────────────────────────────────────────────────────────────────
-NAVY  = "#003057"
-BLUE  = "#75B2DD"
-GOLD  = "#F2A900"
-RED   = "#C4122F"
+NAVY = "#003057"
+BLUE = "#75B2DD"
+GOLD = "#F2A900"
+RED = "#C4122F"
 LGREY = "#D0D0D0"
 MGREY = "#909090"
 
 TIER_COLOUR = {"A": NAVY, "B": BLUE, "C": LGREY}
 
 MECH_LABELS = {
-    "Algorithmic / Reflexive":         "Algorithmic /\nReflexive",
-    "Fiat-Reserve Bank Shock":         "Fiat-Reserve\nBank Shock",
-    "Regulatory / Issuer Winddown":    "Regulatory\nWinddown",
-    "Exchange Credit / Liquidity":     "Exchange Credit\n/ Liquidity",
-    "DeFi Pool Imbalance":             "DeFi Pool\nImbalance",
-    "Collateral / Liquidation":        "Collateral /\nLiquidation",
-    "RWA / Niche Stablecoin":          "RWA /\nNiche",
+    "Algorithmic / Reflexive": "Algorithmic /\nReflexive",
+    "Fiat-Reserve Bank Shock": "Fiat-Reserve\nBank Shock",
+    "Regulatory / Issuer Winddown": "Regulatory\nWinddown",
+    "Exchange Credit / Liquidity": "Exchange Credit\n/ Liquidity",
+    "DeFi Pool Imbalance": "DeFi Pool\nImbalance",
+    "Collateral / Liquidation": "Collateral /\nLiquidation",
+    "RWA / Niche Stablecoin": "RWA /\nNiche",
 }
 MECH_ORDER = list(MECH_LABELS.keys())
 
 
 def load_events() -> pd.DataFrame:
-    cat = pd.read_csv(ROOT / "results/paper_addon/table_14_historical_event_catalog.csv")
+    cat = pd.read_csv(
+        ROOT / "results/paper_addon/table_14_historical_event_catalog.csv"
+    )
     cat["start_dt"] = pd.to_datetime(cat["start"])
-    cat["year_frac"] = cat["start_dt"].dt.year + (cat["start_dt"].dt.dayofyear - 1) / 365
-    cat["mech_idx"]  = cat["mechanism_class"].map(
+    cat["year_frac"] = (
+        cat["start_dt"].dt.year + (cat["start_dt"].dt.dayofyear - 1) / 365
+    )
+    cat["mech_idx"] = cat["mechanism_class"].map(
         {v: i for i, v in enumerate(MECH_ORDER)}
     )
     cat["abs_depeg"] = cat["max_depeg_bps_est"].abs().clip(upper=12000)
@@ -80,11 +86,12 @@ def load_real_basis() -> dict[str, pd.DataFrame]:
 
 
 def make_figure() -> None:
-    cat   = load_events()
+    cat = load_events()
     basis = load_real_basis()
 
-    fig, axes = plt.subplots(1, 2, figsize=(7.0, 3.4),
-                             gridspec_kw={"width_ratios": [1.5, 1]})
+    fig, axes = plt.subplots(
+        1, 2, figsize=(7.0, 3.4), gridspec_kw={"width_ratios": [1.5, 1]}
+    )
     plt.subplots_adjust(wspace=0.12)
 
     # ── Left panel: bubble timeline ──────────────────────────────────────────
@@ -95,31 +102,39 @@ def make_figure() -> None:
         # Distinguish above-peg (positive max_depeg_bps_est) vs below-peg
         edge = GOLD if row["max_depeg_bps_est"] > 0 else "white"
         ax.scatter(
-            row["year_frac"], row["mech_idx"],
+            row["year_frac"],
+            row["mech_idx"],
             s=row["bubble_r"] ** 1.4,
-            color=colour, edgecolors=edge, linewidths=0.7,
-            alpha=0.88, zorder=3,
+            color=colour,
+            edgecolors=edge,
+            linewidths=0.7,
+            alpha=0.88,
+            zorder=3,
         )
         # Label key events. Offsets are per-event and horizontal-only
         # (va="center") so each label sits on its own row centreline and
         # never overlaps the mechanism rows above or below it.
         LABEL_OFFSETS = {
             "dai_black_thursday_2020": (9, 0),
-            "terra_ust_2022":          (9, 0),
-            "ftx_collapse_2022":       (9, 0),
-            "busd_regulatory_2023":    (9, 0),
-            "usdc_svb_2023":           (10, 0),
+            "terra_ust_2022": (9, 0),
+            "ftx_collapse_2022": (9, 0),
+            "busd_regulatory_2023": (9, 0),
+            "usdc_svb_2023": (10, 0),
         }
         if row["event_id"] in LABEL_OFFSETS:
             ax.annotate(
-                row["display_name"].replace(" (PRIMARY)", "").replace(
-                    "USDC/SVB Stress", "USDC/SVB"
-                ).replace("Terra/UST Collapse", "Terra/UST"
-                ).replace("BUSD Regulatory Winddown", "BUSD Winddown"),
+                row["display_name"]
+                .replace(" (PRIMARY)", "")
+                .replace("USDC/SVB Stress", "USDC/SVB")
+                .replace("Terra/UST Collapse", "Terra/UST")
+                .replace("BUSD Regulatory Winddown", "BUSD Winddown"),
                 xy=(row["year_frac"], row["mech_idx"]),
                 xytext=LABEL_OFFSETS[row["event_id"]],
                 textcoords="offset points",
-                fontsize=4.8, color="#333333", ha="left", va="center",
+                fontsize=4.8,
+                color="#333333",
+                ha="left",
+                va="center",
             )
 
     ax.set_yticks(range(len(MECH_ORDER)))
@@ -130,7 +145,7 @@ def make_figure() -> None:
     # removes the right panel.
     ax.set_xlim(2019.7, 2025.4)
     ax.set_xticks([2020, 2021, 2022, 2023, 2024])
-    ax.set_xticklabels(["2020","2021","2022","2023","2024"], fontsize=6)
+    ax.set_xticklabels(["2020", "2021", "2022", "2023", "2024"], fontsize=6)
     ax.tick_params(left=False, labelsize=6)
     ax.set_title("(a) 18-Event Stress Universe", fontsize=7, pad=4)
     ax.spines["top"].set_visible(False)
@@ -139,14 +154,21 @@ def make_figure() -> None:
 
     # Tier legend
     leg = [
-        mpatches.Patch(color=NAVY,  label="Tier A — execution-grade"),
-        mpatches.Patch(color=BLUE,  label="Tier B — price/liquidity"),
+        mpatches.Patch(color=NAVY, label="Tier A — execution-grade"),
+        mpatches.Patch(color=BLUE, label="Tier B — price/liquidity"),
         mpatches.Patch(color=LGREY, label="Tier C — taxonomy"),
-        mpatches.Patch(facecolor="white", edgecolor=GOLD, linewidth=0.9,
-                       label="Above-peg stress"),
+        mpatches.Patch(
+            facecolor="white", edgecolor=GOLD, linewidth=0.9, label="Above-peg stress"
+        ),
     ]
-    ax.legend(handles=leg, fontsize=5, loc="upper left",
-              framealpha=0.85, edgecolor="none", ncol=2)
+    ax.legend(
+        handles=leg,
+        fontsize=5,
+        loc="upper left",
+        framealpha=0.85,
+        edgecolor="none",
+        ncol=2,
+    )
 
     # ── Right panel: real basis fingerprints ─────────────────────────────────
     ax2 = axes[1]
@@ -154,23 +176,37 @@ def make_figure() -> None:
     if not basis:
         # Parquet absent in this checkout; paper crops this panel out anyway.
         ax2.axis("off")
-        for out_path in [OUT / "figure_event_universe.png",
-                         PAPER / "figure_event_universe.png"]:
+        for out_path in [
+            OUT / "figure_event_universe.png",
+            PAPER / "figure_event_universe.png",
+        ]:
             fig.savefig(out_path, dpi=200, bbox_inches="tight")
         print("Saved figure_event_universe.png (left panel only; parquet absent)")
         return
 
     terra = basis["terra_ust_2022"]
-    svb   = basis["usdc_svb_2023"]
+    svb = basis["usdc_svb_2023"]
 
     # Normalise time to [0,1]
     t_terra = terra["minute"] / len(terra)
-    t_svb   = svb["minute"] / len(svb)
+    t_svb = svb["minute"] / len(svb)
 
-    ax2.plot(t_terra, terra["basis_clip"].clip(-300, 300),
-             color=BLUE, lw=0.7, alpha=0.85, label="Terra/UST (Tier B, est.)")
-    ax2.plot(t_svb, svb["basis_clip"].clip(-1200, 300),
-             color=NAVY, lw=0.9, alpha=0.9, label="USDC/SVB (Tier A, real)")
+    ax2.plot(
+        t_terra,
+        terra["basis_clip"].clip(-300, 300),
+        color=BLUE,
+        lw=0.7,
+        alpha=0.85,
+        label="Terra/UST (Tier B, est.)",
+    )
+    ax2.plot(
+        t_svb,
+        svb["basis_clip"].clip(-1200, 300),
+        color=NAVY,
+        lw=0.9,
+        alpha=0.9,
+        label="USDC/SVB (Tier A, real)",
+    )
 
     ax2.axhline(0, color="black", lw=0.5, alpha=0.4)
     ax2.axhline(-10, color=RED, lw=0.5, linestyle=":", alpha=0.5)
@@ -183,18 +219,28 @@ def make_figure() -> None:
     ax2.set_xlim(0, 1)
     ax2.legend(fontsize=5, loc="lower left", framealpha=0.85, edgecolor="none")
 
-    ax2.annotate("Algorithmic spiral:\nrapid deep collapse",
-                 xy=(0.25, terra["basis_clip"].min()),
-                 xytext=(0.32, -220), fontsize=5, color=BLUE,
-                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=0.6))
-    ax2.annotate("Reserve-bank run:\nsharp then persistent",
-                 xy=(0.15, svb["basis_clip"].min()),
-                 xytext=(0.38, -400), fontsize=5, color=NAVY,
-                 arrowprops=dict(arrowstyle="->", color=NAVY, lw=0.6))
+    ax2.annotate(
+        "Algorithmic spiral:\nrapid deep collapse",
+        xy=(0.25, terra["basis_clip"].min()),
+        xytext=(0.32, -220),
+        fontsize=5,
+        color=BLUE,
+        arrowprops=dict(arrowstyle="->", color=BLUE, lw=0.6),
+    )
+    ax2.annotate(
+        "Reserve-bank run:\nsharp then persistent",
+        xy=(0.15, svb["basis_clip"].min()),
+        xytext=(0.38, -400),
+        fontsize=5,
+        color=NAVY,
+        arrowprops=dict(arrowstyle="->", color=NAVY, lw=0.6),
+    )
 
     fig.tight_layout(pad=0.4)
-    for out_path in [OUT / "figure_event_universe.png",
-                     PAPER / "figure_event_universe.png"]:
+    for out_path in [
+        OUT / "figure_event_universe.png",
+        PAPER / "figure_event_universe.png",
+    ]:
         fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved figure_event_universe.png")
@@ -202,18 +248,20 @@ def make_figure() -> None:
 
 def make_latex_table() -> None:
     """Write the 18-event catalogue as a LaTeX longtable fragment."""
-    cat = pd.read_csv(ROOT / "results/paper_addon/table_14_historical_event_catalog.csv")
+    cat = pd.read_csv(
+        ROOT / "results/paper_addon/table_14_historical_event_catalog.csv"
+    )
     cat["start_dt"] = pd.to_datetime(cat["start"])
 
     # Short mechanism labels
     mech_short = {
-        "Algorithmic / Reflexive":         "Algo./Reflex.",
-        "Exchange Credit / Liquidity":      "Exch.\ Credit",
-        "Regulatory / Issuer Winddown":     "Regulatory",
-        "Fiat-Reserve Bank Shock":          "Fiat Reserve",
-        "DeFi Pool Imbalance":              "DeFi Pool",
-        "Collateral / Liquidation":         "Collateral",
-        "RWA / Niche Stablecoin":           "RWA/Niche",
+        "Algorithmic / Reflexive": "Algo./Reflex.",
+        "Exchange Credit / Liquidity": "Exch.\ Credit",
+        "Regulatory / Issuer Winddown": "Regulatory",
+        "Fiat-Reserve Bank Shock": "Fiat Reserve",
+        "DeFi Pool Imbalance": "DeFi Pool",
+        "Collateral / Liquidation": "Collateral",
+        "RWA / Niche Stablecoin": "RWA/Niche",
     }
     # Duration short labels
     dur_map = {"days": "days", "hours": "hrs", "weeks": "wks"}
@@ -231,10 +279,12 @@ def make_latex_table() -> None:
         mech = mech_short.get(r["mechanism_class"], r["mechanism_class"])
         dur = dur_map.get(r["duration_class"], r["duration_class"])
         coins = r["stablecoins"].split(",")[0].strip()  # first coin only
-        name = (r["display_name"]
-                .replace(" (PRIMARY)", "")
-                .replace("/", "/\\allowbreak ")
-                .replace("&", "\\&"))
+        name = (
+            r["display_name"]
+            .replace(" (PRIMARY)", "")
+            .replace("/", "/\\allowbreak ")
+            .replace("&", "\\&")
+        )
 
         rows.append(
             f"  {name} & {r['start_dt'].strftime('%b~%Y')} & "
@@ -242,7 +292,8 @@ def make_latex_table() -> None:
             f"{dur} & {r['data_tier']}\\\\"
         )
 
-    latex = r"""\begin{table}[t]
+    latex = (
+        r"""\begin{table}[t]
 \centering
 \caption{StressBench event catalogue: all 18 events.
   Max depeg in bps ($+$=above peg); $^\dagger$=percentage-point collapse.
@@ -256,11 +307,14 @@ def make_latex_table() -> None:
 \textbf{Event} & \textbf{Date} & \textbf{Coin} &
 \textbf{Mechanism} & \textbf{Max depeg} & \textbf{Dur.} & \textbf{Tier}\\
 \midrule
-""" + "\n".join(rows) + r"""
+"""
+        + "\n".join(rows)
+        + r"""
 \bottomrule
 \end{tabular}
 }
 \end{table}"""
+    )
 
     out_path = ROOT / "results" / "paper_addon" / "table_catalogue_latex.tex"
     out_path.write_text(latex, encoding="utf-8")

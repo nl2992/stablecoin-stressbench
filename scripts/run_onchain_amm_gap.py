@@ -21,6 +21,7 @@ Outputs:
 Usage:
     python scripts/run_onchain_amm_gap.py
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,16 +31,16 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-FEE_BPS = 1.0               # Curve/StableSwap swap fee (~0.01%); single-leg arb
-PRIMARY_BPS = 10.0          # optical primary-fire threshold (matches CEX pipeline)
+FEE_BPS = 1.0  # Curve/StableSwap swap fee (~0.01%); single-leg arb
+PRIMARY_BPS = 10.0  # optical primary-fire threshold (matches CEX pipeline)
 MAX_PLAUSIBLE_BPS = 1000.0  # sanity cap: drop reserve-read artefacts (>10% off peg)
 
 EVENTS = {
     "usdt_curve_2023": "USDT/Curve (Jun 2023)",
-    "usdc_svb_2023":   "USDC/SVB (Mar 2023)",
+    "usdc_svb_2023": "USDC/SVB (Mar 2023)",
     "terra_luna_2022": "Terra/LUNA (May 2022)",
-    "ftx_2022":        "FTX (Nov 2022)",
-    "busd_2023":       "BUSD (Feb 2023)",
+    "ftx_2022": "FTX (Nov 2022)",
+    "busd_2023": "BUSD (Feb 2023)",
 }
 
 
@@ -59,11 +60,17 @@ def analyse(df: pd.DataFrame) -> dict:
     return {
         "n_clean_rows": int(len(clean)),
         "n_bad_ticks_dropped": int(len(oc) - len(clean)),
-        "median_pool_slippage_bps": round(float(slip.median()), 2) if len(slip) else None,
-        "median_abs_basis_bps": round(float(clean["abs_basis_bps"].median()), 2) if len(clean) else None,
+        "median_pool_slippage_bps": (
+            round(float(slip.median()), 2) if len(slip) else None
+        ),
+        "median_abs_basis_bps": (
+            round(float(clean["abs_basis_bps"].median()), 2) if len(clean) else None
+        ),
         "n_optical_primary_fires": n_opt,
         "n_amm_executable": n_exe,
-        "executable_among_optical_pct": round(100 * n_exe / n_opt, 1) if n_opt else None,
+        "executable_among_optical_pct": (
+            round(100 * n_exe / n_opt, 1) if n_opt else None
+        ),
         "optical_to_executable_gap_x": round(n_opt / n_exe, 2) if n_exe else None,
     }
 
@@ -71,8 +78,10 @@ def analyse(df: pd.DataFrame) -> dict:
 def main() -> None:
     _ROOT = Path(__file__).resolve().parents[1]
     ap = argparse.ArgumentParser()
-    ap.add_argument("--gold-dir", default=str(
-        _ROOT.parent / "stablecoin-contagion-network" / "data" / "gold"))
+    ap.add_argument(
+        "--gold-dir",
+        default=str(_ROOT.parent / "stablecoin-contagion-network" / "data" / "gold"),
+    )
     ap.add_argument("--output-dir", default=str(_ROOT / "results/experiments_addon"))
     args = ap.parse_args()
 
@@ -87,10 +96,17 @@ def main() -> None:
         rows.append(r)
 
     df = pd.DataFrame(rows)[
-        ["event", "label", "n_clean_rows", "n_optical_primary_fires",
-         "n_amm_executable", "executable_among_optical_pct",
-         "optical_to_executable_gap_x", "median_abs_basis_bps",
-         "median_pool_slippage_bps"]
+        [
+            "event",
+            "label",
+            "n_clean_rows",
+            "n_optical_primary_fires",
+            "n_amm_executable",
+            "executable_among_optical_pct",
+            "optical_to_executable_gap_x",
+            "median_abs_basis_bps",
+            "median_pool_slippage_bps",
+        ]
     ]
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -120,8 +136,12 @@ def main() -> None:
     (out / "onchain_amm_gap_multi.json").write_text(json.dumps(summary, indent=2))
 
     print(df.to_string(index=False))
-    print("\nSUMMARY:", json.dumps({k: v for k, v in summary.items()
-                                    if k not in ("per_event",)}, indent=2))
+    print(
+        "\nSUMMARY:",
+        json.dumps(
+            {k: v for k, v in summary.items() if k not in ("per_event",)}, indent=2
+        ),
+    )
 
 
 if __name__ == "__main__":

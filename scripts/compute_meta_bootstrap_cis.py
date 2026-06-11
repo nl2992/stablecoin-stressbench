@@ -52,6 +52,7 @@ N_SEEDS = 500
 # Data generators (identical to run_meta_labeling_crossmech.py)
 # --------------------------------------------------------------------------
 
+
 def _gen_terra(rng: np.random.Generator) -> dict:
     n = _TERRA_TOTAL
     n_primary = int(n * _TERRA_PRICE_RATE)
@@ -79,7 +80,9 @@ def _gen_terra(rng: np.random.Generator) -> dict:
     profitable_idxs = rng.choice(fire_idxs, size=n_profitable, replace=False)
     net_profit[profitable_idxs] = rng.uniform(15.0, 120.0, size=n_profitable)
 
-    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(np.int8)
+    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(
+        np.int8
+    )
     primary_signal = (np.abs(basis) > _PRIMARY_THRESHOLD).astype(np.int8)
 
     return {
@@ -170,13 +173,20 @@ def _gen_exchange_credit(rng: np.random.Generator, exec_rate: float = 0.020) -> 
     profitable_idxs = rng.choice(fire_idxs, size=n_profitable, replace=False)
     net_profit[profitable_idxs] = rng.uniform(10.0, 100.0, size=n_profitable)
 
-    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(np.int8)
+    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(
+        np.int8
+    )
     primary_signal = (np.abs(basis) > _PRIMARY_THRESHOLD).astype(np.int8)
 
     return {
-        "basis": basis, "depth_bid": depth_bid, "depth_ask": depth_ask,
-        "spread": spread, "imbalance": imbalance, "net_profit": net_profit,
-        "meta_label": meta_label, "primary_signal": primary_signal,
+        "basis": basis,
+        "depth_bid": depth_bid,
+        "depth_ask": depth_ask,
+        "spread": spread,
+        "imbalance": imbalance,
+        "net_profit": net_profit,
+        "meta_label": meta_label,
+        "primary_signal": primary_signal,
     }
 
 
@@ -205,13 +215,20 @@ def _gen_ftx(rng: np.random.Generator) -> dict:
         profitable_idxs = rng.choice(fire_idxs, size=n_profitable, replace=False)
         net_profit[profitable_idxs] = rng.uniform(5.0, 50.0, size=n_profitable)
 
-    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(np.int8)
+    meta_label = ((np.abs(basis) > _PRIMARY_THRESHOLD) & (net_profit > 0)).astype(
+        np.int8
+    )
     primary_signal = (np.abs(basis) > _PRIMARY_THRESHOLD).astype(np.int8)
 
     return {
-        "basis": basis, "depth_bid": depth_bid, "depth_ask": depth_ask,
-        "spread": spread, "imbalance": imbalance, "net_profit": net_profit,
-        "meta_label": meta_label, "primary_signal": primary_signal,
+        "basis": basis,
+        "depth_bid": depth_bid,
+        "depth_ask": depth_ask,
+        "spread": spread,
+        "imbalance": imbalance,
+        "net_profit": net_profit,
+        "meta_label": meta_label,
+        "primary_signal": primary_signal,
     }
 
 
@@ -219,16 +236,23 @@ def _gen_ftx(rng: np.random.Generator) -> dict:
 # Feature matrix builder
 # --------------------------------------------------------------------------
 
+
 def _features(data: dict) -> np.ndarray:
-    return np.column_stack([
-        data["basis"], data["depth_bid"], data["depth_ask"],
-        data["spread"], data["imbalance"],
-    ])
+    return np.column_stack(
+        [
+            data["basis"],
+            data["depth_bid"],
+            data["depth_ask"],
+            data["spread"],
+            data["imbalance"],
+        ]
+    )
 
 
 # --------------------------------------------------------------------------
 # Fit + evaluate
 # --------------------------------------------------------------------------
+
 
 def _fit_and_eval(
     X_train: np.ndarray,
@@ -278,7 +302,9 @@ def _eval_rl_conditioned(rng: np.random.Generator, svb: dict) -> float:
     # Also fires on ~2% of non-primary (timing mismatch)
     nonprimary_idxs = np.where(~primary_mask)[0]
     n_rl_nonprimary = int(len(nonprimary_idxs) * 0.02)
-    rl_nonprimary_idxs = rng.choice(nonprimary_idxs, size=n_rl_nonprimary, replace=False)
+    rl_nonprimary_idxs = rng.choice(
+        nonprimary_idxs, size=n_rl_nonprimary, replace=False
+    )
     rl_signal[rl_nonprimary_idxs] = True
 
     n_trades = int(rl_signal.sum())
@@ -291,6 +317,7 @@ def _eval_rl_conditioned(rng: np.random.Generator, svb: dict) -> float:
 # --------------------------------------------------------------------------
 # Bootstrap loop
 # --------------------------------------------------------------------------
+
 
 def run_bootstrap(n_seeds: int = N_SEEDS) -> dict[str, list[float]]:
     """Run N_SEEDS experiments for each condition, collect mean_net_bps."""
@@ -316,8 +343,12 @@ def run_bootstrap(n_seeds: int = N_SEEDS) -> dict[str, list[float]]:
         terra = _gen_terra(rng)
         X_terra = _features(terra)
         v = _fit_and_eval(
-            X_terra, terra["primary_signal"], terra["meta_label"],
-            X_svb, net_svb, theta=_THETA_TERRA,
+            X_terra,
+            terra["primary_signal"],
+            terra["meta_label"],
+            X_svb,
+            net_svb,
+            theta=_THETA_TERRA,
         )
         results["terra"].append(v)
 
@@ -325,8 +356,12 @@ def run_bootstrap(n_seeds: int = N_SEEDS) -> dict[str, list[float]]:
         celsius = _gen_exchange_credit(rng, exec_rate=0.020)
         X_celsius = _features(celsius)
         v = _fit_and_eval(
-            X_celsius, celsius["primary_signal"], celsius["meta_label"],
-            X_svb, net_svb, theta=_THETA_CELSIUS,
+            X_celsius,
+            celsius["primary_signal"],
+            celsius["meta_label"],
+            X_svb,
+            net_svb,
+            theta=_THETA_CELSIUS,
         )
         results["celsius"].append(v)
 
@@ -334,8 +369,12 @@ def run_bootstrap(n_seeds: int = N_SEEDS) -> dict[str, list[float]]:
         ftx = _gen_ftx(rng)
         X_ftx = _features(ftx)
         v = _fit_and_eval(
-            X_ftx, ftx["primary_signal"], ftx["meta_label"],
-            X_svb, net_svb, theta=_THETA_FTX,
+            X_ftx,
+            ftx["primary_signal"],
+            ftx["meta_label"],
+            X_svb,
+            net_svb,
+            theta=_THETA_FTX,
         )
         results["ftx"].append(v)
 
@@ -343,17 +382,29 @@ def run_bootstrap(n_seeds: int = N_SEEDS) -> dict[str, list[float]]:
         busd = _gen_exchange_credit(rng, exec_rate=0.016)  # BUSD regulatory
         # Stack training data
         X_pool = np.vstack([X_terra, X_celsius, X_ftx, _features(busd)])
-        y_prim_pool = np.concatenate([
-            terra["primary_signal"], celsius["primary_signal"],
-            ftx["primary_signal"], busd["primary_signal"],
-        ])
-        y_meta_pool = np.concatenate([
-            terra["meta_label"], celsius["meta_label"],
-            ftx["meta_label"], busd["meta_label"],
-        ])
+        y_prim_pool = np.concatenate(
+            [
+                terra["primary_signal"],
+                celsius["primary_signal"],
+                ftx["primary_signal"],
+                busd["primary_signal"],
+            ]
+        )
+        y_meta_pool = np.concatenate(
+            [
+                terra["meta_label"],
+                celsius["meta_label"],
+                ftx["meta_label"],
+                busd["meta_label"],
+            ]
+        )
         v = _fit_and_eval(
-            X_pool, y_prim_pool, y_meta_pool,
-            X_svb, net_svb, theta=_THETA_POOLED,
+            X_pool,
+            y_prim_pool,
+            y_meta_pool,
+            X_svb,
+            net_svb,
+            theta=_THETA_POOLED,
         )
         results["pooled"].append(v)
 
@@ -369,7 +420,11 @@ def summarise(vals: list[float]) -> tuple[float, float, float]:
     arr = np.array([v for v in vals if not np.isnan(v)])
     if len(arr) == 0:
         return float("nan"), float("nan"), float("nan")
-    return float(np.mean(arr)), float(np.percentile(arr, 2.5)), float(np.percentile(arr, 97.5))
+    return (
+        float(np.mean(arr)),
+        float(np.percentile(arr, 2.5)),
+        float(np.percentile(arr, 97.5)),
+    )
 
 
 def main() -> None:
@@ -397,14 +452,16 @@ def main() -> None:
         vals = raw[key]
         mean_v, lo, hi = summarise(vals)
         ci_dict[key] = (mean_v, lo, hi)
-        new_rows.append({
-            "claim": label,
-            "point": point_str,
-            "ci_low": round(lo, 1),
-            "ci_high": round(hi, 1),
-            "unit": "bps",
-            "method": f"500-seed DGP bootstrap (synthetic, matches paper statistics)",
-        })
+        new_rows.append(
+            {
+                "claim": label,
+                "point": point_str,
+                "ci_low": round(lo, 1),
+                "ci_high": round(hi, 1),
+                "unit": "bps",
+                "method": f"500-seed DGP bootstrap (synthetic, matches paper statistics)",
+            }
+        )
         print(f"{label}: mean={mean_v:.1f}  95%CI=[{lo:.1f}, {hi:.1f}]")
 
     # Replace pending rows in existing table, add new ones

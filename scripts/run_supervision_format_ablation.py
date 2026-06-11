@@ -24,7 +24,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
-from _synthetic_crossmech import generate_terra, generate_svb, make_features
+from _synthetic_crossmech import generate_svb, generate_terra, make_features
+
 from stressbench.common.logging import get_logger
 from stressbench.models.meta_labeling import MetaLabelingFilter
 
@@ -36,7 +37,9 @@ _SEED = 42
 _N_BOOTSTRAP = 500
 
 
-def _calibrate(score: np.ndarray, net_profit: np.ndarray, min_trades: int = 10) -> float:
+def _calibrate(
+    score: np.ndarray, net_profit: np.ndarray, min_trades: int = 10
+) -> float:
     best_t, best_total = float(np.median(score)), -np.inf
     mn, mx = float(np.min(score)), float(np.max(score))
     for t in np.linspace(mn + 1e-8, mx - 1e-8, 60):
@@ -53,8 +56,12 @@ def _calibrate(score: np.ndarray, net_profit: np.ndarray, min_trades: int = 10) 
 def _eval(signal: np.ndarray, net_profit: np.ndarray) -> dict:
     n = int(signal.sum())
     if n == 0:
-        return {"n_trades": 0, "net_bps": float("nan"),
-                "hit_rate": float("nan"), "oracle_capture_pct": float("nan")}
+        return {
+            "n_trades": 0,
+            "net_bps": float("nan"),
+            "hit_rate": float("nan"),
+            "oracle_capture_pct": float("nan"),
+        }
     pnl = net_profit[signal.astype(bool)]
     bps = float(np.mean(pnl))
     return {
@@ -68,12 +75,19 @@ def _eval(signal: np.ndarray, net_profit: np.ndarray) -> dict:
 def _bootstrap_ci(pnl: np.ndarray, rng: np.random.Generator, n_boot: int = 500):
     if len(pnl) == 0:
         return float("nan"), float("nan")
-    boots = [float(np.mean(rng.choice(pnl, size=len(pnl), replace=True))) for _ in range(n_boot)]
-    return round(float(np.percentile(boots, 2.5)), 2), round(float(np.percentile(boots, 97.5)), 2)
+    boots = [
+        float(np.mean(rng.choice(pnl, size=len(pnl), replace=True)))
+        for _ in range(n_boot)
+    ]
+    return round(float(np.percentile(boots, 2.5)), 2), round(
+        float(np.percentile(boots, 97.5)), 2
+    )
 
 
 def _binary_classification(X_tr, prim_tr, meta_tr, X_te, prim_te, net_te, rng):
-    model = MetaLabelingFilter(primary_threshold_bps=_PRIMARY_THRESHOLD, primary_signal_col=0)
+    model = MetaLabelingFilter(
+        primary_threshold_bps=_PRIMARY_THRESHOLD, primary_signal_col=0
+    )
     model.fit(X_tr, prim_tr, meta_tr)
 
     proba = model.predict_proba(X_te)[:, 1]
@@ -91,6 +105,7 @@ def _binary_classification(X_tr, prim_tr, meta_tr, X_te, prim_te, net_te, rng):
     ci_lo, ci_hi = _bootstrap_ci(pnl, rng)
 
     from sklearn.metrics import roc_auc_score
+
     y_true_b = (net_fires > 0).astype(int)
     try:
         auroc = round(float(roc_auc_score(y_true_b, proba_fires)), 4)
@@ -98,8 +113,14 @@ def _binary_classification(X_tr, prim_tr, meta_tr, X_te, prim_te, net_te, rng):
         auroc = float("nan")
 
     ld = round(float(meta_tr[prim_tr.astype(bool)].mean()), 4)
-    return {**e, "auroc": auroc, "ci_low": ci_lo, "ci_high": ci_hi,
-            "label_density": ld, "theta": round(theta, 3)}
+    return {
+        **e,
+        "auroc": auroc,
+        "ci_low": ci_lo,
+        "ci_high": ci_hi,
+        "label_density": ld,
+        "theta": round(theta, 3),
+    }
 
 
 def _ordinal_regression(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng):
@@ -116,14 +137,22 @@ def _ordinal_regression(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng):
 
     unique_classes = np.unique(y_ord)
     if len(unique_classes) < 2:
-        return {"n_trades": 0, "net_bps": float("nan"), "hit_rate": float("nan"),
-                "auroc": float("nan"), "oracle_capture_pct": float("nan"),
-                "ci_low": float("nan"), "ci_high": float("nan"),
-                "label_density": ld, "theta": float("nan")}
+        return {
+            "n_trades": 0,
+            "net_bps": float("nan"),
+            "hit_rate": float("nan"),
+            "auroc": float("nan"),
+            "oracle_capture_pct": float("nan"),
+            "ci_low": float("nan"),
+            "ci_high": float("nan"),
+            "label_density": ld,
+            "theta": float("nan"),
+        }
 
     n_classes = len(unique_classes)
-    clf = LGBMClassifier(n_estimators=100, learning_rate=0.05, num_leaves=31,
-                          random_state=42, verbose=-1)
+    clf = LGBMClassifier(
+        n_estimators=100, learning_rate=0.05, num_leaves=31, random_state=42, verbose=-1
+    )
     clf.fit(X_fires_tr, y_ord)
 
     prim_mask_te = prim_te.astype(bool)
@@ -154,8 +183,14 @@ def _ordinal_regression(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng):
     except Exception:
         auroc = float("nan")
 
-    return {**e, "auroc": auroc, "ci_low": ci_lo, "ci_high": ci_hi,
-            "label_density": ld, "theta": round(theta, 3)}
+    return {
+        **e,
+        "auroc": auroc,
+        "ci_low": ci_lo,
+        "ci_high": ci_hi,
+        "label_density": ld,
+        "theta": round(theta, 3),
+    }
 
 
 def _regression_format(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng):
@@ -167,8 +202,9 @@ def _regression_format(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng):
     net_fires_tr = net_tr[prim_mask_tr]
     ld = round(float((net_fires_tr > 0).mean()), 4)
 
-    reg = LGBMRegressor(n_estimators=100, learning_rate=0.05, num_leaves=31,
-                         random_state=42, verbose=-1)
+    reg = LGBMRegressor(
+        n_estimators=100, learning_rate=0.05, num_leaves=31, random_state=42, verbose=-1
+    )
     reg.fit(X_fires_tr, net_fires_tr)
 
     prim_mask_te = prim_te.astype(bool)
@@ -191,12 +227,19 @@ def _regression_format(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng):
     except Exception:
         auroc = float("nan")
 
-    return {**e, "auroc": auroc, "ci_low": ci_lo, "ci_high": ci_hi,
-            "label_density": ld, "theta": round(theta, 3)}
+    return {
+        **e,
+        "auroc": auroc,
+        "ci_low": ci_lo,
+        "ci_high": ci_hi,
+        "label_density": ld,
+        "theta": round(theta, 3),
+    }
 
 
-def _rl_policy_gradient(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng,
-                          n_epochs: int = 100):
+def _rl_policy_gradient(
+    X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng, n_epochs: int = 100
+):
     """PPO-style policy gradient proxy (simulates PPO-GRU failure mode).
 
     Real PPO-GRU fails because:
@@ -237,10 +280,11 @@ def _rl_policy_gradient(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng,
     # We do NOT include actual net_profit in the reward (simulating credit misassignment).
     basis_signal = X_fires_tr[:, 0].astype(np.float32)  # raw basis (col 0)
     # Proxy: basis magnitude exceeding threshold, with noise for reward delay
-    proxy_reward = (
-        np.abs(basis_signal) * 0.4                   # basis-magnitude proxy
-        + rng.normal(0, 8.0, size=len(basis_signal)).astype(np.float32)  # reward noise
-    )
+    proxy_reward = np.abs(basis_signal) * 0.4 + rng.normal(  # basis-magnitude proxy
+        0, 8.0, size=len(basis_signal)
+    ).astype(
+        np.float32
+    )  # reward noise
     baseline = 0.0
 
     for epoch in range(n_epochs):
@@ -254,7 +298,9 @@ def _rl_policy_gradient(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng,
         W = (W + lr * grad_W).astype(np.float32)
         b = np.float32(b + lr * grad_b)
         if actions.sum() > 0:
-            baseline = 0.92 * baseline + 0.08 * float(proxy_reward[actions.astype(bool)].mean())
+            baseline = 0.92 * baseline + 0.08 * float(
+                proxy_reward[actions.astype(bool)].mean()
+            )
 
     prim_mask_te = prim_te.astype(bool)
     X_fires_te = X_te[prim_mask_te].astype(np.float32)
@@ -279,8 +325,14 @@ def _rl_policy_gradient(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng,
     except Exception:
         auroc = float("nan")
 
-    return {**e, "auroc": auroc, "ci_low": ci_lo, "ci_high": ci_hi,
-            "label_density": ld, "theta": round(theta, 3)}
+    return {
+        **e,
+        "auroc": auroc,
+        "ci_low": ci_lo,
+        "ci_high": ci_hi,
+        "label_density": ld,
+        "theta": round(theta, 3),
+    }
 
 
 def main() -> None:
@@ -315,7 +367,9 @@ def main() -> None:
     for fmt_name, fmt_desc, fmt_type in formats:
         logger.info("Running format: %s", fmt_name)
         if fmt_type == "binary":
-            r = _binary_classification(X_tr, prim_tr, meta_tr_bin, X_te, prim_te, net_te, rng)
+            r = _binary_classification(
+                X_tr, prim_tr, meta_tr_bin, X_te, prim_te, net_te, rng
+            )
         elif fmt_type == "ordinal":
             r = _ordinal_regression(X_tr, prim_tr, net_tr, X_te, prim_te, net_te, rng)
         elif fmt_type == "regression":
@@ -338,12 +392,19 @@ def main() -> None:
             "bootstrap_ci_low": r["ci_low"],
             "bootstrap_ci_high": r["ci_high"],
             "theta_calibrated": r["theta"],
-            "net_bps_positive": r["net_bps"] > 0 if not np.isnan(r["net_bps"]) else False,
+            "net_bps_positive": (
+                r["net_bps"] > 0 if not np.isnan(r["net_bps"]) else False
+            ),
         }
         rows.append(row)
         bps_s = f"{row['net_bps']:.2f}" if not np.isnan(row["net_bps"]) else "nan"
-        logger.info("  %s: n_trades=%d, net_bps=%s, density=%.3f",
-                    fmt_name, row["n_trades"], bps_s, row["positive_label_density"])
+        logger.info(
+            "  %s: n_trades=%d, net_bps=%s, density=%.3f",
+            fmt_name,
+            row["n_trades"],
+            bps_s,
+            row["positive_label_density"],
+        )
 
     out_df = pd.DataFrame(rows)
     out_path = out_dir / "supervision_format_ablation.csv"
@@ -351,17 +412,24 @@ def main() -> None:
     logger.info("Saved ablation results to %s", out_path)
 
     print(f"\n=== Supervision Format Ablation (Plan F) ===")
-    print(f"{'Format':<32} {'density':>8} {'n_trades':>9} {'net_bps':>10} "
-          f"{'95%CI':>18} {'AUROC':>7} {'pos?':>5}")
+    print(
+        f"{'Format':<32} {'density':>8} {'n_trades':>9} {'net_bps':>10} "
+        f"{'95%CI':>18} {'AUROC':>7} {'pos?':>5}"
+    )
     print("-" * 94)
     for row in rows:
         bps_s = f"{row['net_bps']:.2f}" if not np.isnan(row["net_bps"]) else "nan"
-        ci_s = (f"[{row['bootstrap_ci_low']:.1f},{row['bootstrap_ci_high']:.1f}]"
-                if not np.isnan(row["bootstrap_ci_low"]) else "nan")
+        ci_s = (
+            f"[{row['bootstrap_ci_low']:.1f},{row['bootstrap_ci_high']:.1f}]"
+            if not np.isnan(row["bootstrap_ci_low"])
+            else "nan"
+        )
         au_s = f"{row['auroc']:.3f}" if not np.isnan(row["auroc"]) else "nan"
-        print(f"{row['supervision_format']:<32} {row['positive_label_density']:>8.3f} "
-              f"{row['n_trades']:>9} {bps_s:>10} {ci_s:>18} {au_s:>7} "
-              f"{'YES' if row['net_bps_positive'] else 'NO':>5}")
+        print(
+            f"{row['supervision_format']:<32} {row['positive_label_density']:>8.3f} "
+            f"{row['n_trades']:>9} {bps_s:>10} {ci_s:>18} {au_s:>7} "
+            f"{'YES' if row['net_bps_positive'] else 'NO':>5}"
+        )
 
 
 if __name__ == "__main__":

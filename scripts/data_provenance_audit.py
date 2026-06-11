@@ -11,6 +11,7 @@ Outputs:
   results/tables/data_provenance.csv
   results/tables/data_provenance.json
 """
+
 from __future__ import annotations
 
 import csv
@@ -113,7 +114,17 @@ TRANSFER_MATRIX_NOTE = (
 def main():
     rows = PROVENANCE
     with open(OUT / "data_provenance.csv", "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["dataset", "event", "data_type", "source", "n_snapshots", "note"])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "dataset",
+                "event",
+                "data_type",
+                "source",
+                "n_snapshots",
+                "note",
+            ],
+        )
         writer.writeheader()
         writer.writerows(rows)
 

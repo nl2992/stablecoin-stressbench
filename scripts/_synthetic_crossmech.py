@@ -21,13 +21,13 @@ _ORACLE_NET_BPS_SVB = 162.2
 
 # Terra/LUNA known split statistics (from paper Table 5 / committed results)
 _TERRA_TOTAL = 11_526
-_TERRA_PRICE_RATE = 0.135   # 13.5% primary fires
-_TERRA_EXEC_RATE = 0.0230   # 2.30% executable (~17% of fires)
+_TERRA_PRICE_RATE = 0.135  # 13.5% primary fires
+_TERRA_EXEC_RATE = 0.0230  # 2.30% executable (~17% of fires)
 
 # USDC/SVB known split statistics
 _SVB_TOTAL = 15_832
-_SVB_PRICE_RATE = 0.125     # 12.5% primary fires
-_SVB_EXEC_RATE = 0.0288     # 2.88% executable
+_SVB_PRICE_RATE = 0.125  # 12.5% primary fires
+_SVB_EXEC_RATE = 0.0288  # 2.88% executable
 
 
 def generate_terra(rng: np.random.Generator) -> dict:
@@ -67,10 +67,12 @@ def generate_terra(rng: np.random.Generator) -> dict:
 
     # Profitable fires: EXTREME depth withdrawal + spread blow-out (the executable signal)
     # The Terra depth-withdrawal pattern is the mechanism-invariant signal.
-    depth_bid[profitable_idxs] *= 0.28   # cumulative: 0.88 * 0.28 ≈ 0.25 of baseline
+    depth_bid[profitable_idxs] *= 0.28  # cumulative: 0.88 * 0.28 ≈ 0.25 of baseline
     depth_ask[profitable_idxs] *= 0.26
-    spread[profitable_idxs] *= 2.8       # cumulative: 1.5 * 2.8 = 4.2x baseline
-    imbalance[profitable_idxs] = rng.uniform(-0.85, -0.15, size=n_profitable)  # sell-side pressure
+    spread[profitable_idxs] *= 2.8  # cumulative: 1.5 * 2.8 = 4.2x baseline
+    imbalance[profitable_idxs] = rng.uniform(
+        -0.85, -0.15, size=n_profitable
+    )  # sell-side pressure
 
     # Unprofitable fires: partial withdrawal (not extreme enough for arb)
     depth_bid[unprofitable_idxs] *= 0.92
@@ -122,10 +124,10 @@ def generate_svb(rng: np.random.Generator) -> dict:
     n_nofire = n - n_primary
 
     # TP fires: large USDC discount (deposit run), basis very negative
-    basis_tp = -(30.0 + rng.gamma(3, 40, size=n_tp))   # -30 to -200+ bps range
+    basis_tp = -(30.0 + rng.gamma(3, 40, size=n_tp))  # -30 to -200+ bps range
     # FP fires: USDT route dislocation makes |basis| > 10 but USDC arb not profitable
     # Basis is in range 10-30 bps (fires primary, but not enough for profitable arb)
-    basis_fp = (10.0 + rng.gamma(1.5, 6, size=n_fp))
+    basis_fp = 10.0 + rng.gamma(1.5, 6, size=n_fp)
     basis_fp *= rng.choice([-1, 1], size=n_fp)
     # Non-fires: small basis
     basis_nofire = rng.normal(0, 2.5, size=n_nofire)
@@ -148,7 +150,7 @@ def generate_svb(rng: np.random.Generator) -> dict:
 
     # TP: EXTREME depth withdrawal matching Terra profitable fire pattern
     # Same mechanism-invariant signal: deposit-run withdraws Binance USD liquidity
-    depth_bid[is_tp] *= 0.30   # same extreme withdrawal as Terra profitable fires
+    depth_bid[is_tp] *= 0.30  # same extreme withdrawal as Terra profitable fires
     depth_ask[is_tp] *= 0.28
     spread[is_tp] *= 3.5
     imbalance[is_tp] = rng.uniform(-0.85, -0.15, size=n_tp)
@@ -213,9 +215,14 @@ def generate_celsius_3ac(rng: np.random.Generator, n: int = 8000) -> dict:
     meta_label = (primary_mask & (net_profit > 0)).astype(np.int8)
 
     return {
-        "basis": basis, "depth_bid": depth_bid, "depth_ask": depth_ask,
-        "spread": spread, "imbalance": imbalance, "net_profit": net_profit,
-        "primary_signal": primary_signal, "meta_label": meta_label,
+        "basis": basis,
+        "depth_bid": depth_bid,
+        "depth_ask": depth_ask,
+        "spread": spread,
+        "imbalance": imbalance,
+        "net_profit": net_profit,
+        "primary_signal": primary_signal,
+        "meta_label": meta_label,
         "n_primary_fires": int(primary_mask.sum()),
         "n_meta_positive": int(meta_label.sum()),
         "event_id": "celsius_3ac_2022",
@@ -257,9 +264,14 @@ def generate_ftx(rng: np.random.Generator, n: int = 6000) -> dict:
     meta_label = (primary_mask & (net_profit > 0)).astype(np.int8)
 
     return {
-        "basis": basis, "depth_bid": depth_bid, "depth_ask": depth_ask,
-        "spread": spread, "imbalance": imbalance, "net_profit": net_profit,
-        "primary_signal": primary_signal, "meta_label": meta_label,
+        "basis": basis,
+        "depth_bid": depth_bid,
+        "depth_ask": depth_ask,
+        "spread": spread,
+        "imbalance": imbalance,
+        "net_profit": net_profit,
+        "primary_signal": primary_signal,
+        "meta_label": meta_label,
         "n_primary_fires": int(primary_mask.sum()),
         "n_meta_positive": int(meta_label.sum()),
         "event_id": "ftx_2022",
@@ -297,9 +309,14 @@ def generate_calm_control(rng: np.random.Generator, n: int = 5000) -> dict:
     meta_label = (primary_mask & (net_profit > 0)).astype(np.int8)
 
     return {
-        "basis": basis, "depth_bid": depth_bid, "depth_ask": depth_ask,
-        "spread": spread, "imbalance": imbalance, "net_profit": net_profit,
-        "primary_signal": primary_signal, "meta_label": meta_label,
+        "basis": basis,
+        "depth_bid": depth_bid,
+        "depth_ask": depth_ask,
+        "spread": spread,
+        "imbalance": imbalance,
+        "net_profit": net_profit,
+        "primary_signal": primary_signal,
+        "meta_label": meta_label,
         "n_primary_fires": int(primary_mask.sum()),
         "n_meta_positive": int(meta_label.sum()),
         "event_id": "calm_control",
@@ -358,10 +375,11 @@ def generate_svb_with_lead_time(rng: np.random.Generator, k_minutes: int = 0) ->
     fp_depth_mult = 1.18  # FP: always high depth (route mismatch not k-dependent)
 
     depth_bid[is_tp] *= tp_depth_mult
-    depth_ask[is_tp] *= (1.0 - 0.72 * alpha)
+    depth_ask[is_tp] *= 1.0 - 0.72 * alpha
     spread[is_tp] *= tp_spread_mult
     imbalance[is_tp] = rng.uniform(
-        -0.85 * alpha - 0.15, -0.15 * alpha - 0.05, size=n_tp)
+        -0.85 * alpha - 0.15, -0.15 * alpha - 0.05, size=n_tp
+    )
 
     depth_bid[is_fp] *= fp_depth_mult
     depth_ask[is_fp] *= 1.14
@@ -374,10 +392,15 @@ def generate_svb_with_lead_time(rng: np.random.Generator, k_minutes: int = 0) ->
     primary_mask = np.abs(basis) > _PRIMARY_THRESHOLD
 
     return {
-        "basis": basis, "depth_bid": depth_bid, "depth_ask": depth_ask,
-        "spread": spread, "imbalance": imbalance, "net_profit": net_profit,
+        "basis": basis,
+        "depth_bid": depth_bid,
+        "depth_ask": depth_ask,
+        "spread": spread,
+        "imbalance": imbalance,
+        "net_profit": net_profit,
         "primary_signal": primary_mask.astype(np.int8),
-        "is_tp": is_tp, "is_fp": is_fp,
+        "is_tp": is_tp,
+        "is_fp": is_fp,
         "n_primary_fires": int(primary_mask.sum()),
         "k_minutes": k_minutes,
         "alpha": alpha,
@@ -388,6 +411,6 @@ def generate_svb_with_lead_time(rng: np.random.Generator, k_minutes: int = 0) ->
 
 
 def make_features(d: dict) -> "np.ndarray":
-    return np.column_stack([
-        d["basis"], d["depth_bid"], d["depth_ask"], d["spread"], d["imbalance"]
-    ])
+    return np.column_stack(
+        [d["basis"], d["depth_bid"], d["depth_ask"], d["spread"], d["imbalance"]]
+    )

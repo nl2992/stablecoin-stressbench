@@ -21,7 +21,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
-from _synthetic_crossmech import generate_terra, generate_svb, make_features
+from _synthetic_crossmech import generate_svb, generate_terra, make_features
+
 from stressbench.common.logging import get_logger
 from stressbench.models.meta_labeling import MetaLabelingFilter
 
@@ -34,6 +35,7 @@ _FEATURE_NAMES = ["basis", "depth_bid", "depth_ask", "spread", "imbalance"]
 
 def _spearman_rho(a: np.ndarray, b: np.ndarray) -> float:
     from scipy.stats import spearmanr
+
     corr, _ = spearmanr(a, b)
     return float(corr)
 
@@ -66,12 +68,17 @@ def main() -> None:
     y_prim_train = terra["primary_signal"]
     y_meta_train = terra["meta_label"]
 
-    model = MetaLabelingFilter(primary_threshold_bps=_PRIMARY_THRESHOLD, primary_signal_col=0)
+    model = MetaLabelingFilter(
+        primary_threshold_bps=_PRIMARY_THRESHOLD, primary_signal_col=0
+    )
     model.fit(X_train, y_prim_train, y_meta_train)
     lgbm_clf = model._meta_clf
-    logger.info("Trained: %d primary fires, %d meta-positive (%.1f%%)",
-                model.n_primary_fires_train, model.n_meta_positive_train,
-                100 * model.n_meta_positive_train / max(model.n_primary_fires_train, 1))
+    logger.info(
+        "Trained: %d primary fires, %d meta-positive (%.1f%%)",
+        model.n_primary_fires_train,
+        model.n_meta_positive_train,
+        100 * model.n_meta_positive_train / max(model.n_primary_fires_train, 1),
+    )
 
     # SHAP on Terra primary fires (training distribution)
     terra_fires_mask = y_prim_train.astype(bool)
@@ -83,8 +90,11 @@ def main() -> None:
     svb_fires_mask = y_prim_svb.astype(bool)
     X_svb_fires = X_test[svb_fires_mask]
 
-    logger.info("SHAP: Terra fires=%d, SVB fires=%d",
-                X_terra_fires.shape[0], X_svb_fires.shape[0])
+    logger.info(
+        "SHAP: Terra fires=%d, SVB fires=%d",
+        X_terra_fires.shape[0],
+        X_svb_fires.shape[0],
+    )
 
     explainer = shap.TreeExplainer(lgbm_clf)
     shap_terra = explainer.shap_values(X_terra_fires)
@@ -137,6 +147,7 @@ def main() -> None:
 
     # Figure: side-by-side SHAP bars sorted by Terra importance
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -159,7 +170,8 @@ def main() -> None:
     fig.suptitle(
         f"SHAP Feature Importance: Terra/LUNA vs USDC/SVB\n"
         f"(Spearman ρ = {spearman_rho:.3f}, Jaccard@3 = {jaccard_top3:.2f})",
-        fontsize=11, y=1.03
+        fontsize=11,
+        y=1.03,
     )
     plt.tight_layout()
     fig_path = fig_dir / "shap_crossmech_fig.png"

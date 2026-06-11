@@ -23,7 +23,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
-from _synthetic_crossmech import generate_terra, generate_svb, make_features
+from _synthetic_crossmech import generate_svb, generate_terra, make_features
+
 from stressbench.common.logging import get_logger
 from stressbench.models.meta_labeling import MetaLabelingFilter
 
@@ -36,8 +37,9 @@ _N_BOOTSTRAP = 2000
 _SEED = 42
 
 
-def _calibrate_threshold(proba: np.ndarray, net_profit: np.ndarray,
-                          min_trades: int = 25) -> float:
+def _calibrate_threshold(
+    proba: np.ndarray, net_profit: np.ndarray, min_trades: int = 25
+) -> float:
     best_t, best_total = 0.5, -np.inf
     for t in np.linspace(0.05, 0.95, 60):
         sig = proba > t
@@ -50,14 +52,21 @@ def _calibrate_threshold(proba: np.ndarray, net_profit: np.ndarray,
     return best_t
 
 
-def _block_bootstrap_ci(pnl_series: np.ndarray, rng: np.random.Generator,
-                         block_len: int, n_boot: int) -> dict:
+def _block_bootstrap_ci(
+    pnl_series: np.ndarray, rng: np.random.Generator, block_len: int, n_boot: int
+) -> dict:
     n = len(pnl_series)
     if n == 0:
         nan = float("nan")
-        return {"ci_low": nan, "ci_high": nan, "p_positive": nan,
-                "mean": nan, "sharpe_mean": nan,
-                "sharpe_ci_low": nan, "sharpe_ci_high": nan}
+        return {
+            "ci_low": nan,
+            "ci_high": nan,
+            "p_positive": nan,
+            "mean": nan,
+            "sharpe_mean": nan,
+            "sharpe_ci_low": nan,
+            "sharpe_ci_high": nan,
+        }
 
     boot_means = np.empty(n_boot)
     boot_sharpes = np.empty(n_boot)
@@ -66,7 +75,7 @@ def _block_bootstrap_ci(pnl_series: np.ndarray, rng: np.random.Generator,
 
     for b in range(n_boot):
         chosen = rng.choice(starts, size=n_blocks, replace=True)
-        sample = np.concatenate([pnl_series[s:s + block_len] for s in chosen])[:n]
+        sample = np.concatenate([pnl_series[s : s + block_len] for s in chosen])[:n]
         m = np.mean(sample)
         s = np.std(sample, ddof=1)
         boot_means[b] = m
@@ -96,9 +105,13 @@ def main() -> None:
 
     terra = generate_terra(rng)
     svb = generate_svb(rng)
-    logger.info("Terra: %d rows, %d primary fires, %d meta-positive (%.1f%%)",
-                len(terra["basis"]), terra["n_primary_fires"], terra["n_meta_positive"],
-                100 * terra["n_meta_positive"] / max(terra["n_primary_fires"], 1))
+    logger.info(
+        "Terra: %d rows, %d primary fires, %d meta-positive (%.1f%%)",
+        len(terra["basis"]),
+        terra["n_primary_fires"],
+        terra["n_meta_positive"],
+        100 * terra["n_meta_positive"] / max(terra["n_primary_fires"], 1),
+    )
 
     X_train = make_features(terra)
     y_prim_train = terra["primary_signal"]
@@ -106,7 +119,9 @@ def main() -> None:
     X_test = make_features(svb)
     y_net_test = svb["net_profit"]
 
-    model = MetaLabelingFilter(primary_threshold_bps=_PRIMARY_THRESHOLD, primary_signal_col=0)
+    model = MetaLabelingFilter(
+        primary_threshold_bps=_PRIMARY_THRESHOLD, primary_signal_col=0
+    )
     model.fit(X_train, y_prim_train, y_meta_train)
 
     proba_test = model.predict_proba(X_test)[:, 1]
@@ -118,9 +133,13 @@ def main() -> None:
     mean_bps = float(np.mean(pnl_traded)) if n_trades > 0 else float("nan")
     oracle_capture = mean_bps / _ORACLE_NET_BPS_SVB if n_trades > 0 else float("nan")
 
-    logger.info("Calibrated theta=%.2f: n_trades=%d, net_bps=%.2f, oracle=%.1f%%",
-                theta, n_trades, mean_bps,
-                oracle_capture * 100 if not np.isnan(oracle_capture) else float("nan"))
+    logger.info(
+        "Calibrated theta=%.2f: n_trades=%d, net_bps=%.2f, oracle=%.1f%%",
+        theta,
+        n_trades,
+        mean_bps,
+        oracle_capture * 100 if not np.isnan(oracle_capture) else float("nan"),
+    )
 
     bootstrap = _block_bootstrap_ci(pnl_traded, rng, _BLOCK_LENGTH, _N_BOOTSTRAP)
 
@@ -134,7 +153,9 @@ def main() -> None:
         "calibrated_threshold": round(float(theta), 3),
         "n_trades": n_trades,
         "net_bps_mean": round(mean_bps, 2) if not np.isnan(mean_bps) else None,
-        "oracle_capture_pct": round(oracle_capture * 100, 2) if not np.isnan(oracle_capture) else None,
+        "oracle_capture_pct": (
+            round(oracle_capture * 100, 2) if not np.isnan(oracle_capture) else None
+        ),
         "bootstrap_95ci_low_bps": bootstrap["ci_low"],
         "bootstrap_95ci_high_bps": bootstrap["ci_high"],
         "p_one_sided_positive": bootstrap["p_positive"],
@@ -157,10 +178,14 @@ def main() -> None:
 
     print(f"\n=== Bootstrap Significance Results (Plan A) ===")
     print(f"Net bps (mean):          {result['net_bps_mean']:.2f} bps")
-    print(f"95% CI:                  [{result['bootstrap_95ci_low_bps']:.2f}, {result['bootstrap_95ci_high_bps']:.2f}] bps")
+    print(
+        f"95% CI:                  [{result['bootstrap_95ci_low_bps']:.2f}, {result['bootstrap_95ci_high_bps']:.2f}] bps"
+    )
     print(f"p(net_bps > 0):          {result['p_one_sided_positive']:.4f}")
     print(f"% positive replicates:   {result['pct_positive_replicates']:.1f}%")
-    print(f"Sharpe CI:               [{result['sharpe_95ci_low']:.3f}, {result['sharpe_95ci_high']:.3f}]")
+    print(
+        f"Sharpe CI:               [{result['sharpe_95ci_low']:.3f}, {result['sharpe_95ci_high']:.3f}]"
+    )
     print(f"Oracle capture:          {result['oracle_capture_pct']:.1f}%")
     print(f"Interpretation:          {result['interpretation']}")
 

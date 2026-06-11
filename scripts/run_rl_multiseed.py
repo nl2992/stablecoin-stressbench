@@ -11,6 +11,7 @@ Outputs -> results/experiments/
     rl_multiseed_results.csv       per-seed results
     rl_multiseed_summary.json      mean ± std + shaped variant
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,9 +23,8 @@ import time
 from pathlib import Path
 
 import numpy as np
-from sklearn.metrics import roc_auc_score
-
 import polars as pl
+from sklearn.metrics import roc_auc_score
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from stressbench.common.logging import get_logger
@@ -37,9 +37,13 @@ logging.basicConfig(
 logger = get_logger(__name__)
 
 FEATS = [
-    "spread_bps_mean", "depth_bid_10bp_mean", "depth_ask_10bp_mean",
-    "imbalance_1bp_mean", "cross_quote_basis_usdc_bps",
-    "cross_quote_basis_usdt_bps", "cross_quote_basis_maxabs_bps",
+    "spread_bps_mean",
+    "depth_bid_10bp_mean",
+    "depth_ask_10bp_mean",
+    "imbalance_1bp_mean",
+    "cross_quote_basis_usdc_bps",
+    "cross_quote_basis_usdt_bps",
+    "cross_quote_basis_maxabs_bps",
 ]
 LABEL_COL = "label_basis_usdc_1m_gt10bps"
 NET_COL = "net_profit_bps_q10000"
@@ -58,6 +62,7 @@ class _GRUCell:
     def __init__(self, F, H, rng):
         def W(r, c):
             return rng.standard_normal((r, c)) * np.sqrt(2 / (r + c))
+
         self.Wz, self.Uz, self.bz = W(H, F), W(H, H), np.zeros(H)
         self.Wr, self.Ur, self.br = W(H, F), W(H, H), np.zeros(H)
         self.Wh, self.Uh, self.bh = W(H, F), W(H, H), np.zeros(H)
@@ -123,7 +128,9 @@ class Policy:
         dL *= adv[:, None] / len(A)
         self.W -= lr * (dL.T @ h)
         self.b -= lr * dL.sum(0)
-        return float(-((adv * (A * np.log(p + 1e-8) + (1 - A) * np.log(1 - p + 1e-8))).mean()))
+        return float(
+            -((adv * (A * np.log(p + 1e-8) + (1 - A) * np.log(1 - p + 1e-8))).mean())
+        )
 
 
 def load(data_dir):
@@ -137,12 +144,16 @@ def extract(df, split, feats):
     sdf = df.filter(pl.col("split") == split)
     X = np.nan_to_num(
         sdf.select([c for c in feats if c in sdf.columns])
-        .to_numpy().astype(np.float32),
+        .to_numpy()
+        .astype(np.float32),
         nan=0.0,
     )
     y_net = np.nan_to_num(
-        sdf[NET_COL].to_numpy().astype(float) if NET_COL in sdf.columns
-        else np.zeros(len(sdf)),
+        (
+            sdf[NET_COL].to_numpy().astype(float)
+            if NET_COL in sdf.columns
+            else np.zeros(len(sdf))
+        ),
         nan=-999.0,
     )
     y_lab = (
@@ -168,7 +179,7 @@ def collect(X, y_net, y_prim, policy, n_ep, eps, shaped=False):
         s = starts[idx]
         T = min(EPISODE_LEN, N - s)
         windows = np.array(
-            [X[s + i - LOOK_BACK: s + i] for i in range(T)], dtype=np.float32
+            [X[s + i - LOOK_BACK : s + i] for i in range(T)], dtype=np.float32
         )
         actions, _ = policy.act(windows, eps=eps)
         rewards = np.zeros(T, dtype=np.float32)
@@ -178,7 +189,7 @@ def collect(X, y_net, y_prim, policy, n_ep, eps, shaped=False):
                 if shaped and raw > 0:
                     raw *= 1.4
                 rewards[i] = raw
-        if actions.sum() == 0 and y_prim[s: s + T].sum() > 0:
+        if actions.sum() == 0 and y_prim[s : s + T].sum() > 0:
             rewards[-1] -= 5.0
         G = np.zeros(T)
         r = 0.0
@@ -200,7 +211,7 @@ def evaluate(X, y_net, y_prim, policy, min_trades=25):
     prim_idx = prim_idx[prim_idx >= LOOK_BACK]
     if len(prim_idx) == 0:
         return dict(n_trades=0, net_bps=float("nan"), auroc=float("nan"))
-    windows = np.array([X[i - LOOK_BACK: i] for i in prim_idx], dtype=np.float32)
+    windows = np.array([X[i - LOOK_BACK : i] for i in prim_idx], dtype=np.float32)
     probs = policy.proba(windows)
     y_true = (y_net[prim_idx] > 10).astype(int)
     try:
@@ -232,7 +243,7 @@ def run_seed(seed, df, feats, shaped=False):
 
     # Fit normalizer on training windows
     sample_idx = list(range(LOOK_BACK, min(5000 + LOOK_BACK, len(X_tr))))
-    sample = np.array([X_tr[i - LOOK_BACK: i] for i in sample_idx], dtype=np.float32)
+    sample = np.array([X_tr[i - LOOK_BACK : i] for i in sample_idx], dtype=np.float32)
     policy._norm(sample, fit=True)
 
     for epoch in range(1, N_EPOCHS + 1):
@@ -246,7 +257,12 @@ def run_seed(seed, df, feats, shaped=False):
         if not np.isnan(res.get("net_bps", float("nan")))
         else float("nan")
     )
-    return dict(seed=seed, shaped=int(shaped), **res, oracle_capture_pct=round(oc, 2) if not np.isnan(oc) else float("nan"))
+    return dict(
+        seed=seed,
+        shaped=int(shaped),
+        **res,
+        oracle_capture_pct=round(oc, 2) if not np.isnan(oc) else float("nan"),
+    )
 
 
 def main():
@@ -266,17 +282,26 @@ def main():
         logger.info("Running seed=%d ...", seed)
         t0 = time.perf_counter()
         r = run_seed(seed, df, feats, shaped=False)
-        logger.info("  seed=%d  n_trades=%d  net_bps=%.2f  auroc=%.3f  (%.1fs)",
-                    seed, r["n_trades"], r.get("net_bps", float("nan")),
-                    r.get("auroc", float("nan")), time.perf_counter() - t0)
+        logger.info(
+            "  seed=%d  n_trades=%d  net_bps=%.2f  auroc=%.3f  (%.1fs)",
+            seed,
+            r["n_trades"],
+            r.get("net_bps", float("nan")),
+            r.get("auroc", float("nan")),
+            time.perf_counter() - t0,
+        )
         rows.append(r)
 
     logger.info("Running shaped-reward variant (seed=42)...")
     t0 = time.perf_counter()
     r_shaped = run_seed(42, df, feats, shaped=True)
-    logger.info("  shaped  n_trades=%d  net_bps=%.2f  auroc=%.3f  (%.1fs)",
-                r_shaped["n_trades"], r_shaped.get("net_bps", float("nan")),
-                r_shaped.get("auroc", float("nan")), time.perf_counter() - t0)
+    logger.info(
+        "  shaped  n_trades=%d  net_bps=%.2f  auroc=%.3f  (%.1fs)",
+        r_shaped["n_trades"],
+        r_shaped.get("net_bps", float("nan")),
+        r_shaped.get("auroc", float("nan")),
+        time.perf_counter() - t0,
+    )
     rows.append(r_shaped)
 
     # Save CSV (all rows share the same fields)
@@ -289,25 +314,39 @@ def main():
 
     # Summary over the 5 standard seeds
     standard = [r for r in rows if not r.get("shaped")]
-    bps_vals = [r["net_bps"] for r in standard if not np.isnan(r.get("net_bps", float("nan")))]
-    auroc_vals = [r["auroc"] for r in standard if not np.isnan(r.get("auroc", float("nan")))]
+    bps_vals = [
+        r["net_bps"] for r in standard if not np.isnan(r.get("net_bps", float("nan")))
+    ]
+    auroc_vals = [
+        r["auroc"] for r in standard if not np.isnan(r.get("auroc", float("nan")))
+    ]
     summary = {
         "n_seeds": len(SEEDS),
         "seeds": SEEDS,
-        "net_bps_mean": round(float(np.mean(bps_vals)), 2) if bps_vals else float("nan"),
-        "net_bps_std":  round(float(np.std(bps_vals)), 2) if bps_vals else float("nan"),
-        "net_bps_min":  round(float(np.min(bps_vals)), 2) if bps_vals else float("nan"),
-        "net_bps_max":  round(float(np.max(bps_vals)), 2) if bps_vals else float("nan"),
-        "auroc_mean":   round(float(np.mean(auroc_vals)), 3) if auroc_vals else float("nan"),
-        "auroc_std":    round(float(np.std(auroc_vals)), 3) if auroc_vals else float("nan"),
+        "net_bps_mean": (
+            round(float(np.mean(bps_vals)), 2) if bps_vals else float("nan")
+        ),
+        "net_bps_std": round(float(np.std(bps_vals)), 2) if bps_vals else float("nan"),
+        "net_bps_min": round(float(np.min(bps_vals)), 2) if bps_vals else float("nan"),
+        "net_bps_max": round(float(np.max(bps_vals)), 2) if bps_vals else float("nan"),
+        "auroc_mean": (
+            round(float(np.mean(auroc_vals)), 3) if auroc_vals else float("nan")
+        ),
+        "auroc_std": (
+            round(float(np.std(auroc_vals)), 3) if auroc_vals else float("nan")
+        ),
         "shaped_net_bps": round(float(r_shaped.get("net_bps", float("nan"))), 2),
-        "shaped_auroc":   round(float(r_shaped.get("auroc", float("nan"))), 3),
-        "oracle_bps":   ORACLE_BPS,
+        "shaped_auroc": round(float(r_shaped.get("auroc", float("nan"))), 3),
+        "oracle_bps": ORACLE_BPS,
     }
     (out / "rl_multiseed_summary.json").write_text(json.dumps(summary, indent=2))
-    logger.info("Summary: net_bps=%.2f±%.2f  auroc=%.3f±%.3f",
-                summary["net_bps_mean"], summary["net_bps_std"],
-                summary["auroc_mean"], summary["auroc_std"])
+    logger.info(
+        "Summary: net_bps=%.2f±%.2f  auroc=%.3f±%.3f",
+        summary["net_bps_mean"],
+        summary["net_bps_std"],
+        summary["auroc_mean"],
+        summary["auroc_std"],
+    )
     print(json.dumps(summary, indent=2))
 
 
