@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software or its results, please cite the accompanying paper."
+title: "Stablecoin StressBench: A Cross-Mechanism Transfer-Learning Benchmark for Executable Arbitrage Under a 12x Optical Gap"
+authors:
+  - family-names: Li
+    given-names: Nigel
+date-released: 2026-06-11
+version: "1.0.0"
+license: MIT
+repository-code: "https://github.com/nl2992/ICAIF_stablecoin-stressbench"
+keywords:
+  - reproducible-research
+  - quantitative-finance
+  - ICAIF
