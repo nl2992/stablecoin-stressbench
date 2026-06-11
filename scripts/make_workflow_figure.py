@@ -3,7 +3,8 @@
 
 Compact single-column flowchart showing the pipeline from the 18-event
 historical catalogue through execution labels, model evaluation, and key
-results.
+results. Plain academic styling: light boxes, thin black borders, black
+serif text, and LaTeX-style math for the two label definitions.
 
 Output: results/paper_addon/figures/figure_workflow.png
 """
@@ -15,58 +16,47 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from matplotlib.patches import FancyBboxPatch
 
 REPO = Path(__file__).parent.parent
 OUT = REPO / "results" / "paper_addon" / "figures" / "figure_workflow.png"
 OUT.parent.mkdir(parents=True, exist_ok=True)
 
-# ── Palette ──────────────────────────────────────────────────────────────────
-C_NAVY = "#003057"
-C_GOLD = "#F2A900"
-C_BLUE = "#75B2DD"
-C_GREY = "#DDDDDD"
-C_GREEN = "#2ca02c"
-C_RED = "#d62728"
-C_WHITE = "#FFFFFF"
-C_DARK = "#333333"
+# ── Academic styling: serif text, Computer-Modern math ───────────────────────
+plt.rcParams.update(
+    {
+        "font.family": "serif",
+        "mathtext.fontset": "cm",
+    }
+)
 
-fig, ax = plt.subplots(figsize=(4.6, 5.8))
+# ── Palette: grayscale only ──────────────────────────────────────────────────
+C_LINE = "#000000"  # borders, arrows, text
+C_LEAF = "#ffffff"  # leaf boxes
+C_STAGE = "#e9e9e9"  # stage-header boxes (light gray)
+
+fig, ax = plt.subplots(figsize=(4.7, 5.9))
 ax.set_xlim(0, 1)
 ax.set_ylim(0, 1)
 ax.axis("off")
 
-# ── Helper ───────────────────────────────────────────────────────────────────
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def box(
-    ax,
-    x,
-    y,
-    w,
-    h,
-    text,
-    fc,
-    ec=C_DARK,
-    fs=7.2,
-    tc=C_WHITE,
-    bold=False,
-    style="round,pad=0.04",
-):
-    bx = FancyBboxPatch(
-        (x - w / 2, y - h / 2),
-        w,
-        h,
-        boxstyle=style,
-        facecolor=fc,
-        edgecolor=ec,
-        linewidth=0.9,
-        zorder=3,
+def box(ax, x, y, w, h, text, fc=C_LEAF, fs=7.4, bold=False):
+    ax.add_patch(
+        FancyBboxPatch(
+            (x - w / 2, y - h / 2),
+            w,
+            h,
+            boxstyle="square,pad=0.012",
+            facecolor=fc,
+            edgecolor=C_LINE,
+            linewidth=0.8,
+            zorder=3,
+        )
     )
-    ax.add_patch(bx)
-    weight = "bold" if bold else "normal"
     ax.text(
         x,
         y,
@@ -74,35 +64,35 @@ def box(
         ha="center",
         va="center",
         fontsize=fs,
-        color=tc,
-        fontweight=weight,
+        color=C_LINE,
+        fontweight="bold" if bold else "normal",
         zorder=4,
         multialignment="center",
     )
 
 
-def arrow(ax, x0, y0, x1, y1, color=C_DARK):
+def arrow(ax, x0, y0, x1, y1):
     ax.annotate(
         "",
         xy=(x1, y1),
         xytext=(x0, y0),
-        arrowprops=dict(arrowstyle="-|>", color=color, lw=0.9),
+        arrowprops=dict(arrowstyle="-|>", color=C_LINE, lw=0.8),
         zorder=2,
     )
 
 
-def arrow_split(ax, xsrc, ysrc, targets, color=C_DARK):
-    """Vertical line down then horizontal branches to targets."""
+def arrow_split(ax, xsrc, ysrc, targets):
+    """Vertical drop then horizontal branches to each target."""
     y_mid = (ysrc + targets[0][1]) / 2
-    ax.plot([xsrc, xsrc], [ysrc, y_mid], color=color, lw=0.9, zorder=2)
+    ax.plot([xsrc, xsrc], [ysrc, y_mid], color=C_LINE, lw=0.8, zorder=2)
     xs = [t[0] for t in targets]
-    ax.plot([min(xs), max(xs)], [y_mid, y_mid], color=color, lw=0.9, zorder=2)
+    ax.plot([min(xs), max(xs)], [y_mid, y_mid], color=C_LINE, lw=0.8, zorder=2)
     for tx, ty in targets:
         ax.annotate(
             "",
             xy=(tx, ty),
             xytext=(tx, y_mid),
-            arrowprops=dict(arrowstyle="-|>", color=color, lw=0.9),
+            arrowprops=dict(arrowstyle="-|>", color=C_LINE, lw=0.8),
             zorder=2,
         )
 
@@ -115,81 +105,62 @@ box(
     0.90,
     0.085,
     "18-event historical catalogue\n7 mechanism classes · Tier A / B / C",
-    C_NAVY,
+    fc=C_STAGE,
     bold=True,
-    fs=7.4,
+    fs=7.6,
 )
-
-# ── Arrow split ──────────────────────────────────────────────────────────────
-arrow_split(ax, 0.50, 0.902, [(0.24, 0.820), (0.76, 0.820)])
+arrow_split(ax, 0.50, 0.902, [(0.26, 0.820), (0.74, 0.820)])
 
 # ── Layer 2: two tracks ──────────────────────────────────────────────────────
 box(
     ax,
-    0.24,
+    0.26,
     0.780,
     0.44,
     0.075,
     "Tier B/C transfer pool\nTerra/LUNA · Celsius · FTX · BUSD",
-    C_BLUE,
-    tc=C_DARK,
-    fs=6.9,
+    fs=7.0,
 )
-
 box(
     ax,
-    0.76,
+    0.74,
     0.780,
     0.44,
     0.075,
-    "2 Tier-A test windows\nSVB stress + recovery",
-    C_GOLD,
-    tc=C_DARK,
-    fs=6.9,
-    bold=True,
+    "Two Tier-A test windows\nSVB stress + recovery",
+    fs=7.0,
 )
+arrow(ax, 0.26, 0.742, 0.26, 0.690)
+arrow(ax, 0.74, 0.742, 0.74, 0.690)
 
-# ── Layer 3: labels ──────────────────────────────────────────────────────────
-arrow(ax, 0.24, 0.742, 0.24, 0.690)
-arrow(ax, 0.76, 0.742, 0.76, 0.690)
-
+# ── Layer 3: label definitions (real formulas) ───────────────────────────────
 box(
     ax,
-    0.24,
-    0.655,
+    0.26,
+    0.652,
     0.44,
-    0.072,
+    0.076,
     "Optical basis label\n"
     r"$b = 10^{4}\,(P_{\mathrm{stable}}/P_{\mathrm{real}} - 1)$  bps",
-    C_GREY,
-    tc=C_DARK,
-    fs=6.6,
+    fs=7.0,
 )
-
 box(
     ax,
-    0.76,
-    0.655,
+    0.74,
+    0.652,
     0.44,
-    0.072,
+    0.076,
     "VWAP net-profit label\n"
-    r"$\mathrm{net} = 10^{4}\!\left(\frac{\mathrm{VWAP_{sell}}-\mathrm{VWAP_{buy}}}{P_{\mathrm{ref}}} - f - \delta\right)$",
-    C_GOLD,
-    tc=C_DARK,
-    fs=6.4,
+    r"$\mathrm{net} = 10^{4}\!\left(\dfrac{\mathrm{VWAP}_{\mathrm{sell}}"
+    r"-\mathrm{VWAP}_{\mathrm{buy}}}{P_{\mathrm{ref}}} - f - \delta\right)$",
+    fs=7.0,
 )
 
-# merge arrows
-ax.plot([0.24, 0.24], [0.622, 0.587], color=C_DARK, lw=0.9)
-ax.plot([0.76, 0.76], [0.622, 0.587], color=C_DARK, lw=0.9)
-ax.plot([0.24, 0.76], [0.587, 0.587], color=C_DARK, lw=0.9)
-ax.annotate(
-    "",
-    xy=(0.50, 0.552),
-    xytext=(0.50, 0.587),
-    arrowprops=dict(arrowstyle="-|>", color=C_DARK, lw=0.9),
-    zorder=2,
-)
+# merge into model ladder
+ax.plot([0.26, 0.26], [0.614, 0.585], color=C_LINE, lw=0.8)
+ax.plot([0.74, 0.74], [0.614, 0.585], color=C_LINE, lw=0.8)
+ax.plot([0.26, 0.74], [0.585, 0.585], color=C_LINE, lw=0.8)
+arrow(ax, 0.50, 0.585, 0.50, 0.552)
 
 # ── Layer 4: model ladder ────────────────────────────────────────────────────
 box(
@@ -198,78 +169,59 @@ box(
     0.514,
     0.90,
     0.070,
-    "Model ladder  ·  SVB test split\nprice rules · ML · seq · meta-labeling · PPO-GRU",
-    C_NAVY,
+    "Model ladder  ·  SVB test split\nprice rules · ML · sequence · meta-labeling · PPO-GRU",
+    fc=C_STAGE,
     bold=True,
-    fs=7.0,
+    fs=7.2,
 )
-
-# ── Arrow to results ─────────────────────────────────────────────────────────
-arrow_split(ax, 0.50, 0.479, [(0.18, 0.415), (0.50, 0.415), (0.82, 0.415)])
+arrow_split(ax, 0.50, 0.479, [(0.20, 0.415), (0.50, 0.415), (0.80, 0.415)])
 
 # ── Layer 5: three result boxes ──────────────────────────────────────────────
 box(
     ax,
-    0.18,
+    0.20,
     0.375,
-    0.27,
-    0.070,
-    "12× optical\nvs executable gap",
-    C_RED,
-    tc=C_WHITE,
-    fs=6.2,
-    bold=True,
+    0.29,
+    0.072,
+    "12$\\times$ optical-to-\nexecutable gap",
+    fs=7.0,
 )
-
 box(
     ax,
     0.50,
     0.375,
-    0.27,
-    0.070,
-    "Calm models fail\nMeta-label: 51% oracle",
-    C_GREEN,
-    tc=C_WHITE,
-    fs=6.2,
-    bold=True,
+    0.29,
+    0.072,
+    "Calm-trained models\nfail (51% oracle)",
+    fs=7.0,
 )
-
 box(
     ax,
-    0.82,
+    0.80,
     0.375,
-    0.27,
-    0.070,
-    "PPO-GRU −29.2 bps\nSupervision format\nis binding",
-    C_DARK,
-    tc=C_WHITE,
-    fs=6.0,
-    bold=False,
+    0.29,
+    0.072,
+    "PPO-GRU $-$29.2 bps:\nsupervision binds",
+    fs=7.0,
 )
+
+# merge into release
+ax.plot([0.20, 0.20], [0.339, 0.300], color=C_LINE, lw=0.8)
+ax.plot([0.50, 0.50], [0.339, 0.300], color=C_LINE, lw=0.8)
+ax.plot([0.80, 0.80], [0.339, 0.300], color=C_LINE, lw=0.8)
+ax.plot([0.20, 0.80], [0.300, 0.300], color=C_LINE, lw=0.8)
+arrow(ax, 0.50, 0.300, 0.50, 0.267)
 
 # ── Layer 6: artefact release ────────────────────────────────────────────────
-ax.plot([0.18, 0.18], [0.340, 0.300], color=C_DARK, lw=0.9)
-ax.plot([0.50, 0.50], [0.340, 0.300], color=C_DARK, lw=0.9)
-ax.plot([0.82, 0.82], [0.340, 0.300], color=C_DARK, lw=0.9)
-ax.plot([0.18, 0.82], [0.300, 0.300], color=C_DARK, lw=0.9)
-ax.annotate(
-    "",
-    xy=(0.50, 0.265),
-    xytext=(0.50, 0.300),
-    arrowprops=dict(arrowstyle="-|>", color=C_DARK, lw=0.9),
-    zorder=2,
-)
-
 box(
     ax,
     0.50,
-    0.230,
+    0.229,
     0.90,
     0.065,
-    "Released artefacts · CC-BY 4.0\ncatalogue · labels · oracle · model harness · leaderboard",
-    "#555555",
-    tc=C_WHITE,
-    fs=6.8,
+    "Released artefacts (CC-BY 4.0)\ncatalogue · labels · oracle · model harness · leaderboard",
+    fc=C_STAGE,
+    fs=7.0,
 )
 
 plt.tight_layout(pad=0.2)

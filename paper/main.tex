@@ -204,15 +204,29 @@ oracle.
         achievable by a hypothetical agent that knows at each minute exactly which
         windows are executable, forming an upper bound on any model's performance.
         Measuring oracle capture (recovered profit as a fraction of the oracle)
-        provides a principled denominator that raw bps figures lack. It exposes a $12\times$ optical-to-executable gap, so a
-        model scored on price labels overstates tradeable performance by
-        roughly twelve times, an evaluation-integrity result for any AI
-        trading model on this data. We further show this gap is
+        provides a principled denominator that raw bps figures lack. It
+        exposes a $12\times$ optical-to-executable gap---an
+        evaluation-integrity result for any AI trading model on this
+        data. We further show this gap is
         \textbf{venue-specific}, $12\times$ on the CEX order book but
         $\approx\!1\times$ on real on-chain AMM execution across all five
         episodes, locating the barrier in CEX microstructure, not in depegs.
         (\S\ref{sec:benchmark}--\ref{sec:models},~\ref{sec:gap})
 \end{enumerate}
+
+Figure~\ref{fig:workflow} summarises the full benchmark pipeline, from
+the 18-event catalogue through execution labels and the model ladder to
+the released artefacts.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.72\columnwidth]{../results/paper_addon/figures/figure_workflow.png}
+  \caption{StressBench pipeline. The 18-event catalogue is filtered to
+    Tier-A execution-grade windows for VWAP labels and oracle evaluation;
+    Tier-B/C events supply mechanism-diverse transfer training. Models are
+    ranked by mean net bps per triggered trade, not price-label AUROC.}
+  \label{fig:workflow}
+\end{figure}
 
 
 %% =============================================================
