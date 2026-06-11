@@ -33,7 +33,7 @@ C_RED = "#d62728"
 C_WHITE = "#FFFFFF"
 C_DARK = "#333333"
 
-fig, ax = plt.subplots(figsize=(3.4, 5.8))
+fig, ax = plt.subplots(figsize=(4.6, 5.8))
 ax.set_xlim(0, 1)
 ax.set_ylim(0, 1)
 ax.axis("off")
@@ -128,7 +128,7 @@ box(
     ax,
     0.24,
     0.780,
-    0.42,
+    0.44,
     0.075,
     "Tier B/C transfer pool\nTerra/LUNA · Celsius · FTX · BUSD",
     C_BLUE,
@@ -140,7 +140,7 @@ box(
     ax,
     0.76,
     0.780,
-    0.42,
+    0.44,
     0.075,
     "2 Tier-A test windows\nSVB stress + recovery",
     C_GOLD,
@@ -157,25 +157,26 @@ box(
     ax,
     0.24,
     0.655,
-    0.42,
-    0.065,
-    "Optical basis labels\n+ kline-proxy depth",
+    0.44,
+    0.072,
+    "Optical basis label\n"
+    r"$b = 10^{4}\,(P_{\mathrm{stable}}/P_{\mathrm{real}} - 1)$  bps",
     C_GREY,
     tc=C_DARK,
-    fs=6.9,
+    fs=6.6,
 )
 
 box(
     ax,
     0.76,
     0.655,
-    0.42,
-    0.065,
-    "VWAP net-profit labels\n+ hindsight oracle",
+    0.44,
+    0.072,
+    "VWAP net-profit label\n"
+    r"$\mathrm{net} = 10^{4}\!\left(\frac{\mathrm{VWAP_{sell}}-\mathrm{VWAP_{buy}}}{P_{\mathrm{ref}}} - f - \delta\right)$",
     C_GOLD,
     tc=C_DARK,
-    fs=6.9,
-    bold=True,
+    fs=6.4,
 )
 
 # merge arrows
@@ -211,12 +212,12 @@ box(
     ax,
     0.18,
     0.375,
-    0.31,
+    0.27,
     0.070,
     "12× optical\nvs executable gap",
     C_RED,
     tc=C_WHITE,
-    fs=6.8,
+    fs=6.2,
     bold=True,
 )
 
@@ -224,12 +225,12 @@ box(
     ax,
     0.50,
     0.375,
-    0.31,
+    0.27,
     0.070,
     "Calm models fail\nMeta-label: 51% oracle",
     C_GREEN,
     tc=C_WHITE,
-    fs=6.8,
+    fs=6.2,
     bold=True,
 )
 
@@ -237,7 +238,7 @@ box(
     ax,
     0.82,
     0.375,
-    0.31,
+    0.27,
     0.070,
     "PPO-GRU −29.2 bps\nSupervision format\nis binding",
     C_DARK,
