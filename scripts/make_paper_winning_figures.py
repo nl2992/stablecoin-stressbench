@@ -165,7 +165,7 @@ def make_shap_top10() -> None:
     label_map = {
         "cross_quote_basis_usdc_bps": "USDC basis",
         "cross_quote_basis_primary_bps": "Primary basis",
-        "deviation_from_1_usd_bps": "Deviation from \$1",
+        "deviation_from_1_usd_bps": r"Deviation from \$1",
         "cross_quote_basis_usdt_bps": "USDT basis",
         "depth_ask_10bp_mean": "Ask depth (10bp)",
         "spread_bps_mean": "Bid-ask spread",

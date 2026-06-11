@@ -256,7 +256,7 @@ def make_latex_table() -> None:
     # Short mechanism labels
     mech_short = {
         "Algorithmic / Reflexive": "Algo./Reflex.",
-        "Exchange Credit / Liquidity": "Exch.\ Credit",
+        "Exchange Credit / Liquidity": r"Exch.\ Credit",
         "Regulatory / Issuer Winddown": "Regulatory",
         "Fiat-Reserve Bank Shock": "Fiat Reserve",
         "DeFi Pool Imbalance": "DeFi Pool",
@@ -274,7 +274,7 @@ def make_latex_table() -> None:
         else:
             depeg_str = f"${int(depeg):+d}$"
         if r["data_tier"] in ("B", "C"):
-            depeg_str = "est.\ " + depeg_str  # estimated
+            depeg_str = r"est.\ " + depeg_str  # estimated
 
         mech = mech_short.get(r["mechanism_class"], r["mechanism_class"])
         dur = dur_map.get(r["duration_class"], r["duration_class"])
