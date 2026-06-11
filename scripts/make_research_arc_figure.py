@@ -33,11 +33,11 @@ plt.rcParams.update({"font.family": "serif", "text.color": INK})
 
 STAGES = [
     ("contagion-gnn", "1 · PREDICT", "Graph-attention network\nflags the correlational\ncontagion hubs",
-     "GAT precision@10 = 2.7× base rate"),
+     "precision@10:  GAT 0.40  vs  XGB 0.00"),
     ("contagion-abm", "2 · TEST CAUSALITY", "Calibrated counterfactual\nknockout asks if the hub\nactually transmits",
-     "#1 predicted hub (BUSD) →  zero causal effect"),
+     "top hub BUSD:  zero causal effect"),
     ("contagion-network", "3 · MEASURE", "Provenance-gated on-chain\nHMM detects mechanism-\nspecific stress",
-     "7 episodes (2022–25), endogenous vs exogenous"),
+     "7 episodes (2022–25):  mechanism-split"),
     ("stressbench", "4 · EXECUTE", "Book-walking labels separate\nvisible from tradeable\ndislocations",
      "12× optical-to-executable gap"),
 ]
@@ -77,7 +77,7 @@ for i, (repo, stage, body, metric) in enumerate(STAGES):
                                 boxstyle="round,pad=0.02,rounding_size=0.1",
                                 linewidth=0, facecolor=COLBLUE, zorder=3))
     ax.text(x + box_w / 2, y0 + 0.33, metric, ha="center", va="center",
-            color=INK, fontsize=7.7, fontweight="bold", zorder=4)
+            color=INK, fontsize=7.0, fontweight="bold", zorder=4)
 
 # arrows between stages
 for i in range(3):
