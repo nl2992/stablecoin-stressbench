@@ -57,38 +57,36 @@
 \begin{abstract}\sloppy
 On 10 March 2023, Silicon Valley Bank's seizure forced USDC off its
 dollar peg. Price charts showed $34.3\%$ of one-minute windows as
-profitable stablecoin arbitrage.  Fewer than $3$ in $100$ ($2.88\%$)
+profitable stablecoin arbitrage; fewer than $3$ in $100$ ($2.88\%$)
 survived VWAP book-walking, fees, and settlement, a \textbf{$12\times$
 gap} between visible and executable profit (proxy-bounded to $12$--$14\times$
 under a conservative $20\%$ depth haircut).  A model scoring well on
 price labels can still lose money on every trade.
-We study when a learned trading model transfers across financial crises,
-using stablecoin depegs as the testbed.
-The central obstacle is distributional. A model trained on calm or
-single-regime data cannot identify the executable minority in a stress
-regime it has never seen, and every calm-trained family we test (tabular
-classifiers, sequence models, reinforcement learning, and changepoint
-detectors) fails economically despite high AUROC. The highest-AUROC model
-(GRU, AUROC~0.80) is simultaneously the largest money-loser ($-239\bps$),
-a direct quantification of the AUROC--P\&L inversion under class imbalance.
-Our main result is that \emph{cross-mechanism transfer} solves this.
+We release \textbf{Stablecoin StressBench}, an 18-event catalogue across
+seven mechanism classes with per-minute VWAP (volume-weighted average
+price) book-walking labels, route provenance, and a hindsight oracle
+ceiling (CC-BY~4.0), and use it to study when a learned trading model
+transfers across financial crises.
+Our main result is that \emph{cross-mechanism transfer} works.
 A meta-labeling classifier trained on an algorithmic collapse
 (Terra/LUNA) and applied unchanged to a bank-reserve shock (USDC/SVB)
-recovers $+82.5\bps$ (95\% CI $[79.5,\,87.7]\bps$, 51.0\% of a hindsight oracle), apparently
-because depth withdrawal and spread widening behave alike regardless of the trigger, since the order
-book responds to uncertainty rather than its cause.
-\emph{Scope}. This real transfer is demonstrated for a single
-source$\,\to\,$destination pair (Terra/LUNA$\,\to\,$Tier-A USDC/SVB). The other
-multi-mechanism conditions are synthetic, so a second execution-grade event is the
-primary open validation requirement (see Limitations).
+recovers $+82.5\bps$ (95\% CI $[79.5,\,87.7]\bps$, 51.0\% of the oracle),
+because depth withdrawal and spread widening behave alike regardless of the
+trigger: the order book responds to uncertainty rather than its cause.
+The obstacle this overcomes is distributional. Every calm-trained family
+we test (tabular classifiers, sequence models, reinforcement learning, and
+changepoint detectors) fails economically despite high AUROC; the
+highest-AUROC model (GRU, AUROC~0.80) is simultaneously the largest
+money-loser ($-239\bps$), a direct quantification of the AUROC--P\&L
+inversion under class imbalance.
 We further isolate \emph{supervision format} as the binding constraint.
 At identical positive-label density, explicit binary labels earn
 $+82.5\bps$ while reward optimisation (PPO-GRU) earns $-29.2\bps$
 (5-seed mean $-45.9\pm5.2\bps$, shaped-reward variant $-35.6\bps$, confirming the gap is not a seed artefact).
-To support these findings we release Stablecoin StressBench, an 18-event
-catalogue across seven mechanism classes, per-minute VWAP
-(volume-weighted average price) book-walking labels with route
-provenance, and a hindsight oracle ceiling, under CC-BY~4.0.
+\emph{Scope}. This real transfer is demonstrated for a single
+source$\,\to\,$destination pair (Terra/LUNA$\,\to\,$Tier-A USDC/SVB). The other
+multi-mechanism conditions are synthetic, so a second execution-grade event is the
+primary open validation requirement (see Limitations).
 \end{abstract}
 
 \keywords{transfer learning, meta-labeling, reinforcement learning,
