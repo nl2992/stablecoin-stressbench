@@ -1,5 +1,10 @@
 # TODO — stabelcoin-stressbench
-# Reviewer Score: 5.5 / 10 — Weak Reject → Target: 7.0 / Accept
+
+> **STATUS (2026-06-11): SUBMISSION-READY.** All referee/gate items below are addressed; paper compiles at 8pp (ICAIF '26, ACM sigconf). Headline contributions: the 12× optical-to-executable gap, cross-mechanism transfer (+82.5 bps, Terra→SVB), 5-seed RL robustness (mean −45.9 bps), and the StressBench catalogue released under CC-BY 4.0. Planning notes below are a historical record of the review-defense pass.
+
+---
+
+# Reviewer Score: 5.5 / 10 — Weak Reject → Target: 7.0 / Accept *(historical, pre-revision)*
 
 ---
 
