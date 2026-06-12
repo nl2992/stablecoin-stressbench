@@ -348,7 +348,7 @@ split has encountered stress dynamics.
 Threshold calibration uses the Terra/LUNA validation split, an
 independent stress event, so the SVB test split is never observed
 during model development.
-The 2.88\% positive rate in the test split implies severe class imbalance.
+The 2.88\% positive rate in the test split (Table~\ref{tab:dataset}) implies severe class imbalance.
 We therefore report economic net bps as the primary criterion. AUROC
 and AUPRC are secondary metrics.
 
@@ -424,7 +424,8 @@ false-positive minute through the full cost stack, showing why
 The cross-quote basis is the percentage gap between BTC priced in
 a stablecoin (e.g. BTC-USDC) and BTC priced in real dollars
 (BTC-USD on Coinbase). A non-zero basis signals an apparent
-dislocation. Three equations define the label construction.
+dislocation (Figure~\ref{fig:basis} shows it across the SVB window).
+Three equations define the label construction.
 \begin{align}
   b_{\text{USDC}}(t)  &\;=\; 10{,}000 \times
       \frac{P_{\text{BTC/USDC}}(t) - P_{\text{BTC/USD}}(t)}
@@ -613,7 +614,7 @@ Terra/LUNA validation split              & 11,526 & $+87.6\bps$  & -- & -- & --\
 
 At a 10\,bps threshold, 34.3\% of test minutes are optically
 dislocated but only 2.88\% are executable after VWAP slippage,
-taker fees, and settlement latency.
+taker fees, and settlement latency (Table~\ref{tab:gap}).
 The ratio persists across all basis levels and widens with notional
 size. At \$500K notional the executable rate collapses to $0.03\%$. Book depth, not fees, is the binding institutional constraint.
 
