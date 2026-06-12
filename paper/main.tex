@@ -10,24 +10,16 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{microtype}
-\usepackage{xcolor}
 \usepackage{url}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{balance}
 \usepackage{enumitem}
-\usepackage{mdframed}
 
 %% ---- ACM metadata -------------------------------------------
 \acmConference[ICAIF '26]{ACM International Conference on AI in Finance}{November 14--17, 2026}{Milan, Italy}
 \acmDOI{}
 \acmISBN{}
 \setcopyright{none}
-
-%% ---- Custom colours (Columbia palette) ----------------------
-\definecolor{colnavy}{HTML}{003057}
-\definecolor{colblue}{HTML}{75B2DD}
-\definecolor{colgold}{HTML}{F2A900}
 
 %% ---- Spacing ---------------------------------------------------
 \setlength{\emergencystretch}{3em}
@@ -81,8 +73,9 @@ money-loser ($-239\bps$), a direct quantification of the AUROC--P\&L
 inversion under class imbalance.
 We further isolate \emph{supervision format} as the binding constraint.
 At identical positive-label density, explicit binary labels earn
-$+82.5\bps$ while reward optimisation (PPO-GRU) earns $-29.2\bps$
-(5-seed mean $-45.9\pm5.2\bps$, shaped-reward variant $-35.6\bps$, confirming the gap is not a seed artefact).
+$+82.5\bps$ while reward optimisation (a conditioned PPO-GRU) earns
+$-29.2\bps$ (headline run; a 5-seed sweep is uniformly more negative,
+$-45.9\pm5.2\bps$), so the label-vs-reward gap is not a seed artefact.
 \emph{Scope}. This real transfer is demonstrated for a single
 source$\,\to\,$destination pair (Terra/LUNA$\,\to\,$Tier-A USDC/SVB). The other
 multi-mechanism conditions are synthetic, so a second execution-grade event is the
@@ -150,20 +143,15 @@ window and traces one representative false-positive minute from
 apparent profit to net loss.
 Basis points (bps) are hundredths of a percent (100\,bps $=$ 1\%).
 
-We establish each gap against a ground truth, mirroring the
-sanity-check-then-hard-case logic of controlled studies.
-Terra/LUNA, a mechanistically independent algorithmic collapse, serves
-as our known reference. It reproduces the optical-to-executable gap at
-$5.9\times$ ($2.40\%$ executable) and supplies a clean cross-mechanism
-training signal.
-USDC/SVB, a fiat-reserve shock with route-complete order-book depth, is
-the execution-grade test case, where the gap reaches $12\times$
-($2.88\%$ executable) and widens to $14\times$ under a 20\% depth
-haircut.
-That the same gap appears in two unrelated mechanisms tells us the
-phenomenon is structural, not an artefact of either event. Only the
-\emph{Tier-A} execution labels---those backed by real, full-depth order-book
-data rather than a price-only proxy---are SVB-specific.
+We establish each gap against a ground truth. Terra/LUNA, a mechanistically
+independent algorithmic collapse, is our known reference (gap $5.9\times$,
+$2.40\%$ executable) and supplies the cross-mechanism training signal; USDC/SVB,
+a fiat-reserve shock with route-complete order-book depth, is the execution-grade
+test case (gap $12\times$, $2.88\%$ executable, widening to $14\times$ under a
+$20\%$ depth haircut). The same gap in two unrelated mechanisms makes the
+phenomenon structural, not an artefact of either event; only the \emph{Tier-A}
+execution labels, backed by real full-depth order-book data rather than a
+price-only proxy, are SVB-specific.
 
 The one approach that crosses zero exploits a simple regularity. The
 order book responds to uncertainty, not to its cause.
@@ -426,7 +414,7 @@ false-positive minute through the full cost stack, showing why
   \caption{Cross-quote basis during the SVB test window (Mar 10--20 2023).
     USDC basis (navy) exceeds 10\,bps in 12.4\% of minutes,
     USDT basis (red) in 27.4\%, and max-abs (gold) in 34.3\%.
-    The price-to-execution ratio is $12\times$.}
+    The price-to-execution ratio is $12\times$ (0\% depth haircut; $14\times$ under a 20\% haircut).}
   \label{fig:basis}
 \end{figure}
 
@@ -571,15 +559,11 @@ Secondary metrics are AUROC and AUPRC.
 NoTrade at $0\bps$ is the economic floor.
 
 \textbf{Positive density clarification.}
-Three densities appear in the paper.
-2.88\% is the fraction of SVB test minutes that are executable.
-2.30\% is the fraction of the full Terra/LUNA stream that is executable.
-17\% is the fraction of primary-signal minutes (those where
-$|b_{\text{USDC}}|>10\bps$) that are executable in Terra/LUNA. This
-is the density seen by the conditioned PPO-GRU and the meta-labeler
-secondary classifier during training.
-The RL-vs-meta-labeling comparison holds density fixed at the 17\%
-figure.
+Three densities appear: 2.88\% (executable fraction of SVB test minutes), 2.30\%
+(executable fraction of the full Terra/LUNA stream), and 17\% (executable fraction
+of \emph{primary-signal} minutes, $|b_{\text{USDC}}|>10\bps$, in Terra/LUNA). The
+17\% figure is what the conditioned PPO-GRU and the meta-labeler secondary classifier
+see in training, and the RL-vs-meta-labeling comparison holds it fixed.
 
 Five evaluation tasks ship with StressBench v1.0, training on the calm or
 Terra block, validating on the Terra calibration block, and testing on SVB.
@@ -596,9 +580,8 @@ Models are ranked by net bps, not AUROC.
 \section{Results}
 \label{sec:results}
 
-Table~\ref{tab:master} maps every oracle figure in the paper to its
-task and window.
-All subsequent references point back to one of these rows.
+Table~\ref{tab:master} maps every oracle figure in the paper to its task and window;
+all subsequent references point back to one of these rows.
 
 \begin{table}[t]
 \centering
@@ -636,7 +619,9 @@ size. At \$500K notional the executable rate collapses to $0.03\%$. Book depth, 
 
 \begin{table}[t]
 \centering
-\caption{Price-to-execution gap (\$10K, 1-min horizon, SVB test split).}
+\caption{Price-to-execution gap (\$10K, 1-min horizon, SVB test split,
+  \textbf{0\% depth haircut}; a conservative 20\% haircut widens the 10\,bps
+  ratio to $14\times$, \S\ref{sec:data}).}
 \label{tab:gap}
 \setlength{\tabcolsep}{3pt}
 {\small
@@ -695,8 +680,8 @@ The gap is robust across the full cost-parameter space. Sweeping
 taker fees from 2 to 10\,bps and settlement penalty from 0 to 10\,bps
 moves the executable rate between 2.84\% and 3.66\%.
 
-\paragraph{The gap is venue-specific. On-chain AMM execution closes it across all
-five episodes}
+\subsection{Venue Specificity: On-Chain AMM Execution Closes the Gap}
+\label{sec:venue}
 To test whether the optical-to-executable gap is intrinsic to depegs or specific to
 CEX order-book microstructure, we measure it on \emph{real} on-chain pool data
 (Curve/StableSwap reserve state $\to$ implied price and \$10k slippage, sourced
@@ -811,7 +796,8 @@ This approach is the only method that crosses zero, earning
 $+82.5\bps$ (51.0\% oracle capture on the \task{basis\_usdc\_1m}
 task, oracle $+161.7\bps$ from Table~\ref{tab:master}).
 A reinforcement learning agent given the same 17\% primary-signal
-density earns $-29.2\bps$.
+density earns $-29.2\bps$ (this single headline run; the 5-seed sweep is
+uniformly more negative, mean $-45.9\pm5.2\bps$, so the gap below is conservative).
 The 111.7\,bps gap points to explicit binary labels as the ingredient
 that reward optimisation cannot replicate at sparse positive rates.
 We treat this as a hypothesis for the multi-mechanism RL experiment,
@@ -1066,19 +1052,14 @@ Gap~1 is closed by execution-grade labels. Gap~2 is closed by cross-mechanism su
 A single transfer from algorithmic collapse to bank-reserve shock recovers half the oracle return, and pooling four mechanism classes confirms the result.
 
 \paragraph{Practitioner takeaways}
-\textbf{(1) Divide every price-label AUROC by $12\times$ before any
-capital decision.}  Across two independent crises (SVB $12\times$,
-Terra $5.9\times$, validation-grade) the execution gap is robust.  Until a study reports
-VWAP-grade labels, its performance figures are unreliable for production
-deployment.
-\textbf{(2) Train on a different mechanism, not on the same event.}
-Every calm-trained or within-event model we test fails economically in a
-new regime.  Cross-mechanism supervision (algorithmic-collapse
-$\to$ bank-reserve shock) recovers $+82.5\bps$ because the order book
-responds to \emph{uncertainty}, not its cause.  Aggregate training data
-across mechanism classes, not across time within one.
-\textbf{(3) Prefer supervised meta-labeling over RL.}
-At identical label density, binary labels earn $+82.5$\,bps. PPO-GRU earns $-29.2$\,bps, sparse rewards collapse to inactivity.
+\textbf{(1) Divide every price-label AUROC by $12\times$ before any capital decision}
+(the gap is robust across two independent crises, SVB $12\times$ and Terra $5.9\times$);
+until a study reports VWAP-grade labels its figures are unreliable for deployment.
+\textbf{(2) Train on a different mechanism, not the same event}, since every
+calm-trained or within-event model fails in a new regime while cross-mechanism
+supervision recovers $+82.5\bps$.
+\textbf{(3) Prefer supervised meta-labeling over RL}, which at identical label
+density earns $+82.5\bps$ versus $-29.2\bps$ for PPO-GRU.
 
 Future work includes Tier-A labels for DeFi and exchange-credit events, a market-impact simulator to close the $111.7$\,bps gap, and early-entry labels to reduce late-stage ambiguity.
 Catalogue, labels, oracle, and harness released under CC-BY~4.0.
@@ -1086,8 +1067,8 @@ Catalogue, labels, oracle, and harness released under CC-BY~4.0.
 
 \section*{Acknowledgements}
 The StressBench catalogue, execution-grade labels, oracle ceiling, and full
-experimental harness are released under CC-BY~4.0 at
-[anonymized repository; link provided at camera-ready].
+experimental harness are released under CC-BY~4.0 at an anonymized repository
+(link provided at camera-ready).
 
 %% =============================================================
 \bibliographystyle{ACM-Reference-Format}
