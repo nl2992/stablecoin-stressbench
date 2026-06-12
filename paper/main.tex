@@ -176,8 +176,9 @@ oracle.
         (\S\ref{sec:diagnostics})
   \item \textbf{Supervision format, not label density, as the binding
         constraint.}
-        At identical 17\% positive-label density, explicit binary
-        supervision earns $+82.5\bps$ while reward optimisation
+        At identical 17\% positive-label density (definitions:
+        \S\ref{sec:eval}), explicit binary supervision earns $+82.5\bps$
+        while reward optimisation
         (a conditioned PPO-GRU) earns $-29.2\bps$, locating the
         difference in how the learning signal is delivered rather than in
         data scarcity. Every other calm-trained family (tabular,
@@ -360,11 +361,9 @@ classifications is available in the project repository.
 
 \subsection{Benchmark Positioning}
 \label{sec:positioning}
-Against the closest prior work, Cintra and Holloway~\cite{cintra2023bocpd},
-Hernandez Cruz et al.~\cite{hernandezcruz2024svb}, Gogol et al.~\cite{gogol2024amm}, and
-Adams et al.~\cite{adams2023mev}, no prior benchmark combines per-minute executable CEX labels,
-route-level L2 provenance, a hindsight oracle ceiling, and cross-mechanism transfer evaluation.
-StressBench is the first to provide all four.
+No prior benchmark (\S\ref{sec:related}) combines per-minute executable CEX
+labels, route-level L2 provenance, a hindsight oracle ceiling, and
+cross-mechanism transfer evaluation; StressBench provides all four.
 
 \paragraph{Feature sets} Four nested sets (\texttt{price\_only} $\subset$
 \texttt{price\_plus\_book} $\subset$ \texttt{price\_book\_frag} $\subset$
@@ -381,19 +380,11 @@ proxies (kline-proxy for SVB/Terra windows, Tier~B).
 \label{sec:framework}
 
 Figure~\ref{fig:framework} structures the paper's central argument
-visually.
-Layer~1 (optical) contains every minute where the price chart shows
-a profitable gap.
-Layer~2 (executable) contains the minutes that remain profitable after
-VWAP book-walking, taker fees, and settlement latency.
-Layer~3 (captured) contains the minutes a deployed model can identify
-in advance.
-Gap~1 is the distance from Layer~1 to Layer~2. Gap~2 is the distance
-from Layer~2 to Layer~3.
-Both gaps are nonzero, independent, and large.
-Panel~(b) of Figure~\ref{fig:framework} traces one representative
-false-positive minute through the full cost stack, showing why
-34.3\% optical activity collapses to 2.88\% executable.
+visually, instantiating the three layers and two gaps defined in
+\S\ref{sec:intro}: both gaps are nonzero, independent, and large.
+Panel~(b) traces one representative false-positive minute through the
+full cost stack, showing why 34.3\% optical activity collapses to
+2.88\% executable.
 
 \begin{figure}[t]
   \centering
@@ -438,7 +429,7 @@ Three equations define the label construction.
       |b_{\text{USDC}}(t{+}h)| > \tau\right]
       \label{eq:ylabel}
 \end{align}
-The primary task is \task{basis\_usdc\_1m\_gt10bps} ($\tau{=}10\bps$, $h{=}1$\,min).
+Here $\mathbf{1}[\cdot]$ is the indicator function; the primary task is \task{basis\_usdc\_1m\_gt10bps} ($\tau{=}10\bps$, $h{=}1$\,min).
 
 \subsection{VWAP Execution and Net Profit Labels}
 \label{sec:netlabels}
@@ -704,10 +695,9 @@ measurement separating the optical-executable gap by venue.
 \label{sec:ladder}
 
 The central finding is not that individual models fail, but that all
-six families converge to the same result. No architecture overcomes
-the distributional mismatch between calm training and stress test.
-This convergence across every model family tested is itself the
-diagnostic. The failure is structural, not a gap in model coverage.
+six families converge to the same result: no architecture overcomes the
+distributional mismatch between calm training and stress test, so the
+failure is structural, not a gap in model coverage.
 Table~\ref{tab:ablation} shows the tabular model results on
 \task{basis\_usdc\_1m\_gt10bps}. Oracle gap values map to
 Table~\ref{tab:master}.
@@ -776,9 +766,10 @@ Oracle$^\dagger$ & --  & $+161.7$ & 316  & --   & 100\%\\
   \centering
   \includegraphics[width=\columnwidth]{../results/paper/figures/figure_oracle_gap_waterfall.png}
   \caption{Oracle gap decomposition (\$10K notional, SVB test split).
-    False-positive drag is directly measured from false-positive trades.
-    Timing error (40--80\,bps) and sizing error (40--100\,bps) are
-    estimated from entry-delay and notional-scaling analysis.}
+    False-positive drag (the mean net loss on trades flagged positive but not
+    executable) is directly measured. Timing error (40--80\,bps) and sizing
+    error (40--100\,bps) are estimated from entry-delay and notional-scaling
+    analysis.}
   \label{fig:waterfall}
 \end{figure}
 
@@ -889,14 +880,13 @@ Spearman $\rho = 1.0$, Jaccard $= 1.0$ across both the top-3 and all-5 features
 The ranking stability holds because \emph{spread}, \emph{imbalance}, and \emph{depth} are
 the structural features of any CEX order book under stress. The synthetic generator
 calibrated to these moments by design, and the test confirms they transfer.
-This is the strongest available validation that synthetic training is not confounding the transfer result.
-A model learning an artefact of the synthetic generator would show divergent SHAP rankings on real data.
+Short of a second execution-grade event, this is the strongest available evidence that synthetic training is not confounding the transfer: a generator artefact would show divergent SHAP rankings on real data (though rank stability alone cannot exclude a shared confounder).
 
 \begin{table}[h]
 \centering
 \caption{SHAP feature importance. Synthetic Terra training vs.\ real SVB test.
   Spearman $\rho=1.0$, Jaccard $=1.0$ on all features, rankings are mechanism-invariant,
-  validating that synthetic calibration preserves real signal structure.}
+  consistent with synthetic calibration preserving real signal structure.}
 \label{tab:shap_invariance}
 \setlength{\tabcolsep}{3pt}
 {\small
@@ -1049,7 +1039,7 @@ oracle-to-executable gap open.
 \label{sec:conclusion}
 
 Stablecoin arbitrage benchmarks built on price labels measure the wrong object. 34.3\% of SVB minutes appeared dislocated but only 2.88\% survived VWAP execution, a $12\times$ gap replicated at $5.9\times$ on Terra/LUNA.
-Gap~1 is closed by execution-grade labels. Gap~2 is closed by cross-mechanism supervision, which succeeds because the order book responds to uncertainty rather than its cause.
+Gap~1 is closed by execution-grade labels. Gap~2 is closed by cross-mechanism supervision, which succeeds because the order book responds to uncertainty rather than its cause (the shared depth-withdrawal and spread-widening signature of Figure~\ref{fig:shap_side}).
 A single transfer from algorithmic collapse to bank-reserve shock recovers half the oracle return, and pooling four mechanism classes confirms the result.
 
 \paragraph{Practitioner takeaways}
@@ -1075,6 +1065,7 @@ experimental harness are released under CC-BY~4.0 at an anonymized repository
 \bibliographystyle{ACM-Reference-Format}
 \scriptsize
 \begin{thebibliography}{23}
+\setlength{\itemsep}{1pt plus 0.2ex}
 
 \bibitem{uhlig2022luna}
 Uhlig, H.\ (2022).
