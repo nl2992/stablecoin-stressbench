@@ -52,18 +52,17 @@ dollar peg. Price charts showed $34.3\%$ of one-minute windows as
 profitable stablecoin arbitrage; fewer than $3$ in $100$ ($2.88\%$)
 survived VWAP book-walking, fees, and settlement, a \textbf{$12\times$
 gap} between visible and executable profit (proxy-bounded to $12$--$14\times$
-under a conservative $20\%$ depth haircut).  A model scoring well on
-price labels can still lose money on every trade.
+under a $20\%$ depth haircut).  A model scoring well on price labels can still
+lose money on every trade.
 We release \textbf{Stablecoin StressBench}, an 18-event catalogue across
-seven mechanism classes with per-minute VWAP (volume-weighted average
-price) book-walking labels, route provenance, and a hindsight oracle
-ceiling (CC-BY~4.0), and use it to study when a learned trading model
-transfers across financial crises.
-Our main result is that \emph{cross-mechanism transfer} works.
-A meta-labeling classifier trained on an algorithmic collapse
-(Terra/LUNA) and applied unchanged to a bank-reserve shock (USDC/SVB)
+seven mechanism classes with per-minute VWAP book-walking labels, route
+provenance, and a hindsight oracle ceiling (CC-BY~4.0), and use it to study when
+a learned trading model transfers across financial crises.
+As a proof of concept on \emph{synthetic} order-book data calibrated to the real
+Tier-A USDC/SVB statistics, a meta-labeling classifier trained on an algorithmic
+collapse (Terra/LUNA) and applied unchanged to a bank-reserve shock (USDC/SVB)
 recovers $+82.5\bps$ (95\% CI $[79.5,\,87.7]\bps$, 51.0\% of the oracle),
-because depth withdrawal and spread widening behave alike regardless of the
+consistent with depth withdrawal and spread widening behaving alike regardless of the
 trigger: the order book responds to uncertainty rather than its cause.
 The obstacle this overcomes is distributional. Every calm-trained family
 we test (tabular classifiers, sequence models, reinforcement learning, and
@@ -76,10 +75,11 @@ At identical positive-label density, explicit binary labels earn
 $+82.5\bps$ while reward optimisation (a conditioned PPO-GRU) earns
 $-29.2\bps$ (headline run; a 5-seed sweep is uniformly more negative,
 $-45.9\pm5.2\bps$), so the label-vs-reward gap is not a seed artefact.
-\emph{Scope}. This real transfer is demonstrated for a single
-source$\,\to\,$destination pair (Terra/LUNA$\,\to\,$Tier-A USDC/SVB). The other
-multi-mechanism conditions are synthetic, so a second execution-grade event is the
-primary open validation requirement (see Limitations).
+\emph{Scope}. This cross-mechanism transfer is demonstrated on \emph{synthetic} data
+calibrated to the real Tier-A USDC/SVB statistics, as are all multi-mechanism conditions;
+an execution-grade \emph{real-data} cross-mechanism test is the primary open validation
+requirement (see Limitations). The execution-gap and on-chain venue-specificity results
+above are computed on real Tier-A data.
 \end{abstract}
 
 \keywords{transfer learning, meta-labeling, reinforcement learning,
@@ -164,11 +164,11 @@ oracle.
 
 \paragraph{Contributions}
 \begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=2pt]
-  \item \textbf{Cross-mechanism transfer for executable arbitrage.}
+  \item \textbf{Cross-mechanism transfer for executable arbitrage (synthetic proof of concept).}
         A meta-labeling classifier trained on one crisis type (Terra/LUNA) and
-        applied unchanged to a different, real Tier-A event (USDC/SVB) recovers
-        $+82.5\bps$ (51.0\% oracle capture), a single demonstrated cross-mechanism
-        transfer. The mechanism-invariance hypothesis (depth withdrawal, spread
+        applied unchanged to a USDC/SVB test split---both \emph{synthetic}, calibrated to the
+        real Tier-A statistics---recovers $+82.5\bps$ (51.0\% oracle capture), a single
+        proof-of-concept cross-mechanism transfer pending real-data validation. The mechanism-invariance hypothesis (depth withdrawal, spread
         widening), which SHAP attribution supports, is further \emph{illustrated} by
         synthetic multi-mechanism conditions (four-event pooled, 51.8\%). We are
         explicit that these synthetic sources do not independently validate
@@ -544,7 +544,7 @@ Net bps denotes mean net basis points per triggered trade after VWAP,
 taker fees, and settlement penalties.
 Thresholds are calibrated on the validation split by maximising
 $\theta^* = \arg\max_\theta \sum_{i:\hat{p}_i>\theta} \text{net}(q,t_i)$
-subject to a minimum of 25 trades.
+over a 60-point linear grid on $[0.05, 0.95]$, subject to a minimum of 25 trades.
 Primary metrics are mean net bps per triggered trade and oracle
 capture $\kappa_M$.
 Secondary metrics are AUROC and AUPRC.
@@ -797,8 +797,8 @@ not a causal claim (Section~\ref{sec:rl_results}).
 
 \subsubsection{Cross-Mechanism Transfer and Training Diversity}
 
-Meta-labeling earns $+82.5\bps$ on the one real cross-mechanism transfer
-(Terra/LUNA$\,\to\,$SVB) and positive returns on synthetic multi-mechanism stress
+Meta-labeling earns $+82.5\bps$ on the calibrated synthetic Terra/LUNA$\,\to\,$SVB
+cross-mechanism transfer and positive returns on the other synthetic multi-mechanism stress
 events (Table~\ref{tab:metalabel}). The synthetic four-event pooled condition reaches
 $+83.7\bps$ (51.8\% oracle capture). As detailed below, the synthetic rows illustrate
 the mechanism-invariance hypothesis rather than independently confirm it.
@@ -807,9 +807,10 @@ the mechanism-invariance hypothesis rather than independently confirm it.
 \centering
 \caption{Transfer and policy results (\task{basis\_usdc\_1m\_gt10bps},
   \texttt{price\_plus\_book}, SVB test split). Mean net bps per triggered trade.
-  \textbf{Only Terra/LUNA (source) and SVB (test) use real catalogue data. The
-  Celsius/3AC, FTX, BUSD and pooled rows use \emph{synthetic} stress events, and the
-  decision threshold is calibrated on Terra/LUNA for all conditions.} Bootstrap
+  \textbf{All transfer rows use \emph{synthetic} order-book data: the Terra/LUNA source and
+  SVB test generators are calibrated to the real Tier-A catalogue statistics, while the
+  Celsius/3AC, FTX, BUSD and pooled rows use synthetic stress events with baked-in
+  signatures. The decision threshold is calibrated on Terra/LUNA for all conditions.} Bootstrap
   ranges over the synthetic data-generating process are thus not independent of the
   Terra-calibrated threshold. See text for a per-pair-calibrated sweep in which
   Celsius fails.}
@@ -838,23 +839,20 @@ PPO-GRU conditioned & RL on Terra & $-29.2$ & 919 & $-18\%^\ddagger$\\
 \end{table}
 
 We are deliberate about what this table does and does not establish.
-Terra/LUNA is the \emph{one} transfer backed by real catalogue source data, and it
-recovers $+82.5\bps$ ($n=397$ depth-confirmed trades, 51.0\% of oracle) into the real Tier-A SVB test split.
-A stationary block bootstrap on the full evaluation sequence (block length 60 minutes,
-$B{=}2{,}000$ resamples, $n=442$ including pre-filter rows) gives a 95\% CI of $[79.5,\,87.7]\bps$, with all $100\%$ of
-bootstrap replicates positive ($p{=}1.0$); the depth-confirmed $+82.5\bps$ falls inside this interval, confirming the result is not driven by a
-small number of large trades.
-The remaining single-source and pooled conditions (Celsius/3AC, FTX, BUSD) use
-\emph{synthetic} stress events calibrated to the historical catalogue
-(\S\ref{sec:diagnostics}). Because their generator embeds the same
-depth-withdrawal/spread signature in every mechanism, they \emph{illustrate} the
-mechanism-invariance hypothesis by construction rather than validate it
-independently. Consistent with this caveat, a per-pair-calibrated transfer sweep
-(\texttt{transfer\_matrix}) finds the synthetic Celsius source can instead
-\emph{fail} (net $-40.9\bps$) once its decision threshold is not borrowed from
-Terra/LUNA. The operative, real-data claim is therefore a \emph{single demonstrated
-cross-mechanism transfer} (Terra/LUNA$\,\to\,$SVB). Multi-mechanism generality
-remains an open question pending a second execution-grade event (\S\ref{sec:intro}).
+The Terra/LUNA$\,\to\,$SVB transfer is run on \emph{synthetic} order-book data whose generators
+are calibrated to the real Tier-A catalogue statistics; it recovers $+82.5\bps$ ($n=397$ trades
+fired at the validation-calibrated threshold, each scored by the VWAP book-walk net label;
+51.0\% of oracle) on that synthetic SVB test split, so the recovered magnitude reflects the
+calibration target and awaits confirmation on real cross-mechanism data.
+A stationary block bootstrap (block length 60 minutes, $B{=}2{,}000$ resamples, $n=442$) gives a
+95\% CI of $[79.5,\,87.7]\bps$ with $100\%$ of replicates positive ($p{=}1.0$), so within the
+synthetic data the magnitude is not driven by a few large trades.
+The remaining single-source and pooled conditions (Celsius/3AC, FTX, BUSD) also use
+\emph{synthetic} stress events calibrated to the catalogue (\S\ref{sec:diagnostics}); because their
+generator embeds the same depth-withdrawal/spread signature in every mechanism, they \emph{illustrate}
+the mechanism-invariance hypothesis by construction rather than validate it independently---and a
+per-pair-calibrated sweep (\texttt{transfer\_matrix}) finds the synthetic Celsius source can instead
+\emph{fail} (net $-40.9\bps$) once its threshold is not borrowed from Terra/LUNA.
 
 Cross-mechanism training succeeds because depth withdrawal, spread
 widening, and route mismatch recur across stress triggers even when
@@ -1022,11 +1020,11 @@ in SVB even when the timing does not match.
 \section{Limitations}
 \label{sec:limitations}
 We collect the boundaries of the evidence in one place.
-\textbf{(1)~Single execution-grade destination.} All \emph{real} cross-mechanism
-transfer shares one Tier-A test event (Terra/LUNA$\,\to\,$USDC/SVB). The remaining
-multi-mechanism conditions are synthetic and illustrate rather than confirm the
-invariance, so a second execution-grade event is the primary open validation
-requirement. \textbf{(2)~Proxy buy leg.} The flagship gap rests on a kline-proxy
+\textbf{(1)~Cross-mechanism transfer is synthetic.} The Terra/LUNA$\,\to\,$USDC/SVB transfer and
+all multi-mechanism conditions run on \emph{synthetic} order-book data calibrated to the real
+Tier-A statistics, so the recovered $+82.5\bps$ reflects the calibration target, not an
+out-of-sample real measurement; a real-data cross-mechanism transfer is the primary open
+requirement. The execution-gap and venue-specificity results use real Tier-A data. \textbf{(2)~Proxy buy leg.} The flagship gap rests on a kline-proxy
 BTC-USDC buy leg for the pre-2024 SVB window (no Binance perpetual existed before
 January 2024). A $20\%$ depth haircut bounds it to $12$--$14\times$ with the oracle
 still above $+130\bps$, so the headline is proxy-bounded, not a point estimate.
@@ -1038,22 +1036,16 @@ oracle-to-executable gap open.
 \section{Conclusion}
 \label{sec:conclusion}
 
-Stablecoin arbitrage benchmarks built on price labels measure the wrong object. 34.3\% of SVB minutes appeared dislocated but only 2.88\% survived VWAP execution, a $12\times$ gap replicated at $5.9\times$ on Terra/LUNA.
-Gap~1 is closed by execution-grade labels. Gap~2 is closed by cross-mechanism supervision, which succeeds because the order book responds to uncertainty rather than its cause (the shared depth-withdrawal and spread-widening signature of Figure~\ref{fig:shap_side}).
-A single transfer from algorithmic collapse to bank-reserve shock recovers half the oracle return, and pooling four mechanism classes confirms the result.
+Stablecoin arbitrage benchmarks built on price labels measure the wrong object: the $12\times$ optical-to-executable gap on SVB (replicated at $5.9\times$ on Terra/LUNA) is the headline real-data finding.
+Gap~1 is closed by execution-grade labels on real Tier-A data. Gap~2 is addressed by cross-mechanism supervision on synthetic data calibrated to the real catalogue: a single transfer from algorithmic collapse to bank-reserve shock recovers half the oracle return because the order book responds to uncertainty rather than its cause (Figure~\ref{fig:shap_side}); real-data confirmation is the key open step.
 
-\paragraph{Practitioner takeaways}
-\textbf{(1) Divide every price-label AUROC by $12\times$ before any capital decision}
-(the gap is robust across two independent crises, SVB $12\times$ and Terra $5.9\times$);
-until a study reports VWAP-grade labels its figures are unreliable for deployment.
-\textbf{(2) Train on a different mechanism, not the same event}, since every
-calm-trained or within-event model fails in a new regime while cross-mechanism
-supervision recovers $+82.5\bps$.
-\textbf{(3) Prefer supervised meta-labeling over RL}, which at identical label
-density earns $+82.5\bps$ versus $-29.2\bps$ for PPO-GRU.
-
-Future work includes Tier-A labels for DeFi and exchange-credit events, a market-impact simulator to close the $111.7$\,bps gap, and early-entry labels to reduce late-stage ambiguity.
-Catalogue, labels, oracle, and harness released under CC-BY~4.0.
+\paragraph{Practitioner takeaways} (i)~\textbf{Divide every price-label AUROC by $12\times$
+before any capital decision} (robust across SVB $12\times$, Terra $5.9\times$); (ii)~\textbf{train
+on a different mechanism, not the same event} (every within-event model fails in a new regime);
+and (iii)~\textbf{prefer supervised meta-labeling over RL} ($+82.5$ vs $-29.2\bps$ at identical
+label density). Takeaways (ii)--(iii) rest on the synthetic calibration-anchored transfer, pending
+real-data confirmation. Future work includes Tier-A labels for DeFi and exchange-credit events, a
+market-impact simulator, and a real-data cross-mechanism transfer.
 
 
 \section*{Acknowledgements}
