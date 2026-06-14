@@ -439,7 +439,7 @@ Here $\mathbf{1}[\cdot]$ is the indicator function; the primary task is \task{ba
     \left[\,
       \frac{\text{VWAP}_{\text{sell}} - \text{VWAP}_{\text{buy}}}{P_{\text{ref}}}
       - f_{\text{buy}} - f_{\text{sell}} - \delta_{\text{settle}}
-    \,\right] \quad \text{[bps]}
+    \,\right]
   \label{eq:net}
 \end{equation}
 
@@ -831,8 +831,7 @@ Four-event pooled & alg.+exch.+reg. & $+83.7$ & 163 & 51.8\%\\
 \midrule
 PPO-GRU conditioned & RL on Terra & $-29.2$ & 919 & $-18\%^\ddagger$\\
 \bottomrule
-\multicolumn{5}{l}{\footnotesize $^{\ast\ast}$FTX. Signal too weak ($<5\bps$ intensity), single trade, excluded from multi-source claim.}\\
-\multicolumn{5}{l}{\footnotesize $^\ddagger$Negative capture means the agent loses money relative to the NoTrade (0 bps) floor.}\\
+\multicolumn{5}{@{}p{0.96\columnwidth}@{}}{\footnotesize $^{\ast\ast}$FTX signal too weak ($<5\bps$, single trade); excluded from the multi-source claim. $^\ddagger$Negative capture: the agent loses relative to the NoTrade (0\,bps) floor.}\\
 \end{tabular}
 }
 \end{table}
