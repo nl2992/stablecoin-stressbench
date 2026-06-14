@@ -544,7 +544,7 @@ Net bps denotes mean net basis points per triggered trade after VWAP,
 taker fees, and settlement penalties.
 Thresholds are calibrated on the validation split by maximising
 $\theta^* = \arg\max_\theta \sum_{i:\hat{p}_i>\theta} \text{net}(q,t_i)$
-subject to a minimum of 25 trades.
+over a 60-point linear grid on $[0.05, 0.95]$, subject to a minimum of 25 trades.
 Primary metrics are mean net bps per triggered trade and oracle
 capture $\kappa_M$.
 Secondary metrics are AUROC and AUPRC.
@@ -839,7 +839,8 @@ PPO-GRU conditioned & RL on Terra & $-29.2$ & 919 & $-18\%^\ddagger$\\
 
 We are deliberate about what this table does and does not establish.
 Terra/LUNA is the \emph{one} transfer backed by real catalogue source data, and it
-recovers $+82.5\bps$ ($n=397$ depth-confirmed trades, 51.0\% of oracle) into the real Tier-A SVB test split.
+recovers $+82.5\bps$ ($n=397$ trades fired at the validation-calibrated threshold, each
+scored by the VWAP book-walk net label; 51.0\% of oracle) into the real Tier-A SVB test split.
 A stationary block bootstrap on the full evaluation sequence (block length 60 minutes,
 $B{=}2{,}000$ resamples, $n=442$ including pre-filter rows) gives a 95\% CI of $[79.5,\,87.7]\bps$, with all $100\%$ of
 bootstrap replicates positive ($p{=}1.0$); the depth-confirmed $+82.5\bps$ falls inside this interval, confirming the result is not driven by a
